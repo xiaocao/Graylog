@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 #==============================================================================
 #title			: install_graylog.sh
 #description	: This script will install Graylog components (server and web).
@@ -6,8 +6,8 @@
 #job title		: Network engineer
 #mail			: mikael.andre.1989@gmail.com
 #created		: 20150219
-#last revision	: 20150303
-#version		: 1.0
+#last revision	: 20150307
+#version		: 1.1
 #platform		: Linux
 #processor		: 64 Bits
 #os				: CentOS
@@ -16,7 +16,10 @@
 #notes			: Copy and paste in Vi to use this script
 #==============================================================================
 
-# GLOBAL SYSTEM VARIABLES
+#==============================================================================
+# Global variables
+#==============================================================================
+# SYSTEM VARIABLES
 SERVER_PROCESSOR_TYPE=
 SERVER_IP_ADDRESS=
 SERVER_HOST_NAME=
@@ -27,26 +30,22 @@ PUBLIC_KEY_FILE=
 INSTALLATION_LOG_TIMESTAMP=`date +%d%m%Y%H%M%S`
 INSTALLATION_LOG_FOLDER=`pwd`
 INSTALLATION_LOG_FILE="$INSTALLATION_LOG_FOLDER/install_graylog_$INSTALLATION_LOG_TIMESTAMP.log"
-
-# GLOBAL NETWORK VARIABLES
+INSTALLATION_CFG_FILE=""
+# NETWORK VARIABLES
 NETWORK_INTERFACE_NAME=
-
-# GLOBAL NTP VARIABLES
+# NTP VARIABLES
 BOOLEAN_NTP_ONSTARTUP=
-
-# GLOBAL OPENSSH VARIABLES
+# VARIABLES
 BOOLEAN_USE_OPENSSHKEY=
 OPENSSH_PERSONAL_KEY=
-
-# GLOBAL MONGO VARIABLES
+# MONGO VARIABLES
 BOOLEAN_MONGO_ONSTARTUP=
 MONGO_ADMIN_USER="admin"
 MONGO_ADMIN_PASSWORD=
 MONGO_GRAYLOG_DATABASE=
 MONGO_GRAYLOG_USER=
 MONGO_GRAYLOG_PASSWORD=
-
-# GLOBAL SSL VARIABLES
+# SSL VARIABLES
 SSL_KEY_SIZE="2048"
 SSL_KEY_DURATION=
 SSL_SUBJECT_COUNTRY=
@@ -55,34 +54,28 @@ SSL_SUBJECT_LOCALITY=
 SSL_SUBJECT_ORGANIZATION=
 SSL_SUBJECT_ORGANIZATIONUNIT=
 SSL_SUBJECT_EMAIL=
-
-# GLOBAL JAVA VARIABLES
+# JAVA VARIABLES
 ELASTICSEARCH_RAM_RESERVATION="256m"
 GRAYLOGSERVER_RAM_RESERVATION="256m"
 GRAYLOGWEBGUI_RAM_RESERVATION="256m"
-
-# GLOBAL ELASTICSEARCH VARIABLES
+# ELASTICSEARCH VARIABLES
 BOOLEAN_ELASTICSEARCH_ONSTARTUP=
 BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=
-
-# GLOBAL SMTP VARIABLES
+# SMTP VARIABLES
 SMTP_HOST_NAME=
 SMTP_DOMAIN_NAME=
 SMTP_PORT_NUMBER=
 SMTP_AUTH_USERNAME=
 SMTP_AUTH_PASSWORD=
-
-# GLOBAL GRAYLOG VARIABLES
+# GRAYLOG VARIABLES
 BOOLEAN_GRAYLOGSERVER_ONSTARTUP=
 BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=
 GRAYLOG_SECRET_PASSWORD=
 GRAYLOG_ADMIN_USERNAME="admin"
 GRAYLOG_ADMIN_PASSWORD=
-
-# GLOBAL NGINX VARIABLES
+# NGINX VARIABLES
 BOOLEAN_NGINX_ONSTARTUP=
-
-# GLOBAL COLOR VARIABLES
+# COLOR VARIABLES
 RES_COL="60"
 RES_COL1="67"
 MOVE_TO_COL="\\033[${RES_COL}G"
@@ -92,7 +85,12 @@ SETCOLOR_SUCCESS="\\033[0;32m"
 SETCOLOR_FAILURE="\\033[0;31m"
 SETCOLOR_WARNING="\\033[0;33m"
 SETCOLOR_NORMAL="\\033[0;39m"
+#==============================================================================
 
+#==============================================================================
+# Functions
+#==============================================================================
+# Log function to write all events during installation process
 function log() {
 	local program_name="$0"
 	local message_type="$1"
@@ -101,24 +99,31 @@ function log() {
 
 	echo -e "$(date) [$program_name]: $message_type: $message_content" >> $INSTALLATION_LOG_FILE
 }
+# Display message on standart output with carriage return
 function echo_message() {
 	echo -en "${1}${MOVE_TO_COL}"
 }
+# Display "[ INFO ]" message on standart output with carriage return
 function echo_info() {
 	echo -e "[ ${SETCOLOR_INFO}${1}${SETCOLOR_NORMAL} ]" 
 }
+# Display "[  OK  ]" message on standart output with carriage return
 function echo_success() {
 	echo -e "[  ${SETCOLOR_SUCCESS}${1}${SETCOLOR_NORMAL}  ]" 
 }
+# Display "[FAILED]" message on standart output with carriage return
 function echo_failure() {
 	echo -e "[${SETCOLOR_FAILURE}${1}${SETCOLOR_NORMAL}]"
 }
+# Display "[ WARN ]" message on standart output with carriage return
 function echo_warning() {
-    echo -e "[ ${SETCOLOR_WARNING}${1}${SETCOLOR_NORMAL} ]"
+	echo -e "[ ${SETCOLOR_WARNING}${1}${SETCOLOR_NORMAL} ]"
 }
+# Display "[ PASS ]" message on standart output with carriage return
 function echo_passed() {
 	echo -e "[ ${SETCOLOR_WARNING}${1}${SETCOLOR_NORMAL} ]"
 }
+# Return 0 if user answers "yes" or 1 to "no" answer
 function yes_no_function() {
 	local input_message=$1
 	local yes_regex="^[Yy][Ee][Ss]$|^[Yy]$"
@@ -145,12 +150,21 @@ function yes_no_function() {
 		return 1
 	fi
 }
+# Abort function and inform user to read log file for more informations on bad ending
 function abort_installation() {
 	log "ERROR" "GRAYLOG installation: Abort"
 	echo_message "Check log file $INSTALLATION_LOG_FILE"
 	echo_info "INFO"
+	if [ $INSTALLATION_CFG_FILE != "" ]
+	then
+		if [[ "$INSTALLATION_CFG_FILE" =~ .*\.cfg$ ]]
+		then
+			log "INFO" "GRAYLOG installation: Retry with $0 -f $INSTALLATION_CFG_FILE"
+		fi
+	fi
 	exit 1
 }
+# Return 0 if file exists or 1 if not
 function test_file() {
 	local input_file="$1"
 	local is_exist=
@@ -163,6 +177,7 @@ function test_file() {
 	fi
 	echo $is_exist
 }
+# Return 0 if directory exists or 1 if not
 function test_directory() {
 	local input_folder="$1"
 	local is_exist=
@@ -175,6 +190,7 @@ function test_directory() {
 	fi
 	echo $is_exist
 }
+# Test DNS configuration and send 4 icmp packets
 function test_internet() {
 	local icmp_packets_sent=4
 	local icmp_packets_received=
@@ -204,7 +220,12 @@ function test_internet() {
 		abort_installation
 	fi
 }
+# Set all global variables using inputs user
 function set_globalvariables() {
+	local installation_cfg_tmpfile="$INSTALLATION_LOG_FOLDER/install_graylog_$INSTALLATION_LOG_TIMESTAMP.cfg"
+
+	touch $installation_cfg_tmpfile
+	log "INFO" "Global variables: $installation_cfg_tmpfile successfully created"
 	yes_no_function "Do you want to modify name of network interface, default value : ${SETCOLOR_INFO}eth0${SETCOLOR_NORMAL} ?" "yes"
 	if [ "$?" == 0 ]
 	then
@@ -219,6 +240,7 @@ function set_globalvariables() {
 		NETWORK_INTERFACE_NAME="eth0"
 		log "INFO" "Global variables: NETWORK_INTERFACE_NAME not modified by user (Default value=$NETWORK_INTERFACE_NAME)"
 	fi
+	echo "NETWORK_INTERFACE_NAME=\"$NETWORK_INTERFACE_NAME\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to use your OpenSSH key to authenticate you on GRAYLOG server ?" "yes"
 	if [ $? -eq 0 ]
 	then
@@ -230,10 +252,12 @@ function set_globalvariables() {
 			read OPENSSH_PERSONAL_KEY
 		done
 		log "INFO" "Global variables: OPENSSH_PERSONAL_KEY modified by user (New value=$OPENSSH_PERSONAL_KEY)"
+		echo "OPENSSH_PERSONAL_KEY=\"$OPENSSH_PERSONAL_KEY\"" >> $installation_cfg_tmpfile
 	else
 		BOOLEAN_USE_OPENSSHKEY=0
 		log "INFO" "Global variables: OPENSSH_PERSONAL_KEY not modified by user (Default value=$OPENSSH_PERSONAL_KEY)"
 	fi
+	echo "BOOLEAN_USE_OPENSSHKEY=\"$BOOLEAN_USE_OPENSSHKEY\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to modify time zone of server, default value : ${SETCOLOR_INFO}Europe/Paris${SETCOLOR_NORMAL} ?" "yes"
 	if [ "$?" == 0 ]
 	then
@@ -248,6 +272,7 @@ function set_globalvariables() {
 		SERVER_TIME_ZONE="Europe/Paris"
 		log "INFO" "Global variables: SERVER_TIME_ZONE not modified by user (Default value=$SERVER_TIME_ZONE)"
 	fi
+	echo "SERVER_TIME_ZONE=\"$SERVER_TIME_ZONE\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to add NTP on startup ?" "yes"
 	if [ "$?" == 0 ]
 	then
@@ -255,6 +280,7 @@ function set_globalvariables() {
 	else
 		BOOLEAN_NTP_ONSTARTUP=0
 	fi
+	echo "BOOLEAN_NTP_ONSTARTUP=\"$BOOLEAN_NTP_ONSTARTUP\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to modify password of Mongo administrator, default value : ${SETCOLOR_INFO}admin4mongo${SETCOLOR_NORMAL} ?" "yes"
 	if [ $? -eq 0 ]
 	then
@@ -269,6 +295,7 @@ function set_globalvariables() {
 		MONGO_ADMIN_PASSWORD="admin4mongo"
 		log "INFO" "Global variables: MONGO_ADMIN_PASSWORD not modified by user (Default value=$MONGO_ADMIN_PASSWORD)"
 	fi
+	echo "MONGO_ADMIN_PASSWORD=\"$MONGO_ADMIN_PASSWORD\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to modify name of Mongo database, default value : ${SETCOLOR_INFO}graylog${SETCOLOR_NORMAL} ?" "no"
 	if [ $? -eq 0 ]
 	then
@@ -283,6 +310,7 @@ function set_globalvariables() {
 		MONGO_GRAYLOG_DATABASE="graylog"
 		log "INFO" "Global variables: MONGO_GRAYLOG_DATABASE not modified by user (Default value=$MONGO_GRAYLOG_DATABASE)"
 	fi
+	echo "MONGO_GRAYLOG_DATABASE=\"$MONGO_GRAYLOG_DATABASE\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to modify login of Mongo Graylog user, default value : ${SETCOLOR_INFO}grayloguser${SETCOLOR_NORMAL} ?" "no"
 	if [ $? -eq 0 ]
 	then
@@ -297,6 +325,7 @@ function set_globalvariables() {
 		MONGO_GRAYLOG_USER="grayloguser"
 		log "INFO" "Global variables: MONGO_GRAYLOG_USER not modified by user (Default value=$MONGO_GRAYLOG_USER)"
 	fi
+	echo "MONGO_GRAYLOG_USER=\"$MONGO_GRAYLOG_USER\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to modify password of Mongo Graylog user, default value : ${SETCOLOR_INFO}graylog4mongo${SETCOLOR_NORMAL} ?" "yes"
 	if [ $? -eq 0 ]
 	then
@@ -311,6 +340,7 @@ function set_globalvariables() {
 		MONGO_GRAYLOG_PASSWORD="graylog4mongo"
 		log "INFO" "Global variables: MONGO_GRAYLOG_PASSWORD not modified by user (Default value=$MONGO_GRAYLOG_PASSWORD)"
 	fi
+	echo "MONGO_GRAYLOG_PASSWORD=\"$MONGO_GRAYLOG_PASSWORD\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to add Mongo database server on startup ?" "yes"
 	if [ "$?" == 0 ]
 	then
@@ -318,6 +348,7 @@ function set_globalvariables() {
 	else
 		BOOLEAN_MONGO_ONSTARTUP=0
 	fi
+	echo "BOOLEAN_MONGO_ONSTARTUP=\"$BOOLEAN_MONGO_ONSTARTUP\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to modify period of validity of SSL Certificate, default value : ${SETCOLOR_INFO}365${SETCOLOR_NORMAL} ?" "no"
 	if [ $? -eq 0 ]
 	then
@@ -332,6 +363,7 @@ function set_globalvariables() {
 		SSL_KEY_DURATION="365"
 		log "INFO" "Global variables: SSL_KEY_DURATION not modified by user (Default value=$SSL_KEY_DURATION)"
 	fi
+	echo "SSL_KEY_DURATION=\"$SSL_KEY_DURATION\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to modify the country code of SSL Certificate, default value : ${SETCOLOR_INFO}FR${SETCOLOR_NORMAL} ?" "yes"
 	if [ $? -eq 0 ]
 	then
@@ -346,6 +378,7 @@ function set_globalvariables() {
 		SSL_SUBJECT_COUNTRY="FR"
 		log "INFO" "Global variables: SSL_SUBJECT_COUNTRY not modified by user (Default value=$SSL_SUBJECT_COUNTRY)"
 	fi
+	echo "SSL_SUBJECT_COUNTRY=\"$SSL_SUBJECT_COUNTRY\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to modify state of SSL Certificate, default value : ${SETCOLOR_INFO}STATE${SETCOLOR_NORMAL} ?" "yes"
 	if [ $? -eq 0 ]
 	then
@@ -360,6 +393,7 @@ function set_globalvariables() {
 		SSL_SUBJECT_STATE="STATE"
 		log "INFO" "Global variables: SSL_SUBJECT_STATE not modified by user (Default value=$SSL_SUBJECT_STATE)"
 	fi
+	echo "SSL_SUBJECT_STATE=\"$SSL_SUBJECT_STATE\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to modify locality of SSL Certificate, default value : ${SETCOLOR_INFO}LOCALITY${SETCOLOR_NORMAL} ?" "yes"
 	if [ $? -eq 0 ]
 	then
@@ -374,6 +408,7 @@ function set_globalvariables() {
 		SSL_SUBJECT_LOCALITY="LOCALITY"
 		log "INFO" "Global variables: SSL_SUBJECT_LOCALITY not modified by user (Default value=$SSL_SUBJECT_LOCALITY)"
 	fi
+	echo "SSL_SUBJECT_LOCALITY=\"$SSL_SUBJECT_LOCALITY\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to modify organization name of SSL Certificate, default value : ${SETCOLOR_INFO}Organisation${SETCOLOR_NORMAL} ?" "yes"
 	if [ $? -eq 0 ]
 	then
@@ -388,6 +423,7 @@ function set_globalvariables() {
 		SSL_SUBJECT_ORGANIZATION="Organisation"
 		log "INFO" "Global variables: SSL_SUBJECT_ORGANIZATION not modified by user (Default value=$SSL_SUBJECT_ORGANIZATION)"
 	fi
+	echo "SSL_SUBJECT_ORGANIZATION=\"$SSL_SUBJECT_ORGANIZATION\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to modify organization unit name of SSL Certificate, default value : ${SETCOLOR_INFO}Organisation Unit${SETCOLOR_NORMAL} ?" "yes"
 	if [ $? -eq 0 ]
 	then
@@ -402,6 +438,7 @@ function set_globalvariables() {
 		SSL_SUBJECT_ORGANIZATIONUNIT="Organisation Unit"
 		log "INFO" "Global variables: SSL_SUBJECT_ORGANIZATIONUNIT not modified by user (Default value=$SSL_SUBJECT_ORGANIZATIONUNIT)"
 	fi
+	echo "SSL_SUBJECT_ORGANIZATIONUNIT=\"$SSL_SUBJECT_ORGANIZATIONUNIT\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to modify mail address of SSL Certificate, default value : ${SETCOLOR_INFO}mail.address@test.fr${SETCOLOR_NORMAL} ?" "yes"
 	if [ $? -eq 0 ]
 	then
@@ -416,12 +453,12 @@ function set_globalvariables() {
 		SSL_SUBJECT_EMAIL="mail.address@test.fr"
 		log "INFO" "Global variables: SSL_SUBJECT_EMAIL not modified by user (Default value=$SSL_SUBJECT_EMAIL)"
 	fi
+	echo "SSL_SUBJECT_EMAIL=\"$SSL_SUBJECT_EMAIL\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to modify fully qualified domain name (FQDN) of SMTP server, default value : ${SETCOLOR_INFO}smtp.test.fr${SETCOLOR_NORMAL} ?" "yes"
 	if [ $? -eq 0 ]
 	then
 		while [ -z "$SMTP_HOST_NAME" ]
-		do
-			
+		do		
 			echo -e "Type the FQDN of SMTP server, followed by [ENTER]:"
 			echo -en "> "
 			read SMTP_HOST_NAME
@@ -431,6 +468,7 @@ function set_globalvariables() {
 		SMTP_HOST_NAME="smtp.test.fr"
 		log "INFO" "Global variables: SMTP_HOST_NAME not modified by user (Default value=$SMTP_HOST_NAME)"
 	fi
+	echo "SMTP_HOST_NAME=\"$SMTP_HOST_NAME\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to modify domain name, default value : ${SETCOLOR_INFO}test.fr${SETCOLOR_NORMAL} ?" "yes"
 	if [ $? -eq 0 ]
 	then
@@ -445,6 +483,7 @@ function set_globalvariables() {
 		SMTP_DOMAIN_NAME="test.fr"
 		log "INFO" "Global variables: SMTP_DOMAIN_NAME not modified by user (Default value=$SMTP_DOMAIN_NAME)"
 	fi
+	echo "SMTP_DOMAIN_NAME=\"$SMTP_DOMAIN_NAME\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to modify SMTP port number, default value : ${SETCOLOR_INFO}465${SETCOLOR_NORMAL} ?" "yes"
 	if [ $? -eq 0 ]
 	then
@@ -459,6 +498,7 @@ function set_globalvariables() {
 		SMTP_PORT_NUMBER="465"
 		log "INFO" "Global variables: SMTP_PORT_NUMBER not modified by user (Default value=$SMTP_PORT_NUMBER)"
 	fi
+	echo "SMTP_PORT_NUMBER=\"$SMTP_PORT_NUMBER\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to modify SMTP authentication user, default value : ${SETCOLOR_INFO}test@test.fr${SETCOLOR_NORMAL} ?" "yes"
 	if [ $? -eq 0 ]
 	then
@@ -473,6 +513,7 @@ function set_globalvariables() {
 		SMTP_AUTH_USERNAME="test@test.fr"
 		log "INFO" "Global variables: SMTP_AUTH_USERNAME not modified by user (Default value=$SMTP_AUTH_USERNAME)"
 	fi
+	echo "SMTP_AUTH_USERNAME=\"$SMTP_AUTH_USERNAME\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to modify SMTP authentication password, default value : ${SETCOLOR_INFO}password123${SETCOLOR_NORMAL} ?" "yes"
 	if [ $? -eq 0 ]
 	then
@@ -487,6 +528,7 @@ function set_globalvariables() {
 		SMTP_AUTH_PASSWORD="password123"
 		log "INFO" "Global variables: SMTP_AUTH_PASSWORD not modified by user (Default value=$SMTP_AUTH_PASSWORD)"
 	fi
+	echo "SMTP_AUTH_PASSWORD=\"$SMTP_AUTH_PASSWORD\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to install HQ plugin to manage ElasticSearch ?" "yes"
 	if [ $? -eq 0 ]
 	then
@@ -494,6 +536,7 @@ function set_globalvariables() {
 	else
 		BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=0
 	fi
+	echo "BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=\"$BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to add ElasticSearch server on startup ?" "yes"
 	if [ "$?" == 0 ]
 	then
@@ -501,6 +544,7 @@ function set_globalvariables() {
 	else
 		BOOLEAN_ELASTICSEARCH_ONSTARTUP=0
 	fi
+	echo "BOOLEAN_ELASTICSEARCH_ONSTARTUP=\"$BOOLEAN_ELASTICSEARCH_ONSTARTUP\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to modify Graylog secret password, default value : ${SETCOLOR_INFO}secretpassword${SETCOLOR_NORMAL} ?" "yes"
 	if [ $? -eq 0 ]
 	then
@@ -515,6 +559,7 @@ function set_globalvariables() {
 		GRAYLOG_SECRET_PASSWORD="secretpassword"
 		log "INFO" "Global variables: GRAYLOG_SECRET_PASSWORD not modified by user (Default value=$GRAYLOG_SECRET_PASSWORD)"
 	fi
+	echo "GRAYLOG_SECRET_PASSWORD=\"$GRAYLOG_SECRET_PASSWORD\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to modify Graylog administrator password, default value : ${SETCOLOR_INFO}adminpassword${SETCOLOR_NORMAL} ?" "yes"
 	if [ $? -eq 0 ]
 	then
@@ -529,6 +574,7 @@ function set_globalvariables() {
 		GRAYLOG_ADMIN_PASSWORD="adminpassword"
 		log "INFO" "Global variables: GRAYLOG_ADMIN_PASSWORD not modified by user (Default value=$GRAYLOG_ADMIN_PASSWORD)"
 	fi
+	echo "GRAYLOG_ADMIN_PASSWORD=\"$GRAYLOG_ADMIN_PASSWORD\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to add Graylog server on startup ?" "yes"
 	if [ "$?" == 0 ]
 	then
@@ -536,6 +582,7 @@ function set_globalvariables() {
 	else
 		BOOLEAN_GRAYLOGSERVER_ONSTARTUP=0
 	fi
+	echo "BOOLEAN_GRAYLOGSERVER_ONSTARTUP=\"$BOOLEAN_GRAYLOGSERVER_ONSTARTUP\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to add Graylog web interface on startup ?" "yes"
 	if [ "$?" == 0 ]
 	then
@@ -543,6 +590,7 @@ function set_globalvariables() {
 	else
 		BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=0
 	fi
+	echo "BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=\"$BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP\"" >> $installation_cfg_tmpfile
 	yes_no_function "Do you want to add Nginx web interface on startup ?" "yes"
 	if [ "$?" == 0 ]
 	then
@@ -550,7 +598,10 @@ function set_globalvariables() {
 	else
 		BOOLEAN_NGINX_ONSTARTUP=0
 	fi
+	echo "BOOLEAN_NGINX_ONSTARTUP=\"$BOOLEAN_NGINX_ONSTARTUP\"" >> $installation_cfg_tmpfile
+	INSTALLATION_CFG_FILE=$installation_cfg_tmpfile
 }
+# Get system informations like OS name, OS version, etc...
 function get_sysinfo() {
 	local error_counter=0
 	local std_error_output=
@@ -626,6 +677,7 @@ function get_sysinfo() {
 		abort_installation
 	fi
 }
+# Generate private and public keys to secure communications
 function generate_sslkeys() {
 	local std_error_output1=
 	local std_error_output2=
@@ -707,6 +759,7 @@ function generate_sslkeys() {
 		abort_installation
 	fi
 }
+# Configure Yum repositories (EPEL, ElasticSearch, Nginx, Graylog)
 function configure_yum() {
 	local error_counter=0
 	local warning_counter=0
@@ -844,6 +897,7 @@ EOF
 		abort_installation
 	fi
 }
+# Clean yum cache and recreate it
 function initialize_yum() {
 	local error_counter=0
 
@@ -874,6 +928,7 @@ function initialize_yum() {
 		abort_installation
 	fi
 }
+# Upgrade OS to the last version
 function upgrade_os() {
 	local std_error_output=
 
@@ -909,6 +964,7 @@ function upgrade_os() {
 		abort_installation
 	fi
 }
+# Install NTP service to maintain system at the time
 function install_ntp() {
 	local installed_counter=0
 	local std_error_output=
@@ -966,6 +1022,7 @@ function install_ntp() {
 		fi
 	fi
 }
+# Install core rpm packages
 function install_lsbpackages() {
 	local installed_counter=0
 	local std_error_output=
@@ -1009,6 +1066,7 @@ function install_lsbpackages() {
 		fi
 	fi
 }
+# Install tcpdump, scp, telnet, traceroute, etc..
 function install_networkpackages() {
 	local installed_counter=0
 	local std_error_output=
@@ -1069,6 +1127,7 @@ function install_networkpackages() {
 		fi
 	fi
 }
+# Configure Bash
 function configure_bashrc() {
 	local std_error_output=
 	local bashrc_config_file="/root/.bashrc"
@@ -1127,6 +1186,7 @@ EOF
 		fi
 	fi
 }
+# Configure OpenSSH to listen on specific interface specified by user
 function configure_openssh() {
 	local std_error_output=
 	local opensshd_config_folder="/etc/ssh"
@@ -1168,6 +1228,7 @@ function configure_openssh() {
 		fi
 	fi
 }
+# Authenticate "root" user on system using RSA authentication
 function add_opensshkey() {
 	local std_error_output=
 	local openssh_authorizedkeys_folder="/root/.ssh"
@@ -1255,6 +1316,7 @@ function add_opensshkey() {
 		fi
 	fi
 }
+# Configure Postfix to listen on loopback interface
 function configure_postfix() {
 	local std_error_output=
 	local postfix_config_folder="/etc/postfix"
@@ -1293,6 +1355,7 @@ function configure_postfix() {
 		fi
 	fi
 }
+# Add an entry to "/etc/hosts" file
 function configure_hostsfile() {
 	local std_error_output=
 	local hosts_definiton_file="/etc/hosts"
@@ -1321,6 +1384,7 @@ function configure_hostsfile() {
 		fi
 	fi
 }
+# Disable Selinux module
 function configure_selinux() {
 	local std_error_output=
 	local selinux_config_folder="/etc/selinux"
@@ -1349,6 +1413,7 @@ function configure_selinux() {
 		fi
 	fi
 }
+# Install and configure Mongo database server
 function install_mongodb() {
 	local installed_counter=0
 	local std_error_output=
@@ -1520,6 +1585,7 @@ EOF
 		fi
 	fi
 }
+# Install JRE (Java Runtime Environment)
 function install_java() {
 	local installed_counter=0
 	local std_error_output=
@@ -1548,6 +1614,7 @@ function install_java() {
 		fi
 	fi
 }
+# Install and configure ElasticSearch server
 function install_elasticsearch() {
 	local installed_counter=0
 	local std_error_output1=
@@ -1717,6 +1784,7 @@ function install_elasticsearch() {
 		fi
 	fi
 }
+# Install and configure server component of Graylog application
 function install_graylogserver() {
 	local installed_counter=0
 	local std_error_output1=
@@ -1882,6 +1950,7 @@ function install_graylogserver() {
 		fi
 	fi
 }
+# Install and configure web interface component of Graylog application
 function install_graylogwebgui() {
 	local installed_counter=0
 	local std_error_output1=
@@ -2014,6 +2083,7 @@ function install_graylogwebgui() {
 		fi
 	fi
 }
+# Install Nginx web server as a proxy to communicate with Graylog web interface
 function install_nginx() {
 	local installed_counter=0
 	local std_error_output1=
@@ -2165,6 +2235,7 @@ function install_nginx() {
 		fi
 	fi
 }
+# Display Graylog informations (URL, login and password of admin account)
 function display_informations() {
 	echo -e "\n###################################################################"
 	echo -e "#${MOVE_TO_COL1}#\n# To administrate Graylog server${MOVE_TO_COL1}#"
@@ -2182,10 +2253,48 @@ function display_informations() {
 	fi
 	echo -e "\n\n    ${SETCOLOR_WARNING}!!! You MUST restart the server after this installation !!!${SETCOLOR_NORMAL}    \n\n"
 }
+# Display help to use this installation program
+function display_help() {
+	local program=$0
+
+	echo -e "Usage: $program -i|a <file>"
+	echo -e "  -i\tInstall Graylog Components in interactive mode"
+	echo -e "  -a\tInstall Graylog components in auto mode"
+	echo -e "  -h\tDisplay this help"
+	echo -e "\nExample:\n   $program -a /root/graylog_variables.cfg"
+	exit 1
+}
+# Main loop
 function main {
 	log "INFO" "GRAYLOG installation: Begin"
 	test_internet
-	set_globalvariables
+	if [ "$INSTALLATION_CFG_FILE" == "" ]
+	then
+		set_globalvariables
+	else
+		if [[ "$INSTALLATION_CFG_FILE" =~ .*\.cfg$ ]]
+		then
+			std_error_output=$(test_file ${INSTALLATION_CFG_FILE})
+			if [ "$std_error_output" == "0" ]
+			then
+				log "INFO" "Global variables: $INSTALLATION_CFG_FILE successfully found"
+				if [ -z "$INSTALLATION_CFG_FILE" ]
+				then
+					log "ERROR" "Global variables: Not loaded"
+					abort_installation
+				else
+					source $INSTALLATION_CFG_FILE
+					log "INFO" "Global variables: Successfully loaded"
+				fi
+			else
+				log "ERROR" "Global variables: $INSTALLATION_CFG_FILE not found"
+				abort_installation
+			fi
+		else
+			log "ERROR" "Global variables: $INSTALLATION_CFG_FILE bad extension"
+			abort_installation
+		fi
+	fi
 	get_sysinfo
 	generate_sslkeys
 	configure_yum
@@ -2216,7 +2325,36 @@ function main {
 	display_informations
 	log "INFO" "GRAYLOG installation: End"
 }
+#==============================================================================
 
-main
-
+#==============================================================================
+# Program
+#==============================================================================
+OPTIND=1
+while getopts ":hia:" options
+do
+	case ${options} in
+		i )
+			main
+			;;
+		a )
+			INSTALLATION_CFG_FILE=$OPTARG
+			main
+			;;
+		: )
+			display_help
+			exit 1
+			;;
+		\?|h)
+			display_help
+			exit 0
+			;;
+		* )
+			display_help
+			exit 1
+			;;
+	esac
+done
+shift "$((OPTIND-1))"
 exit 0
+#==============================================================================
