@@ -22,8 +22,8 @@ This shell script installs all Graylog components (server and web) on one server
   * Press `<i>` to go in edit mode,
   * Paste content from the following URL : [Github](https://raw.githubusercontent.com/mikael-andre/Graylog/master/install_graylog.sh),
   * Press `<ESCAPE>` to exit edit mode,
-  * Type `:x` and press `<ENTER>` to save and close file
-  * For content of `~/graylog_variables.cfg` file, use the following URL : [Graylog variables file](https://raw.githubusercontent.com/mikael-andre/Graylog/master/graylog_variables.cfg),
+  * Type `:x` and press `<ENTER>` to save and close file,
+  * For content of `~/graylog_variables.cfg` file, use the following URL : [Github](https://raw.githubusercontent.com/mikael-andre/Graylog/master/graylog_variables.cfg)
 4. Give execute rights on install script
   - `chmod +x ~/install_graylog.sh`
 5. Launch it with one of the following commands
