@@ -6,7 +6,7 @@
 #job title		: Network engineer
 #mail			: mikael.andre.1989@gmail.com
 #created		: 20150219
-#last revision	: 20150307
+#last revision	: 20150309
 #version		: 1.1
 #platform		: Linux
 #processor		: 64 Bits
@@ -35,7 +35,7 @@ INSTALLATION_CFG_FILE=""
 NETWORK_INTERFACE_NAME=
 # NTP VARIABLES
 BOOLEAN_NTP_ONSTARTUP=
-# VARIABLES
+# SSH VARIABLES
 BOOLEAN_USE_OPENSSHKEY=
 OPENSSH_PERSONAL_KEY=
 # MONGO VARIABLES
@@ -75,9 +75,10 @@ GRAYLOG_ADMIN_USERNAME="admin"
 GRAYLOG_ADMIN_PASSWORD=
 # NGINX VARIABLES
 BOOLEAN_NGINX_ONSTARTUP=
-# COLOR VARIABLES
+# TERMINAL VARIABLES
 RES_COL="60"
 RES_COL1="67"
+# COLOR VARIABLES
 MOVE_TO_COL="\\033[${RES_COL}G"
 MOVE_TO_COL1="\\033[${RES_COL1}G"
 SETCOLOR_INFO="\\033[0;36m"
@@ -1186,7 +1187,7 @@ EOF
 		fi
 	fi
 }
-# Configure OpenSSH to listen on specific interface specified by user
+# Configure OpenSSH to listen on loopback and specific interface specified by user
 function configure_openssh() {
 	local std_error_output=
 	local opensshd_config_folder="/etc/ssh"
@@ -1228,7 +1229,7 @@ function configure_openssh() {
 		fi
 	fi
 }
-# Authenticate "root" user on system using RSA authentication
+# Authenticate "root" user on system using RSA keys
 function add_opensshkey() {
 	local std_error_output=
 	local openssh_authorizedkeys_folder="/root/.ssh"
@@ -1316,7 +1317,7 @@ function add_opensshkey() {
 		fi
 	fi
 }
-# Configure Postfix to listen on loopback interface
+# Configure Postfix to use Internet Protocol version 4
 function configure_postfix() {
 	local std_error_output=
 	local postfix_config_folder="/etc/postfix"
