@@ -7,12 +7,12 @@
 #mail			: mikael.andre.1989@gmail.com
 #created		: 20150219
 #last revision	: 20150309
-#version		: 1.1
+#version		: 1.2
 #platform		: Linux
 #processor		: 64 Bits
 #os				: CentOS
 #os version		: 6.5 or 6.6
-#usage			: sh install_graylog.sh
+#usage			: sh install_graylog.sh -i|-a <VARIABLES FILE>
 #notes			: Copy and paste in Vi to use this script
 #==============================================================================
 
@@ -1115,7 +1115,7 @@ function install_networkpackages() {
 		log "INFO" "Network packages: Already installed"
 		echo_passed "PASS"
 	else
-		std_error_output=$(yum -y install wget tcpdump traceroute bind-utils telnet openssh-clients system-config-firewall-tui 2>&1 >/dev/null)
+		std_error_output=$(yum -y install wget tcpdump traceroute bind-utils telnet openssh-clients system-config-firewall 2>&1 >/dev/null)
 		if [ "$std_error_output" == "" ] || [[ "$std_error_output" =~ [Ww]arning.* ]]
 		then
 			log "INFO" "Network packages: Successfully installed"
