@@ -26,5 +26,8 @@ This shell script installs all Graylog components (server and web) on one server
 5. Launch it with the following command
   - `~/install_graylog.sh`
 
+## License ##
+This `install_graylog.sh` and `graylog_variables.cfg` are distributed under GNU GPL v2 license, see LICENSE.
+
 ## Contact
 Feel free to contact me by mail or Github if you have any issues or suggestions.
