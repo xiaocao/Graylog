@@ -12,7 +12,7 @@ Find prerequisites and installation documentations at [http://mikael-andre.githu
 * Mikaël ANDRE - Network Engineer at Telindus FRANCE
 
 ## License ##
-This `install_graylog.sh` and `graylog_variables.cfg` are distributed under GNU GPL v2 license, see LICENSE.
+These files `install_graylog.sh` and `graylog_variables.cfg` are distributed under GNU GPL v2 license, see LICENSE.
 
 ### Contact ###
 Feel free to contact me by [GitHub](https://github.com/mikael-andre/Graylog/issues) if you have any issues or suggest features.
