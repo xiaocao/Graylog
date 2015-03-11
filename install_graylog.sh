@@ -6,8 +6,8 @@
 #job title     : Network engineer
 #mail          : mikael.andre.1989@gmail.com
 #created       : 20150219
-#last revision : 20150310
-#version       : 1.3
+#last revision : 20150311
+#version       : 1.4
 #platform      : Linux
 #processor     : 64 Bits
 #os            : CentOS
@@ -35,6 +35,8 @@ INSTALLATION_CFG_FILE=""
 NETWORK_INTERFACE_NAME=
 # NTP VARIABLES
 BOOLEAN_NTP_ONSTARTUP=
+BOOLEAN_NTP_CONFIGURE=
+NEW_NTP_ADDRESS=
 # SSH VARIABLES
 BOOLEAN_USE_OPENSSHKEY=
 OPENSSH_PERSONAL_KEY=
@@ -46,7 +48,7 @@ MONGO_GRAYLOG_DATABASE=
 MONGO_GRAYLOG_USER=
 MONGO_GRAYLOG_PASSWORD=
 # SSL VARIABLES
-SSL_KEY_SIZE="2048"
+SSL_KEY_SIZE=
 SSL_KEY_DURATION=
 SSL_SUBJECT_COUNTRY=
 SSL_SUBJECT_STATE=
@@ -61,18 +63,22 @@ GRAYLOGWEBGUI_RAM_RESERVATION="256m"
 # ELASTICSEARCH VARIABLES
 BOOLEAN_ELASTICSEARCH_ONSTARTUP=
 BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=
-# SMTP VARIABLES
-SMTP_HOST_NAME=
-SMTP_DOMAIN_NAME=
-SMTP_PORT_NUMBER=
-SMTP_AUTH_USERNAME=
-SMTP_AUTH_PASSWORD=
 # GRAYLOG VARIABLES
 BOOLEAN_GRAYLOGSERVER_ONSTARTUP=
 BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=
 GRAYLOG_SECRET_PASSWORD=
-GRAYLOG_ADMIN_USERNAME="admin"
+GRAYLOG_ADMIN_USERNAME=
 GRAYLOG_ADMIN_PASSWORD=
+GRAYLOG_USE_SMTP=
+# SMTP VARIABLES
+SMTP_HOST_NAME=
+SMTP_DOMAIN_NAME=
+SMTP_PORT_NUMBER=
+SMTP_USE_AUTH=
+SMTP_USE_TLS=
+SMTP_USE_SSL=
+SMTP_AUTH_USERNAME=
+SMTP_AUTH_PASSWORD=
 # NGINX VARIABLES
 BOOLEAN_NGINX_ONSTARTUP=
 # TERMINAL VARIABLES
@@ -232,10 +238,10 @@ function set_globalvariables() {
     done
     log "INFO" "Global variables: NETWORK_INTERFACE_NAME modified by user (New value=$NETWORK_INTERFACE_NAME)"
   else
-    NETWORK_INTERFACE_NAME="eth0"
+    NETWORK_INTERFACE_NAME='eth0'
     log "INFO" "Global variables: NETWORK_INTERFACE_NAME not modified by user (Default value=$NETWORK_INTERFACE_NAME)"
   fi
-  echo "NETWORK_INTERFACE_NAME=\"$NETWORK_INTERFACE_NAME\"" >> $installation_cfg_tmpfile
+  echo "NETWORK_INTERFACE_NAME='$NETWORK_INTERFACE_NAME'" >> $installation_cfg_tmpfile
   yes_no_function "Do you want to use your OpenSSH key to authenticate you on GRAYLOG server ?" "yes"
   if [ $? -eq 0 ]
   then
@@ -247,12 +253,12 @@ function set_globalvariables() {
       read OPENSSH_PERSONAL_KEY
     done
     log "INFO" "Global variables: OPENSSH_PERSONAL_KEY modified by user (New value=$OPENSSH_PERSONAL_KEY)"
-    echo "OPENSSH_PERSONAL_KEY=\"$OPENSSH_PERSONAL_KEY\"" >> $installation_cfg_tmpfile
+    echo "OPENSSH_PERSONAL_KEY='$OPENSSH_PERSONAL_KEY'" >> $installation_cfg_tmpfile
   else
     BOOLEAN_USE_OPENSSHKEY=0
     log "INFO" "Global variables: OPENSSH_PERSONAL_KEY not modified by user (Default value=$OPENSSH_PERSONAL_KEY)"
   fi
-  echo "BOOLEAN_USE_OPENSSHKEY=\"$BOOLEAN_USE_OPENSSHKEY\"" >> $installation_cfg_tmpfile
+  echo "BOOLEAN_USE_OPENSSHKEY=$BOOLEAN_USE_OPENSSHKEY" >> $installation_cfg_tmpfile
   yes_no_function "Do you want to modify time zone of server, default value : ${SETCOLOR_INFO}Europe/Paris${SETCOLOR_NORMAL} ?" "yes"
   if [ "$?" == 0 ]
   then
@@ -264,10 +270,27 @@ function set_globalvariables() {
     done
     log "INFO" "Global variables: SERVER_TIME_ZONE modified by user (New value=$SERVER_TIME_ZONE)"
   else
-    SERVER_TIME_ZONE="Europe/Paris"
+    SERVER_TIME_ZONE='Europe/Paris'
     log "INFO" "Global variables: SERVER_TIME_ZONE not modified by user (Default value=$SERVER_TIME_ZONE)"
   fi
-  echo "SERVER_TIME_ZONE=\"$SERVER_TIME_ZONE\"" >> $installation_cfg_tmpfile
+  echo "SERVER_TIME_ZONE='$SERVER_TIME_ZONE'" >> $installation_cfg_tmpfile
+  yes_no_function "Do you want to configure NTP service ?" "yes"
+  if [ "$?" == 0 ]
+  then
+    BOOLEAN_NTP_CONFIGURE=1
+    while [ -z "$NEW_NTP_ADDRESS" ]
+    do
+      echo -e "Type IP address/hostname of NTP server, followed by [ENTER]:"
+      echo -en "> "
+      read NEW_NTP_ADDRESS
+    done
+    log "INFO" "Global variables: NEW_NTP_ADDRESS set by user (New value=$NEW_NTP_ADDRESS)"
+    echo "NEW_NTP_ADDRESS='$NEW_NTP_ADDRESS'" >> $installation_cfg_tmpfile
+  else
+    BOOLEAN_NTP_CONFIGURE=0
+    log "INFO" "Global variables: Used default CentOS NTP servers"
+  fi
+  echo "BOOLEAN_NTP_CONFIGURE=$BOOLEAN_NTP_CONFIGURE" >> $installation_cfg_tmpfile
   yes_no_function "Do you want to add NTP on startup ?" "yes"
   if [ "$?" == 0 ]
   then
@@ -275,7 +298,7 @@ function set_globalvariables() {
   else
     BOOLEAN_NTP_ONSTARTUP=0
   fi
-  echo "BOOLEAN_NTP_ONSTARTUP=\"$BOOLEAN_NTP_ONSTARTUP\"" >> $installation_cfg_tmpfile
+  echo "BOOLEAN_NTP_ONSTARTUP=$BOOLEAN_NTP_ONSTARTUP" >> $installation_cfg_tmpfile
   yes_no_function "Do you want to modify password of Mongo administrator, default value : ${SETCOLOR_INFO}admin4mongo${SETCOLOR_NORMAL} ?" "yes"
   if [ $? -eq 0 ]
   then
@@ -287,10 +310,10 @@ function set_globalvariables() {
     done
     log "INFO" "Global variables: MONGO_ADMIN_PASSWORD modified by user (New value=$MONGO_ADMIN_PASSWORD)"
   else
-    MONGO_ADMIN_PASSWORD="admin4mongo"
+    MONGO_ADMIN_PASSWORD='admin4mongo'
     log "INFO" "Global variables: MONGO_ADMIN_PASSWORD not modified by user (Default value=$MONGO_ADMIN_PASSWORD)"
   fi
-  echo "MONGO_ADMIN_PASSWORD=\"$MONGO_ADMIN_PASSWORD\"" >> $installation_cfg_tmpfile
+  echo "MONGO_ADMIN_PASSWORD='$MONGO_ADMIN_PASSWORD'" >> $installation_cfg_tmpfile
   yes_no_function "Do you want to modify name of Mongo database, default value : ${SETCOLOR_INFO}graylog${SETCOLOR_NORMAL} ?" "no"
   if [ $? -eq 0 ]
   then
@@ -302,10 +325,10 @@ function set_globalvariables() {
     done
     log "INFO" "Global variables: MONGO_GRAYLOG_DATABASE modified by user (New value=$MONGO_GRAYLOG_DATABASE)"
   else
-    MONGO_GRAYLOG_DATABASE="graylog"
+    MONGO_GRAYLOG_DATABASE='graylog'
     log "INFO" "Global variables: MONGO_GRAYLOG_DATABASE not modified by user (Default value=$MONGO_GRAYLOG_DATABASE)"
   fi
-  echo "MONGO_GRAYLOG_DATABASE=\"$MONGO_GRAYLOG_DATABASE\"" >> $installation_cfg_tmpfile
+  echo "MONGO_GRAYLOG_DATABASE='$MONGO_GRAYLOG_DATABASE'" >> $installation_cfg_tmpfile
   yes_no_function "Do you want to modify login of Mongo Graylog user, default value : ${SETCOLOR_INFO}grayloguser${SETCOLOR_NORMAL} ?" "no"
   if [ $? -eq 0 ]
   then
@@ -317,10 +340,10 @@ function set_globalvariables() {
     done
     log "INFO" "Global variables: MONGO_GRAYLOG_USER modified by user (New value=$MONGO_GRAYLOG_USER)"
   else
-    MONGO_GRAYLOG_USER="grayloguser"
+    MONGO_GRAYLOG_USER='grayloguser'
     log "INFO" "Global variables: MONGO_GRAYLOG_USER not modified by user (Default value=$MONGO_GRAYLOG_USER)"
   fi
-  echo "MONGO_GRAYLOG_USER=\"$MONGO_GRAYLOG_USER\"" >> $installation_cfg_tmpfile
+  echo "MONGO_GRAYLOG_USER='$MONGO_GRAYLOG_USER'" >> $installation_cfg_tmpfile
   yes_no_function "Do you want to modify password of Mongo Graylog user, default value : ${SETCOLOR_INFO}graylog4mongo${SETCOLOR_NORMAL} ?" "yes"
   if [ $? -eq 0 ]
   then
@@ -332,10 +355,10 @@ function set_globalvariables() {
     done
     log "INFO" "Global variables: MONGO_GRAYLOG_PASSWORD modified by user (New value=$MONGO_GRAYLOG_PASSWORD)"
   else
-    MONGO_GRAYLOG_PASSWORD="graylog4mongo"
+    MONGO_GRAYLOG_PASSWORD='graylog4mongo'
     log "INFO" "Global variables: MONGO_GRAYLOG_PASSWORD not modified by user (Default value=$MONGO_GRAYLOG_PASSWORD)"
   fi
-  echo "MONGO_GRAYLOG_PASSWORD=\"$MONGO_GRAYLOG_PASSWORD\"" >> $installation_cfg_tmpfile
+  echo "MONGO_GRAYLOG_PASSWORD='$MONGO_GRAYLOG_PASSWORD'" >> $installation_cfg_tmpfile
   yes_no_function "Do you want to add Mongo database server on startup ?" "yes"
   if [ "$?" == 0 ]
   then
@@ -343,7 +366,22 @@ function set_globalvariables() {
   else
     BOOLEAN_MONGO_ONSTARTUP=0
   fi
-  echo "BOOLEAN_MONGO_ONSTARTUP=\"$BOOLEAN_MONGO_ONSTARTUP\"" >> $installation_cfg_tmpfile
+  echo "BOOLEAN_MONGO_ONSTARTUP=$BOOLEAN_MONGO_ONSTARTUP" >> $installation_cfg_tmpfile
+  yes_no_function "Do you want to modify siez of SSL private key, default value : ${SETCOLOR_INFO}2048${SETCOLOR_NORMAL} ?" "no"
+  if [ $? -eq 0 ]
+  then
+    while [ -z "$SSL_KEY_SIZE" ] || [[ ! "$SSL_KEY_SIZE" =~ 512|1024|2048|4096 ]]
+    do
+      echo -e "Type the size of SSL private key (possible values : 512|1024|2048|4096), followed by [ENTER]:"
+      echo -en "> "
+      read SSL_KEY_SIZE
+    done
+    log "INFO" "Global variables: SSL_KEY_SIZE modified by user (New value=$SSL_KEY_SIZE)"
+  else
+    SSL_KEY_SIZE=2048
+    log "INFO" "Global variables: SSL_KEY_SIZE not modified by user (Default value=$SSL_KEY_SIZE)"
+  fi
+  echo "SSL_KEY_SIZE=$SSL_KEY_SIZE" >> $installation_cfg_tmpfile
   yes_no_function "Do you want to modify period of validity of SSL Certificate, default value : ${SETCOLOR_INFO}365${SETCOLOR_NORMAL} ?" "no"
   if [ $? -eq 0 ]
   then
@@ -355,10 +393,10 @@ function set_globalvariables() {
     done
     log "INFO" "Global variables: SSL_KEY_DURATION modified by user (New value=$SSL_KEY_DURATION)"
   else
-    SSL_KEY_DURATION="365"
+    SSL_KEY_DURATION=365
     log "INFO" "Global variables: SSL_KEY_DURATION not modified by user (Default value=$SSL_KEY_DURATION)"
   fi
-  echo "SSL_KEY_DURATION=\"$SSL_KEY_DURATION\"" >> $installation_cfg_tmpfile
+  echo "SSL_KEY_DURATION=$SSL_KEY_DURATION" >> $installation_cfg_tmpfile
   yes_no_function "Do you want to modify the country code of SSL Certificate, default value : ${SETCOLOR_INFO}FR${SETCOLOR_NORMAL} ?" "yes"
   if [ $? -eq 0 ]
   then
@@ -370,10 +408,10 @@ function set_globalvariables() {
     done
     log "INFO" "Global variables: SSL_SUBJECT_COUNTRY modified by user (New value=$SSL_SUBJECT_COUNTRY)"
   else
-    SSL_SUBJECT_COUNTRY="FR"
+    SSL_SUBJECT_COUNTRY='FR'
     log "INFO" "Global variables: SSL_SUBJECT_COUNTRY not modified by user (Default value=$SSL_SUBJECT_COUNTRY)"
   fi
-  echo "SSL_SUBJECT_COUNTRY=\"$SSL_SUBJECT_COUNTRY\"" >> $installation_cfg_tmpfile
+  echo "SSL_SUBJECT_COUNTRY='$SSL_SUBJECT_COUNTRY'" >> $installation_cfg_tmpfile
   yes_no_function "Do you want to modify state of SSL Certificate, default value : ${SETCOLOR_INFO}STATE${SETCOLOR_NORMAL} ?" "yes"
   if [ $? -eq 0 ]
   then
@@ -385,10 +423,10 @@ function set_globalvariables() {
     done
     log "INFO" "Global variables: SSL_SUBJECT_STATE modified by user (New value=$SSL_SUBJECT_STATE)"
   else
-    SSL_SUBJECT_STATE="STATE"
+    SSL_SUBJECT_STATE='STATE'
     log "INFO" "Global variables: SSL_SUBJECT_STATE not modified by user (Default value=$SSL_SUBJECT_STATE)"
   fi
-  echo "SSL_SUBJECT_STATE=\"$SSL_SUBJECT_STATE\"" >> $installation_cfg_tmpfile
+  echo "SSL_SUBJECT_STATE='$SSL_SUBJECT_STATE'" >> $installation_cfg_tmpfile
   yes_no_function "Do you want to modify locality of SSL Certificate, default value : ${SETCOLOR_INFO}LOCALITY${SETCOLOR_NORMAL} ?" "yes"
   if [ $? -eq 0 ]
   then
@@ -400,10 +438,10 @@ function set_globalvariables() {
     done
     log "INFO" "Global variables: SSL_SUBJECT_LOCALITY modified by user (New value=$SSL_SUBJECT_LOCALITY)"
   else
-    SSL_SUBJECT_LOCALITY="LOCALITY"
+    SSL_SUBJECT_LOCALITY='LOCALITY'
     log "INFO" "Global variables: SSL_SUBJECT_LOCALITY not modified by user (Default value=$SSL_SUBJECT_LOCALITY)"
   fi
-  echo "SSL_SUBJECT_LOCALITY=\"$SSL_SUBJECT_LOCALITY\"" >> $installation_cfg_tmpfile
+  echo "SSL_SUBJECT_LOCALITY='$SSL_SUBJECT_LOCALITY'" >> $installation_cfg_tmpfile
   yes_no_function "Do you want to modify organization name of SSL Certificate, default value : ${SETCOLOR_INFO}Organisation${SETCOLOR_NORMAL} ?" "yes"
   if [ $? -eq 0 ]
   then
@@ -415,10 +453,10 @@ function set_globalvariables() {
     done
     log "INFO" "Global variables: SSL_SUBJECT_ORGANIZATION modified by user (New value=$SSL_SUBJECT_ORGANIZATION)"
   else
-    SSL_SUBJECT_ORGANIZATION="Organisation"
+    SSL_SUBJECT_ORGANIZATION='Organisation'
     log "INFO" "Global variables: SSL_SUBJECT_ORGANIZATION not modified by user (Default value=$SSL_SUBJECT_ORGANIZATION)"
   fi
-  echo "SSL_SUBJECT_ORGANIZATION=\"$SSL_SUBJECT_ORGANIZATION\"" >> $installation_cfg_tmpfile
+  echo "SSL_SUBJECT_ORGANIZATION='$SSL_SUBJECT_ORGANIZATION'" >> $installation_cfg_tmpfile
   yes_no_function "Do you want to modify organization unit name of SSL Certificate, default value : ${SETCOLOR_INFO}Organisation Unit${SETCOLOR_NORMAL} ?" "yes"
   if [ $? -eq 0 ]
   then
@@ -430,10 +468,10 @@ function set_globalvariables() {
     done
     log "INFO" "Global variables: SSL_SUBJECT_ORGANIZATIONUNIT modified by user (New value=$SSL_SUBJECT_ORGANIZATIONUNIT)"
   else
-    SSL_SUBJECT_ORGANIZATIONUNIT="Organisation Unit"
+    SSL_SUBJECT_ORGANIZATIONUNIT='Organisation Unit'
     log "INFO" "Global variables: SSL_SUBJECT_ORGANIZATIONUNIT not modified by user (Default value=$SSL_SUBJECT_ORGANIZATIONUNIT)"
   fi
-  echo "SSL_SUBJECT_ORGANIZATIONUNIT=\"$SSL_SUBJECT_ORGANIZATIONUNIT\"" >> $installation_cfg_tmpfile
+  echo "SSL_SUBJECT_ORGANIZATIONUNIT='$SSL_SUBJECT_ORGANIZATIONUNIT'" >> $installation_cfg_tmpfile
   yes_no_function "Do you want to modify mail address of SSL Certificate, default value : ${SETCOLOR_INFO}mail.address@test.fr${SETCOLOR_NORMAL} ?" "yes"
   if [ $? -eq 0 ]
   then
@@ -445,85 +483,10 @@ function set_globalvariables() {
     done
     log "INFO" "Global variables: SSL_SUBJECT_EMAIL modified by user (New value=$SSL_SUBJECT_EMAIL)"
   else
-    SSL_SUBJECT_EMAIL="mail.address@test.fr"
+    SSL_SUBJECT_EMAIL='mail.address@test.fr'
     log "INFO" "Global variables: SSL_SUBJECT_EMAIL not modified by user (Default value=$SSL_SUBJECT_EMAIL)"
   fi
-  echo "SSL_SUBJECT_EMAIL=\"$SSL_SUBJECT_EMAIL\"" >> $installation_cfg_tmpfile
-  yes_no_function "Do you want to modify fully qualified domain name (FQDN) of SMTP server, default value : ${SETCOLOR_INFO}smtp.test.fr${SETCOLOR_NORMAL} ?" "yes"
-  if [ $? -eq 0 ]
-  then
-    while [ -z "$SMTP_HOST_NAME" ]
-    do    
-      echo -e "Type the FQDN of SMTP server, followed by [ENTER]:"
-      echo -en "> "
-      read SMTP_HOST_NAME
-    done
-    log "INFO" "Global variables: SMTP_HOST_NAME modified by user (New value=$SMTP_HOST_NAME)"
-  else
-    SMTP_HOST_NAME="smtp.test.fr"
-    log "INFO" "Global variables: SMTP_HOST_NAME not modified by user (Default value=$SMTP_HOST_NAME)"
-  fi
-  echo "SMTP_HOST_NAME=\"$SMTP_HOST_NAME\"" >> $installation_cfg_tmpfile
-  yes_no_function "Do you want to modify domain name, default value : ${SETCOLOR_INFO}test.fr${SETCOLOR_NORMAL} ?" "yes"
-  if [ $? -eq 0 ]
-  then
-    while [ -z "$SMTP_DOMAIN_NAME" ]
-    do
-      echo -e "Type the domaine name, followed by [ENTER]:"
-      echo -en "> "
-      read SMTP_DOMAIN_NAME
-    done
-    log "INFO" "Global variables: SMTP_DOMAIN_NAME modified by user (New value=$SMTP_DOMAIN_NAME)"
-  else
-    SMTP_DOMAIN_NAME="test.fr"
-    log "INFO" "Global variables: SMTP_DOMAIN_NAME not modified by user (Default value=$SMTP_DOMAIN_NAME)"
-  fi
-  echo "SMTP_DOMAIN_NAME=\"$SMTP_DOMAIN_NAME\"" >> $installation_cfg_tmpfile
-  yes_no_function "Do you want to modify SMTP port number, default value : ${SETCOLOR_INFO}465${SETCOLOR_NORMAL} ?" "yes"
-  if [ $? -eq 0 ]
-  then
-    while [ -z "$SMTP_PORT_NUMBER" ]
-    do
-      echo -e "Type the SMTP port number, followed by [ENTER]:"
-      echo -en "> "
-      read SMTP_PORT_NUMBER
-    done
-    log "INFO" "Global variables: SMTP_PORT_NUMBER modified by user (New value=$SMTP_PORT_NUMBER)"
-  else
-    SMTP_PORT_NUMBER="465"
-    log "INFO" "Global variables: SMTP_PORT_NUMBER not modified by user (Default value=$SMTP_PORT_NUMBER)"
-  fi
-  echo "SMTP_PORT_NUMBER=\"$SMTP_PORT_NUMBER\"" >> $installation_cfg_tmpfile
-  yes_no_function "Do you want to modify SMTP authentication user, default value : ${SETCOLOR_INFO}test@test.fr${SETCOLOR_NORMAL} ?" "yes"
-  if [ $? -eq 0 ]
-  then
-    while [ -z "$SMTP_AUTH_USERNAME" ]
-    do
-      echo -e "Type the SMTP authentication user, followed by [ENTER]:"
-      echo -en "> "
-      read SMTP_AUTH_USERNAME
-    done
-    log "INFO" "Global variables: SMTP_AUTH_USERNAME modified by user (New value=$SMTP_AUTH_USERNAME)"
-  else
-    SMTP_AUTH_USERNAME="test@test.fr"
-    log "INFO" "Global variables: SMTP_AUTH_USERNAME not modified by user (Default value=$SMTP_AUTH_USERNAME)"
-  fi
-  echo "SMTP_AUTH_USERNAME=\"$SMTP_AUTH_USERNAME\"" >> $installation_cfg_tmpfile
-  yes_no_function "Do you want to modify SMTP authentication password, default value : ${SETCOLOR_INFO}password123${SETCOLOR_NORMAL} ?" "yes"
-  if [ $? -eq 0 ]
-  then
-    while [ -z "$SMTP_AUTH_PASSWORD" ]
-    do
-      echo -e "Type the SMTP authentication password, followed by [ENTER]:"
-      echo -en "> "
-      read SMTP_AUTH_PASSWORD
-    done
-    log "INFO" "Global variables: SMTP_AUTH_PASSWORD modified by user (New value=$SMTP_AUTH_PASSWORD)"
-  else
-    SMTP_AUTH_PASSWORD="password123"
-    log "INFO" "Global variables: SMTP_AUTH_PASSWORD not modified by user (Default value=$SMTP_AUTH_PASSWORD)"
-  fi
-  echo "SMTP_AUTH_PASSWORD=\"$SMTP_AUTH_PASSWORD\"" >> $installation_cfg_tmpfile
+  echo "SSL_SUBJECT_EMAIL='$SSL_SUBJECT_EMAIL'" >> $installation_cfg_tmpfile
   yes_no_function "Do you want to install HQ plugin to manage ElasticSearch ?" "yes"
   if [ $? -eq 0 ]
   then
@@ -531,7 +494,7 @@ function set_globalvariables() {
   else
     BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=0
   fi
-  echo "BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=\"$BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN\"" >> $installation_cfg_tmpfile
+  echo "BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=$BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN" >> $installation_cfg_tmpfile
   yes_no_function "Do you want to add ElasticSearch server on startup ?" "yes"
   if [ "$?" == 0 ]
   then
@@ -539,7 +502,7 @@ function set_globalvariables() {
   else
     BOOLEAN_ELASTICSEARCH_ONSTARTUP=0
   fi
-  echo "BOOLEAN_ELASTICSEARCH_ONSTARTUP=\"$BOOLEAN_ELASTICSEARCH_ONSTARTUP\"" >> $installation_cfg_tmpfile
+  echo "BOOLEAN_ELASTICSEARCH_ONSTARTUP=$BOOLEAN_ELASTICSEARCH_ONSTARTUP" >> $installation_cfg_tmpfile
   yes_no_function "Do you want to modify Graylog secret password, default value : ${SETCOLOR_INFO}secretpassword${SETCOLOR_NORMAL} ?" "yes"
   if [ $? -eq 0 ]
   then
@@ -551,10 +514,25 @@ function set_globalvariables() {
     done
     log "INFO" "Global variables: GRAYLOG_SECRET_PASSWORD modified by user (New value=$GRAYLOG_SECRET_PASSWORD)"
   else
-    GRAYLOG_SECRET_PASSWORD="secretpassword"
+    GRAYLOG_SECRET_PASSWORD='secretpassword'
     log "INFO" "Global variables: GRAYLOG_SECRET_PASSWORD not modified by user (Default value=$GRAYLOG_SECRET_PASSWORD)"
   fi
-  echo "GRAYLOG_SECRET_PASSWORD=\"$GRAYLOG_SECRET_PASSWORD\"" >> $installation_cfg_tmpfile
+  echo "GRAYLOG_SECRET_PASSWORD='$GRAYLOG_SECRET_PASSWORD'" >> $installation_cfg_tmpfile
+  yes_no_function "Do you want to modify login of Graylog admin user, default value : ${SETCOLOR_INFO}admin${SETCOLOR_NORMAL} ?" "no"
+  if [ $? -eq 0 ]
+  then
+    while [ -z "$GRAYLOG_ADMIN_USERNAME" ]
+    do
+      echo -e "Type the login of Graylog admin user, followed by [ENTER]:"
+      echo -en "> "
+      read GRAYLOG_ADMIN_USERNAME
+    done
+    log "INFO" "Global variables: GRAYLOG_ADMIN_USERNAME modified by user (New value=$GRAYLOG_ADMIN_USERNAME)"
+  else
+    GRAYLOG_ADMIN_USERNAME='admin'
+    log "INFO" "Global variables: GRAYLOG_ADMIN_USERNAME not modified by user (Default value=$GRAYLOG_ADMIN_USERNAME)"
+  fi
+  echo "GRAYLOG_ADMIN_USERNAME='$GRAYLOG_ADMIN_USERNAME'" >> $installation_cfg_tmpfile
   yes_no_function "Do you want to modify Graylog administrator password, default value : ${SETCOLOR_INFO}adminpassword${SETCOLOR_NORMAL} ?" "yes"
   if [ $? -eq 0 ]
   then
@@ -566,10 +544,145 @@ function set_globalvariables() {
     done
     log "INFO" "Global variables: GRAYLOG_ADMIN_PASSWORD modified by user (New value=$GRAYLOG_ADMIN_PASSWORD)"
   else
-    GRAYLOG_ADMIN_PASSWORD="adminpassword"
+    GRAYLOG_ADMIN_PASSWORD='adminpassword'
     log "INFO" "Global variables: GRAYLOG_ADMIN_PASSWORD not modified by user (Default value=$GRAYLOG_ADMIN_PASSWORD)"
   fi
-  echo "GRAYLOG_ADMIN_PASSWORD=\"$GRAYLOG_ADMIN_PASSWORD\"" >> $installation_cfg_tmpfile
+  echo "GRAYLOG_ADMIN_PASSWORD='$GRAYLOG_ADMIN_PASSWORD'" >> $installation_cfg_tmpfile
+  yes_no_function "Do you want to use Simple Mail Transport Protocol (SMTP) for Graylog ?" "yes"
+  if [ $? -eq 0 ]
+  then
+    GRAYLOG_USE_SMTP='true'
+    log "INFO" "Global variables: GRAYLOG_USE_SMTP set to true by user (GRAYLOG_USE_SMTP=$GRAYLOG_USE_SMTP)"
+    yes_no_function "Do you want to modify fully qualified domain name (FQDN) of SMTP server, default value : ${SETCOLOR_INFO}mail.example.com${SETCOLOR_NORMAL} ?" "yes"
+    if [ $? -eq 0 ]
+    then
+      while [ -z "$SMTP_HOST_NAME" ]
+      do    
+        echo -e "Type the FQDN of SMTP server, followed by [ENTER]:"
+        echo -en "> "
+        read SMTP_HOST_NAME
+      done
+      log "INFO" "Global variables: SMTP_HOST_NAME modified by user (New value=$SMTP_HOST_NAME)"
+    else
+      SMTP_HOST_NAME='mail.example.com'
+      log "INFO" "Global variables: SMTP_HOST_NAME not modified by user (Default value=$SMTP_HOST_NAME)"
+    fi
+    echo "SMTP_HOST_NAME='$SMTP_HOST_NAME'" >> $installation_cfg_tmpfile
+    yes_no_function "Do you want to modify domain name, default value : ${SETCOLOR_INFO}example.com${SETCOLOR_NORMAL} ?" "yes"
+    if [ $? -eq 0 ]
+    then
+      while [ -z "$SMTP_DOMAIN_NAME" ]
+      do
+        echo -e "Type the domaine name, followed by [ENTER]:"
+        echo -en "> "
+        read SMTP_DOMAIN_NAME
+      done
+      log "INFO" "Global variables: SMTP_DOMAIN_NAME modified by user (New value=$SMTP_DOMAIN_NAME)"
+    else
+      SMTP_DOMAIN_NAME='example.com'
+      log "INFO" "Global variables: SMTP_DOMAIN_NAME not modified by user (Default value=$SMTP_DOMAIN_NAME)"
+    fi
+    echo "SMTP_DOMAIN_NAME='$SMTP_DOMAIN_NAME'" >> $installation_cfg_tmpfile
+    yes_no_function "Do you want to modify SMTP port number, default value : ${SETCOLOR_INFO}587${SETCOLOR_NORMAL} ?" "yes"
+    if [ $? -eq 0 ]
+    then
+      while [ -z "$SMTP_PORT_NUMBER" ]
+      do
+        echo -e "Type the SMTP port number, followed by [ENTER]:"
+        echo -en "> "
+        read SMTP_PORT_NUMBER
+      done
+      log "INFO" "Global variables: SMTP_PORT_NUMBER modified by user (New value=$SMTP_PORT_NUMBER)"
+    else
+      SMTP_PORT_NUMBER=587
+      log "INFO" "Global variables: SMTP_PORT_NUMBER not modified by user (Default value=$SMTP_PORT_NUMBER)"
+    fi
+    echo "SMTP_PORT_NUMBER=$SMTP_PORT_NUMBER" >> $installation_cfg_tmpfile
+    yes_no_function "Do you want to use SMTP authentication ?" "yes"
+    if [ $? -eq 0 ]
+    then
+      SMTP_USE_AUTH='true'
+      yes_no_function "Do you want to use TLS for SMTP ?" "yes"
+      if [ $? -eq 0 ]
+      then
+        SMTP_USE_TLS='true'
+      else
+        SMTP_USE_TLS='false'
+      fi
+      log "INFO" "Global variables: SMTP_USE_TLS set to $SMTP_USE_TLS"
+      echo "SMTP_USE_TLS='$SMTP_USE_TLS'" >> $installation_cfg_tmpfile
+      yes_no_function "Do you want to use SSL for SMTP ?" "yes"
+      if [ $? -eq 0 ]
+      then
+        SMTP_USE_SSL='true'
+      else
+        SMTP_USE_SSL='false'
+      fi
+      log "INFO" "Global variables: SMTP_USE_SSL set to $SMTP_USE_SSL"
+      echo "SMTP_USE_SSL='$SMTP_USE_SSL'" >> $installation_cfg_tmpfile
+      yes_no_function "Do you want to modify SMTP authentication user, default value : ${SETCOLOR_INFO}you@example.com${SETCOLOR_NORMAL} ?" "yes"
+      if [ $? -eq 0 ]
+      then
+        while [ -z "$SMTP_AUTH_USERNAME" ]
+        do
+          echo -e "Type the SMTP authentication user, followed by [ENTER]:"
+          echo -en "> "
+          read SMTP_AUTH_USERNAME
+        done
+        log "INFO" "Global variables: SMTP_AUTH_USERNAME modified by user (New value=$SMTP_AUTH_USERNAME)"
+      else
+        SMTP_AUTH_USERNAME='you@example.com'
+        log "INFO" "Global variables: SMTP_AUTH_USERNAME not modified by user (Default value=$SMTP_AUTH_USERNAME)"
+      fi
+      echo "SMTP_AUTH_USERNAME='$SMTP_AUTH_USERNAME'" >> $installation_cfg_tmpfile
+      yes_no_function "Do you want to modify SMTP authentication password, default value : ${SETCOLOR_INFO}secret${SETCOLOR_NORMAL} ?" "yes"
+      if [ $? -eq 0 ]
+      then
+        while [ -z "$SMTP_AUTH_PASSWORD" ]
+        do
+          echo -e "Type the SMTP authentication password, followed by [ENTER]:"
+          echo -en "> "
+          read SMTP_AUTH_PASSWORD
+        done
+        log "INFO" "Global variables: SMTP_AUTH_PASSWORD modified by user (New value=$SMTP_AUTH_PASSWORD)"
+      else
+        SMTP_AUTH_PASSWORD='secret'
+        log "INFO" "Global variables: SMTP_AUTH_PASSWORD not modified by user (Default value=$SMTP_AUTH_PASSWORD)"
+      fi
+      echo "SMTP_AUTH_PASSWORD='$SMTP_AUTH_PASSWORD'" >> $installation_cfg_tmpfile
+    else
+      SMTP_USE_AUTH='false'
+      
+      echo "SMTP_USE_TLS='false'" >> $installation_cfg_tmpfile
+      echo "SMTP_USE_SSL='false'" >> $installation_cfg_tmpfile
+      echo "SMTP_AUTH_USERNAME='you@example.com'" >> $installation_cfg_tmpfile
+      log "INFO" "Global variables: SMTP_AUTH_USERNAME not modified by user (Default value=$SMTP_AUTH_USERNAME)"
+      echo "SMTP_AUTH_PASSWORD='secret'" >> $installation_cfg_tmpfile
+      log "INFO" "Global variables: SMTP_AUTH_PASSWORD not modified by user (Default value=$SMTP_AUTH_PASSWORD)"
+    fi
+    log "INFO" "Global variables: SMTP_USE_AUTH set to $SMTP_USE_AUTH"
+    echo "SMTP_USE_AUTH='$SMTP_USE_AUTH'" >> $installation_cfg_tmpfile
+  else
+    GRAYLOG_USE_SMTP='false'
+    echo "SMTP_HOST_NAME='mail.example.com'" >> $installation_cfg_tmpfile
+    log "INFO" "Global variables: SMTP_HOST_NAME not modified by user (Default value=$SMTP_HOST_NAME)"
+    echo "SMTP_DOMAIN_NAME='example.com'" >> $installation_cfg_tmpfile
+    log "INFO" "Global variables: SMTP_DOMAIN_NAME not modified by user (Default value=$SMTP_DOMAIN_NAME)"
+    echo "SMTP_PORT_NUMBER=587" >> $installation_cfg_tmpfile
+    log "INFO" "Global variables: SMTP_PORT_NUMBER not modified by user (Default value=$SMTP_PORT_NUMBER)"
+    echo "SMTP_USE_AUTH='false'" >> $installation_cfg_tmpfile
+    log "INFO" "Global variables: SMTP_USE_AUTH set to default value ($SMTP_USE_AUTH)"
+    echo "SMTP_USE_TLS='false'" >> $installation_cfg_tmpfile
+    log "INFO" "Global variables: SMTP_USE_TLS set to default value ($SMTP_USE_TLS)"
+    echo "SMTP_USE_SSL='false'" >> $installation_cfg_tmpfile
+    log "INFO" "Global variables: SMTP_USE_SSL set to default value ($SMTP_USE_SSL)"
+    echo "SMTP_AUTH_USERNAME='you@example.com'" >> $installation_cfg_tmpfile
+    log "INFO" "Global variables: SMTP_AUTH_USERNAME not modified by user (Default value=$SMTP_AUTH_USERNAME)"
+    echo "SMTP_AUTH_PASSWORD='secret'" >> $installation_cfg_tmpfile
+    log "INFO" "Global variables: SMTP_AUTH_PASSWORD not modified by user (Default value=$SMTP_AUTH_PASSWORD)"
+  fi
+  log "INFO" "Global variables: GRAYLOG_USE_SMTP set to $GRAYLOG_USE_SMTP"
+  echo "GRAYLOG_USE_SMTP='$GRAYLOG_USE_SMTP'" >> $installation_cfg_tmpfile
   yes_no_function "Do you want to add Graylog server on startup ?" "yes"
   if [ "$?" == 0 ]
   then
@@ -577,7 +690,7 @@ function set_globalvariables() {
   else
     BOOLEAN_GRAYLOGSERVER_ONSTARTUP=0
   fi
-  echo "BOOLEAN_GRAYLOGSERVER_ONSTARTUP=\"$BOOLEAN_GRAYLOGSERVER_ONSTARTUP\"" >> $installation_cfg_tmpfile
+  echo "BOOLEAN_GRAYLOGSERVER_ONSTARTUP=$BOOLEAN_GRAYLOGSERVER_ONSTARTUP" >> $installation_cfg_tmpfile
   yes_no_function "Do you want to add Graylog web interface on startup ?" "yes"
   if [ "$?" == 0 ]
   then
@@ -585,7 +698,7 @@ function set_globalvariables() {
   else
     BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=0
   fi
-  echo "BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=\"$BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP\"" >> $installation_cfg_tmpfile
+  echo "BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=$BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP" >> $installation_cfg_tmpfile
   yes_no_function "Do you want to add Nginx web interface on startup ?" "yes"
   if [ "$?" == 0 ]
   then
@@ -593,7 +706,7 @@ function set_globalvariables() {
   else
     BOOLEAN_NGINX_ONSTARTUP=0
   fi
-  echo "BOOLEAN_NGINX_ONSTARTUP=\"$BOOLEAN_NGINX_ONSTARTUP\"" >> $installation_cfg_tmpfile
+  echo "BOOLEAN_NGINX_ONSTARTUP=$BOOLEAN_NGINX_ONSTARTUP" >> $installation_cfg_tmpfile
   INSTALLATION_CFG_FILE=$installation_cfg_tmpfile
 }
 # Get system informations like OS name, OS version, etc...
@@ -958,6 +1071,8 @@ function upgrade_os() {
 function install_ntp() {
   local installed_counter=0
   local std_error_output=
+  local ntp_config_file="/etc/ntp.conf"
+  local ntp_backup_file="$ntp_config_file.dist"
   echo_message "Install NTP service"
   std_error_output=$(yum list installed | grep -w ntp)
   if [[ "$std_error_output" =~ ^ntp\..* ]]
@@ -974,6 +1089,34 @@ function install_ntp() {
     then
       log "INFO" "NTP service: Successfully installed"
       echo_success "OK"
+      echo_message "Configure NTP service"
+      std_error_output=$(test_file ${ntp_backup_file})
+      if [ "$std_error_output" == "0" ]
+      then
+        log "WARN" "NTP service: Already configured"
+        echo_passed "PASS"
+      else
+        if [ $BOOLEAN_NTP_CONFIGURE == 1 ]
+        then
+          std_error_output=$(sed -i.dist \
+          -e "s/\(# Please consider.*\)/\1\nserver $NEW_NTP_ADDRESS/" \
+          -e "s/\(server\s[0-9]\..*\)/#\1/" \
+          $ntp_config_file 2>&1 >/dev/null)
+          if [ "$std_error_output" == "" ]
+          then
+            log "INFO" "NTP service: Successfully configured"
+            echo_success "OK"
+          else
+            log "ERROR" "NTP service: Not configured"
+            log "DEBUG" $std_error_output
+            echo_failure "FAILED"
+            abort_installation
+          fi
+        else
+          log "WARN" "NTP service: Configuration cancelled by user"
+          echo_passed "PASS"
+        fi
+      fi
       echo_message "Start NTP service"
       std_error_output=$(service ntpd start on 2>&1 >/dev/null)
       if [ "$std_error_output" == "" ]
@@ -1863,12 +2006,12 @@ function install_graylogserver() {
           -e "s/#\(mongodb_password = \).*/\1$MONGO_GRAYLOG_PASSWORD/" \
           -e "s/\(mongodb_host = \).*/\1localhost/" \
           -e "s/\(mongodb_database = \).*/\1$MONGO_GRAYLOG_DATABASE/" \
-          -e "s/#\(transport_email_enabled = \).*/\1true/" \
+          -e "s/#\(transport_email_enabled = \).*/\1$GRAYLOG_USE_SMTP/" \
           -e "s/#\(transport_email_hostname = \).*/\1$SMTP_HOST_NAME/" \
           -e "s/#\(transport_email_port = \).*/\1$SMTP_PORT_NUMBER/" \
-          -e "s/#\(transport_email_use_auth = \).*/\1true/" \
-          -e "s/#\(transport_email_use_tls = \).*/\1true/" \
-          -e "s/#\(transport_email_use_ssl = \).*/\1true/" \
+          -e "s/#\(transport_email_use_auth = \).*/\1$SMTP_USE_AUTH/" \
+          -e "s/#\(transport_email_use_tls = \).*/\1$SMTP_USE_TLS/" \
+          -e "s/#\(transport_email_use_ssl = \).*/\1$SMTP_USE_SSL/" \
           -e "s/#\(transport_email_auth_username = \).*/\1$SMTP_AUTH_USERNAME/" \
           -e "s/#\(transport_email_auth_password = \).*/\1$SMTP_AUTH_PASSWORD/" \
           -e "s/#\(transport_email_subject_prefix = .*\)/\1/" \
@@ -2316,32 +2459,32 @@ function main {
     fi
   fi
   get_sysinfo
-  generate_sslkeys
-  configure_yum
-  initialize_yum
-  upgrade_os
-  install_ntp
-  install_lsbpackages
-  install_networkpackages
-  configure_bashrc
-  configure_openssh
-  if [ $BOOLEAN_USE_OPENSSHKEY -eq 1 ]
-  then
-    add_opensshkey
-  else
-    echo_message "Add OpenSSH Key"
-    log "WARN" "SSH personal key: operation cancelled by user"
-    echo_passed "PASS"
-  fi
-  configure_postfix
-  configure_hostsfile
-  configure_selinux
-  install_mongodb
-  install_java
-  install_elasticsearch
-  install_graylogserver
-  install_graylogwebgui
-  install_nginx
+#  generate_sslkeys
+#  configure_yum
+#  initialize_yum
+#  upgrade_os
+#  install_ntp
+#  install_lsbpackages
+#  install_networkpackages
+#  configure_bashrc
+#  configure_openssh
+#  if [ $BOOLEAN_USE_OPENSSHKEY -eq 1 ]
+#  then
+#    add_opensshkey
+#  else
+#    echo_message "Add OpenSSH Key"
+#    log "WARN" "SSH personal key: operation cancelled by user"
+#    echo_passed "PASS"
+#  fi
+#  configure_postfix
+#  configure_hostsfile
+#  configure_selinux
+#  install_mongodb
+#  install_java
+#  install_elasticsearch
+#  install_graylogserver
+#  install_graylogwebgui
+#  install_nginx
   display_informations
   log "INFO" "GRAYLOG installation: End"
 }
