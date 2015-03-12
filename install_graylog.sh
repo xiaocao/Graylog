@@ -223,1289 +223,1100 @@ function test_internet() {
 # Set all global variables using inputs user
 function set_globalvariables() {
   local installation_cfg_tmpfile="$INSTALLATION_LOG_FOLDER/install_graylog_$INSTALLATION_LOG_TIMESTAMP.cfg"
+  local old_input_value=
   touch $installation_cfg_tmpfile
   log "INFO" "Global variables: $installation_cfg_tmpfile successfully created"
   if [ -z "$NETWORK_INTERFACE_NAME" ]
   then
-    yes_no_function "Do you want to modify name of network interface, default value : ${SETCOLOR_INFO}eth0${SETCOLOR_NORMAL} ?" "yes"
+    while [ -z "$NETWORK_INTERFACE_NAME" ]
+    do
+      echo -e "Type network interface name [${SETCOLOR_INFO}eth0${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -en "> "
+      read NETWORK_INTERFACE_NAME
+      if [ -z "$NETWORK_INTERFACE_NAME" ]
+      then
+        NETWORK_INTERFACE_NAME='eth0'
+      fi
+    done
   else
-    yes_no_function "Do you want to modify name of network interface, actual value : ${SETCOLOR_WARNING}${NETWORK_INTERFACE_NAME}${SETCOLOR_NORMAL} ?" "no"
-  fi
-  if [ $? -eq 0 ]
-  then
-    if [ -z "$NETWORK_INTERFACE_NAME" ]
+    yes_no_function "Can you confirm you want to modify current interface name ?" "yes"
+    if [ $? -eq 0 ]
     then
+      old_input_value=$NETWORK_INTERFACE_NAME
+      NETWORK_INTERFACE_NAME=
       while [ -z "$NETWORK_INTERFACE_NAME" ]
       do
-        echo -e "Type network interface name, followed by [ENTER]:"
+        echo -e "Type network interface name [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
         echo -en "> "
         read NETWORK_INTERFACE_NAME
+        if [ -z "$NETWORK_INTERFACE_NAME" ]
+        then
+          NETWORK_INTERFACE_NAME=$old_input_value
+        fi
       done
     else
-      yes_no_function "Can you confirm you want to modify current interface name ?" "yes"
-      if [ $? -eq 0 ]
-      then
-        NETWORK_INTERFACE_NAME=
-        while [ -z "$NETWORK_INTERFACE_NAME" ]
-        do
-          echo -e "Type network interface name, followed by [ENTER]:"
-          echo -en "> "
-          read NETWORK_INTERFACE_NAME
-        done
-      else
-        NETWORK_INTERFACE_NAME=$NETWORK_INTERFACE_NAME
-      fi
-    fi
-  else
-    if [ -z "$NETWORK_INTERFACE_NAME" ]
-    then
-      NETWORK_INTERFACE_NAME='eth0'
-    else
-      NETWORK_INTERFACE_NAME=$NETWORK_INTERFACE_NAME
+      NETWORK_INTERFACE_NAME=$old_input_value
     fi
   fi
   echo "NETWORK_INTERFACE_NAME='$NETWORK_INTERFACE_NAME'" > $installation_cfg_tmpfile
   if [ -z "$BOOLEAN_USE_OPENSSHKEY" ]
   then
-    yes_no_function "Do you want to use your OpenSSH key to authenticate you on GRAYLOG server, default value : ${SETCOLOR_INFO}yes${SETCOLOR_NORMAL} ?" "yes"
-  else
-    if [ "$BOOLEAN_USE_OPENSSHKEY" == 1 ]
+    yes_no_function "Do you want to use RSA authentication on GRAYLOG server ?" "yes"
+    if [ "$?" == 0 ]
     then
-      yes_no_function "Do you want to use your OpenSSH key to authenticate you on GRAYLOG server, actual value : ${SETCOLOR_WARNING}yes${SETCOLOR_NORMAL} ?" "yes"
+      BOOLEAN_USE_OPENSSHKEY=1
     else
-      yes_no_function "Do you want to use your OpenSSH key to authenticate you on GRAYLOG server, actual value : ${SETCOLOR_WARNING}no${SETCOLOR_NORMAL} ?" "no"
+      BOOLEAN_USE_OPENSSHKEY=0
+    fi
+  else
+    if [ "$BOOLEAN_USE_OPENSSHKEY" == 1]
+    then
+      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not use${SETCOLOR_NORMAL} RSA authentication ?" "yes"
+      if [ "$?" == 0 ]
+      then
+        BOOLEAN_USE_OPENSSHKEY=0
+      else
+        BOOLEAN_USE_OPENSSHKEY=$BOOLEAN_USE_OPENSSHKEY
+      fi
+    else
+      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}use${SETCOLOR_NORMAL} RSA authentication ?" "yes"
+      if [ "$?" == 0 ]
+      then
+        BOOLEAN_USE_OPENSSHKEY=1
+      else
+        BOOLEAN_USE_OPENSSHKEY=$BOOLEAN_USE_OPENSSHKEY
+      fi
     fi
   fi
-  if [ $? -eq 0 ]
+  if [ "$BOOLEAN_USE_OPENSSHKEY" == 1 ]
   then
-    BOOLEAN_USE_OPENSSHKEY=1
     if [ -z "$OPENSSH_PERSONAL_KEY" ]
     then
       while [ -z "$OPENSSH_PERSONAL_KEY" ] || [[ ! "$OPENSSH_PERSONAL_KEY" =~ ^ssh-rsa.* ]]
       do
-        echo -e "Paste your OpenSSH key, followed by [ENTER]:"
+        echo -e "Paste your RSA public key, followed by [ENTER]:"
         echo -en "> "
         read OPENSSH_PERSONAL_KEY
       done
     else
-      yes_no_function "Can you confirm you want to modify current SSH key ?" "yes"
+      yes_no_function "Can you confirm you want to modify current RSA public key" "yes"
       if [ $? -eq 0 ]
       then
+        old_input_value=$OPENSSH_PERSONAL_KEY
         OPENSSH_PERSONAL_KEY=
         while [ -z "$OPENSSH_PERSONAL_KEY" ] || [[ ! "$OPENSSH_PERSONAL_KEY" =~ ^ssh-rsa.* ]]
         do
-          echo -e "Paste your OpenSSH key, followed by [ENTER]:"
+          echo -e "Paste your RSA public key [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
           echo -en "> "
           read OPENSSH_PERSONAL_KEY
+          if [ -z $OPENSSH_PERSONAL_KEY ]
+          then
+            OPENSSH_PERSONAL_KEY=$old_input_value
+          fi
         done
       else
-        OPENSSH_PERSONAL_KEY=$OPENSSH_PERSONAL_KEY
+        OPENSSH_PERSONAL_KEY=$old_input_value
       fi
     fi
   else
-    BOOLEAN_USE_OPENSSHKEY=0
     OPENSSH_PERSONAL_KEY=
   fi
   echo "BOOLEAN_USE_OPENSSHKEY=$BOOLEAN_USE_OPENSSHKEY" >> $installation_cfg_tmpfile
   echo "OPENSSH_PERSONAL_KEY='$OPENSSH_PERSONAL_KEY'" >> $installation_cfg_tmpfile
   if [ -z "$SERVER_TIME_ZONE" ]
   then
-    yes_no_function "Do you want to modify timezone of server, default value : ${SETCOLOR_INFO}Europe/Paris${SETCOLOR_NORMAL} ?" "yes"
+    while [ -z "$SERVER_TIME_ZONE" ]
+    do
+      echo -e "Type timezone [${SETCOLOR_INFO}Europe/Paris${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -en "> "
+      read SERVER_TIME_ZONE
+      if [ -z "$SERVER_TIME_ZONE" ]
+      then
+        SERVER_TIME_ZONE='Europe/Paris'
+      fi
+    done
   else
-    yes_no_function "Do you want to modify timezone of server, actual value : ${SETCOLOR_WARNING}${SERVER_TIME_ZONE}${SETCOLOR_NORMAL} ?" "no"
-  fi
-  if [ $? -eq 0 ]
-  then
-    if [ -z "$SERVER_TIME_ZONE" ]
+    yes_no_function "Can you confirm you want to modify current time zone ?" "yes"
+    if [ $? -eq 0 ]
     then
+      old_input_value=$SERVER_TIME_ZONE
+      SERVER_TIME_ZONE=
       while [ -z "$SERVER_TIME_ZONE" ]
       do
-        echo -e "Type timezone, followed by [ENTER]:"
+        echo -e "Type timezone [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
         echo -en "> "
         read SERVER_TIME_ZONE
+        if [ -z "$SERVER_TIME_ZONE" ]
+        then
+          SERVER_TIME_ZONE=$old_input_value
+        fi
       done
     else
-      yes_no_function "Can you confirm you want to modify current timezone ?" "yes"
-      if [ $? -eq 0 ]
-      then
-        SERVER_TIME_ZONE=
-        while [ -z "$SERVER_TIME_ZONE" ]
-        do
-          echo -e "Type timezone, followed by [ENTER]:"
-          echo -en "> "
-          read SERVER_TIME_ZONE
-        done
-      else
-        SERVER_TIME_ZONE=$SERVER_TIME_ZONE
-      fi
-    fi
-  else
-    if [ -z "$SERVER_TIME_ZONE" ]
-    then
-      SERVER_TIME_ZONE='Europe/Paris'
-    else
-      SERVER_TIME_ZONE=$SERVER_TIME_ZONE
+      SERVER_TIME_ZONE=$old_input_value
     fi
   fi
   echo "SERVER_TIME_ZONE='$SERVER_TIME_ZONE'" >> $installation_cfg_tmpfile
   if [ -z "$BOOLEAN_NTP_CONFIGURE" ]
   then
-    yes_no_function "Do you want to configure NTP service, default value : ${SETCOLOR_INFO}yes${SETCOLOR_NORMAL} ?" "yes"
-  else
-    if [ "$BOOLEAN_NTP_CONFIGURE" == 1 ]
+    yes_no_function "Do you want to configure NTP service ?" "yes"
+    if [ "$?" == 0 ]
     then
-      yes_no_function "Do you want to configure NTP service, actual value : ${SETCOLOR_WARNING}yes${SETCOLOR_NORMAL} ?" "yes"
+      BOOLEAN_NTP_CONFIGURE=1
     else
-      yes_no_function "Do you want to configure NTP service, actual value : ${SETCOLOR_WARNING}no${SETCOLOR_NORMAL} ?" "no"
+      BOOLEAN_NTP_CONFIGURE=0
+    fi
+  else
+    if [ "$BOOLEAN_NTP_CONFIGURE" == 1]
+    then
+      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not configure${SETCOLOR_NORMAL} NTP service ?" "yes"
+      if [ "$?" == 0 ]
+      then
+        BOOLEAN_NTP_CONFIGURE=0
+      else
+        BOOLEAN_NTP_CONFIGURE=$BOOLEAN_NTP_CONFIGURE
+      fi
+    else
+      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}configure${SETCOLOR_NORMAL} NTP service ?" "yes"
+      if [ "$?" == 0 ]
+      then
+        BOOLEAN_NTP_CONFIGURE=1
+      else
+        BOOLEAN_NTP_CONFIGURE=$BOOLEAN_NTP_CONFIGURE
+      fi
     fi
   fi
-  if [ $? -eq 0 ]
+  if [ "$BOOLEAN_NTP_CONFIGURE" == 1 ]
   then
-    BOOLEAN_NTP_CONFIGURE=1
     if [ -z "$NEW_NTP_ADDRESS" ]
     then
       while [ -z "$NEW_NTP_ADDRESS" ]
       do
-        echo -e "Type IP address or hostname of NTP server, followed by [ENTER]:"
+        echo -e "Type IP address or hostname of NTP server [${SETCOLOR_INFO}ntp.test.fr${SETCOLOR_NORMAL}], followed by [ENTER]:"
         echo -en "> "
         read NEW_NTP_ADDRESS
+        if [ -z "$NEW_NTP_ADDRESS" ]
+        then
+          NEW_NTP_ADDRESS='ntp.test.fr'
+        fi
       done
     else
       yes_no_function "Can you confirm you want to modify current NTP server ?" "yes"
       if [ $? -eq 0 ]
       then
+        old_input_value=$NEW_NTP_ADDRESS
         NEW_NTP_ADDRESS=
         while [ -z "$NEW_NTP_ADDRESS" ]
         do
-          echo -e "Type IP address or hostname of NTP server, followed by [ENTER]:"
+          echo -e "Type IP address or hostname of NTP server [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
           echo -en "> "
           read NEW_NTP_ADDRESS
+          if [ -z "$NEW_NTP_ADDRESS" ]
+          then
+            NEW_NTP_ADDRESS=$old_input_value
+          fi
         done
       else
-        NEW_NTP_ADDRESS=$NEW_NTP_ADDRESS
+        NEW_NTP_ADDRESS=$old_input_value
       fi
     fi
   else
-    BOOLEAN_NTP_CONFIGURE=0
     NEW_NTP_ADDRESS=
   fi
   echo "BOOLEAN_NTP_CONFIGURE=$BOOLEAN_NTP_CONFIGURE" >> $installation_cfg_tmpfile
   echo "NEW_NTP_ADDRESS='$NEW_NTP_ADDRESS'" >> $installation_cfg_tmpfile
   if [ -z "$BOOLEAN_NTP_ONSTARTUP" ]
   then
-    yes_no_function "Do you want to add NTP service on startup, default value : ${SETCOLOR_INFO}on${SETCOLOR_NORMAL} ?" "yes"
-  else
-    if [ "$BOOLEAN_NTP_ONSTARTUP" == 1 ]
-    then
-      yes_no_function "Do you want to add NTP service on startup, actual value : ${SETCOLOR_WARNING}on${SETCOLOR_NORMAL} ?" "yes"
-    else
-      yes_no_function "Do you want to add NTP service on startup, actual value : ${SETCOLOR_WARNING}off${SETCOLOR_NORMAL} ?" "no"
-    fi
-  fi
-  if [ "$?" == 0 ]
-  then
-    if [ -z "$BOOLEAN_NTP_ONSTARTUP" ]
+    yes_no_function "Do you want to add NTP service on startup ?" "yes"
+    if [ "$?" == 0 ]
     then
       BOOLEAN_NTP_ONSTARTUP=1
     else
-      if [ "$BOOLEAN_NTP_ONSTARTUP" == 1 ]
-      then
-        yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} NTP service on startup ?" "yes"
-        if [ "$?" == 0 ]
-        then
-          BOOLEAN_NTP_ONSTARTUP=0
-        else
-          BOOLEAN_NTP_ONSTARTUP=$BOOLEAN_NTP_ONSTARTUP
-        fi
-      else
-        yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} NTP service on startup ?" "yes"
-        if [ "$?" == 0 ]
-        then
-          BOOLEAN_NTP_ONSTARTUP=1
-        else
-          BOOLEAN_NTP_ONSTARTUP=$BOOLEAN_NTP_ONSTARTUP
-        fi
-      fi
+      BOOLEAN_NTP_ONSTARTUP=0
     fi
   else
-    BOOLEAN_NTP_ONSTARTUP=0
+    if [ "$BOOLEAN_NTP_ONSTARTUP" == 1]
+    then
+      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} NTP service on startup ?" "yes"
+      if [ "$?" == 0 ]
+      then
+        BOOLEAN_NTP_ONSTARTUP=0
+      else
+        BOOLEAN_NTP_ONSTARTUP=$BOOLEAN_NTP_ONSTARTUP
+      fi
+    else
+      yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} NTP service on startup ?" "yes"
+      if [ "$?" == 0 ]
+      then
+        BOOLEAN_NTP_ONSTARTUP=1
+      else
+        BOOLEAN_NTP_ONSTARTUP=$BOOLEAN_NTP_ONSTARTUP
+      fi
+    fi
   fi
   echo "BOOLEAN_NTP_ONSTARTUP=$BOOLEAN_NTP_ONSTARTUP" >> $installation_cfg_tmpfile
   if [ -z "$MONGO_ADMIN_PASSWORD" ]
   then
-    yes_no_function "Do you want to modify password of Mongo administrator, default value : ${SETCOLOR_INFO}admin4mongo${SETCOLOR_NORMAL} ?" "yes"
+    while [ -z "$MONGO_ADMIN_PASSWORD" ]
+    do
+      echo -e "Type password of Mongo administrator [${SETCOLOR_INFO}admin4mongo${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -en "> "
+      read MONGO_ADMIN_PASSWORD
+      if [ -z "$MONGO_ADMIN_PASSWORD" ]
+      then
+        MONGO_ADMIN_PASSWORD='admin4mongo'
+      fi
+    done
   else
-    yes_no_function "Do you want to modify password of Mongo administrator, actual value : ${SETCOLOR_WARNING}${MONGO_ADMIN_PASSWORD}${SETCOLOR_NORMAL} ?" "no"
-  fi
-  if [ $? -eq 0 ]
-  then
-    if [ -z "$MONGO_ADMIN_PASSWORD" ]
+    yes_no_function "Can you confirm you want to modify current password of Mongo administrator ?" "yes"
+    if [ $? -eq 0 ]
     then
+      old_input_value=$MONGO_ADMIN_PASSWORD
+      MONGO_ADMIN_PASSWORD=
       while [ -z "$MONGO_ADMIN_PASSWORD" ]
       do
-        echo -e "Type password of Mongo administrator, followed by [ENTER]:"
+        echo -e "Type password of Mongo administrator [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
         echo -en "> "
         read MONGO_ADMIN_PASSWORD
+        if [ -z "$MONGO_ADMIN_PASSWORD" ]
+        then
+          MONGO_ADMIN_PASSWORD=$old_input_value
+        fi
       done
     else
-      yes_no_function "Can you confirm you want to modify current password of Mongo administrator ?" "yes"
-      if [ $? -eq 0 ]
-      then
-        MONGO_ADMIN_PASSWORD=
-        while [ -z "$MONGO_ADMIN_PASSWORD" ]
-        do
-          echo -e "Type password of Mongo administrator, followed by [ENTER]:"
-          echo -en "> "
-          read MONGO_ADMIN_PASSWORD
-        done
-      else
-        MONGO_ADMIN_PASSWORD=$MONGO_ADMIN_PASSWORD
-      fi
-    fi
-  else
-    if [ -z "$MONGO_ADMIN_PASSWORD" ]
-    then
-      MONGO_ADMIN_PASSWORD='admin4mongo'
-    else
-      MONGO_ADMIN_PASSWORD=$MONGO_ADMIN_PASSWORD
+      MONGO_ADMIN_PASSWORD=$old_input_value
     fi
   fi
   echo "MONGO_ADMIN_PASSWORD='$MONGO_ADMIN_PASSWORD'" >> $installation_cfg_tmpfile
   if [ -z "$MONGO_GRAYLOG_DATABASE" ]
   then
-    yes_no_function "Do you want to modify name of Graylog Mongo database, default value : ${SETCOLOR_INFO}graylog${SETCOLOR_NORMAL} ?" "yes"
+    while [ -z "$MONGO_GRAYLOG_DATABASE" ]
+    do
+      echo -e "Type name of Graylog Mongo database [${SETCOLOR_INFO}graylog${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -en "> "
+      read MONGO_GRAYLOG_DATABASE
+      if [ -z "$MONGO_GRAYLOG_DATABASE" ]
+      then
+        MONGO_GRAYLOG_DATABASE='graylog'
+      fi
+    done
   else
-    yes_no_function "Do you want to modify name of Graylog Mongo database, actual value : ${SETCOLOR_WARNING}${MONGO_GRAYLOG_DATABASE}${SETCOLOR_NORMAL} ?" "no"
-  fi
-  if [ $? -eq 0 ]
-  then
-    if [ -z "$MONGO_GRAYLOG_DATABASE" ]
+    yes_no_function "Can you confirm you want to modify current name of Graylog Mongo database ?" "yes"
+    if [ $? -eq 0 ]
     then
+      old_input_value=$MONGO_GRAYLOG_DATABASE
+      MONGO_GRAYLOG_DATABASE=
       while [ -z "$MONGO_GRAYLOG_DATABASE" ]
       do
-        echo -e "Type name of Graylog Mongo database, followed by [ENTER]:"
+        echo -e "Type name of Graylog Mongo database [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
         echo -en "> "
         read MONGO_GRAYLOG_DATABASE
+        if [ -z "$MONGO_GRAYLOG_DATABASE" ]
+        then
+          MONGO_GRAYLOG_DATABASE=$old_input_value
+        fi
       done
     else
-      yes_no_function "Can you confirm you want to modify current name of Graylog Mongo database ?" "yes"
-      if [ $? -eq 0 ]
-      then
-        MONGO_GRAYLOG_DATABASE=
-        while [ -z "$MONGO_GRAYLOG_DATABASE" ]
-        do
-          echo -e "Type name of Graylog Mongo database, followed by [ENTER]:"
-          echo -en "> "
-          read MONGO_GRAYLOG_DATABASE
-        done
-      else
-        MONGO_GRAYLOG_DATABASE=$MONGO_GRAYLOG_DATABASE
-      fi
-    fi
-  else
-    if [ -z "$MONGO_GRAYLOG_DATABASE" ]
-    then
-      MONGO_GRAYLOG_DATABASE='admin4mongo'
-    else
-      MONGO_GRAYLOG_DATABASE=$MONGO_GRAYLOG_DATABASE
+      MONGO_GRAYLOG_DATABASE=$old_input_value
     fi
   fi
   echo "MONGO_GRAYLOG_DATABASE='$MONGO_GRAYLOG_DATABASE'" >> $installation_cfg_tmpfile
   if [ -z "$MONGO_GRAYLOG_USER" ]
   then
-    yes_no_function "Do you want to modify login of Mongo Graylog user, default value : ${SETCOLOR_INFO}grayloguser${SETCOLOR_NORMAL} ?" "yes"
+    while [ -z "$MONGO_GRAYLOG_USER" ]
+    do
+      echo -e "Type login of Mongo Graylog user [${SETCOLOR_INFO}grayloguser${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -en "> "
+      read MONGO_GRAYLOG_USER
+      if [ -z "$MONGO_GRAYLOG_USER" ]
+      then
+        MONGO_GRAYLOG_USER='grayloguser'
+      fi
+    done
   else
-    yes_no_function "Do you want to modify login of Mongo Graylog user, actual value : ${SETCOLOR_WARNING}${MONGO_GRAYLOG_USER}${SETCOLOR_NORMAL} ?" "no"
-  fi
-  if [ $? -eq 0 ]
-  then
-    if [ -z "$MONGO_GRAYLOG_USER" ]
+    yes_no_function "Can you confirm you want to modify current login of Mongo Graylog user ?" "yes"
+    if [ $? -eq 0 ]
     then
+      old_input_value=$MONGO_GRAYLOG_USER
+      MONGO_GRAYLOG_USER=
       while [ -z "$MONGO_GRAYLOG_USER" ]
       do
-        echo -e "Type login of Graylog Mongo database, followed by [ENTER]:"
+        echo -e "Type login of Mongo Graylog user [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
         echo -en "> "
         read MONGO_GRAYLOG_USER
+        if [ -z "$MONGO_GRAYLOG_USER" ]
+        then
+          MONGO_GRAYLOG_USER=$old_input_value
+        fi
       done
     else
-      yes_no_function "Can you confirm you want to modify current login of Mongo Graylog user ?" "yes"
-      if [ $? -eq 0 ]
-      then
-        MONGO_GRAYLOG_USER=
-        while [ -z "$MONGO_GRAYLOG_USER" ]
-        do
-          echo -e "Type login of Graylog Mongo database, followed by [ENTER]:"
-          echo -en "> "
-          read MONGO_GRAYLOG_USER
-        done
-      else
-        MONGO_GRAYLOG_USER=$MONGO_GRAYLOG_USER
-      fi
-    fi
-  else
-    if [ -z "$MONGO_GRAYLOG_USER" ]
-    then
-      MONGO_GRAYLOG_USER='grayloguser'
-    else
-      MONGO_GRAYLOG_USER=$MONGO_GRAYLOG_USER
+      MONGO_GRAYLOG_USER=$old_input_value
     fi
   fi
   echo "MONGO_GRAYLOG_USER='$MONGO_GRAYLOG_USER'" >> $installation_cfg_tmpfile
   if [ -z "$MONGO_GRAYLOG_PASSWORD" ]
   then
-    yes_no_function "Do you want to modify password of Graylog Mongo user, default value : ${SETCOLOR_INFO}graylog4mongo${SETCOLOR_NORMAL} ?" "yes"
+    while [ -z "$MONGO_GRAYLOG_PASSWORD" ]
+    do
+      echo -e "Type password of Mongo Graylog user [${SETCOLOR_INFO}graylog4mongo${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -en "> "
+      read MONGO_GRAYLOG_PASSWORD
+      if [ -z "$MONGO_GRAYLOG_PASSWORD" ]
+      then
+        MONGO_GRAYLOG_PASSWORD='graylog4mongo'
+      fi
+    done
   else
-    yes_no_function "Do you want to modify password of Graylog Mongo user, actual value : ${SETCOLOR_WARNING}${MONGO_GRAYLOG_PASSWORD}${SETCOLOR_NORMAL} ?" "no"
-  fi
-  if [ $? -eq 0 ]
-  then
-    if [ -z "$MONGO_GRAYLOG_PASSWORD" ]
+    yes_no_function "Can you confirm you want to modify current password of Mongo Graylog user ?" "yes"
+    if [ $? -eq 0 ]
     then
+      old_input_value=$MONGO_GRAYLOG_PASSWORD
+      MONGO_GRAYLOG_PASSWORD=
       while [ -z "$MONGO_GRAYLOG_PASSWORD" ]
       do
-        echo -e "Type the login of Graylog Mongo password, followed by [ENTER]:"
+        echo -e "Type password of Mongo Graylog user [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
         echo -en "> "
         read MONGO_GRAYLOG_PASSWORD
+        if [ -z "$MONGO_GRAYLOG_PASSWORD" ]
+        then
+          MONGO_GRAYLOG_PASSWORD=$old_input_value
+        fi
       done
     else
-      yes_no_function "Can you confirm you want to modify current password of Graylog Mongo user ?" "yes"
-      if [ $? -eq 0 ]
-      then
-        MONGO_GRAYLOG_PASSWORD=
-        while [ -z "$MONGO_GRAYLOG_PASSWORD" ]
-        do
-          echo -e "Type the login of Graylog Mongo password, followed by [ENTER]:"
-          echo -en "> "
-          read MONGO_GRAYLOG_PASSWORD
-        done
-      else
-        MONGO_GRAYLOG_PASSWORD=$MONGO_GRAYLOG_PASSWORD
-      fi
-    fi
-  else
-    if [ -z "$MONGO_GRAYLOG_PASSWORD" ]
-    then
-      MONGO_GRAYLOG_PASSWORD='graylog4mongo'
-    else
-      MONGO_GRAYLOG_PASSWORD=$MONGO_GRAYLOG_PASSWORD
+      MONGO_GRAYLOG_PASSWORD=$old_input_value
     fi
   fi
   echo "MONGO_GRAYLOG_PASSWORD='$MONGO_GRAYLOG_PASSWORD'" >> $installation_cfg_tmpfile
   if [ -z "$BOOLEAN_MONGO_ONSTARTUP" ]
   then
-    yes_no_function "Do you want to add Mongo database server on startup, default value : ${SETCOLOR_INFO}on${SETCOLOR_NORMAL} ?" "yes"
-  else
-    if [ "$BOOLEAN_MONGO_ONSTARTUP" == 1 ]
-    then
-      yes_no_function "Do you want to add Mongo database server on startup, actual value : ${SETCOLOR_WARNING}on${SETCOLOR_NORMAL} ?" "yes"
-    else
-      yes_no_function "Do you want to add Mongo database server on startup, actual value : ${SETCOLOR_WARNING}off${SETCOLOR_NORMAL} ?" "no"
-    fi
-  fi
-  if [ "$?" == 0 ]
-  then
-    if [ -z "$BOOLEAN_MONGO_ONSTARTUP" ]
+    yes_no_function "Do you want to add Mongo database server on startup ?" "yes"
+    if [ "$?" == 0 ]
     then
       BOOLEAN_MONGO_ONSTARTUP=1
     else
-      if [ "$BOOLEAN_MONGO_ONSTARTUP" == 1 ]
-      then
-        yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} Mongo database server on startup ?" "yes"
-        if [ "$?" == 0 ]
-        then
-          BOOLEAN_MONGO_ONSTARTUP=0
-        else
-          BOOLEAN_MONGO_ONSTARTUP=$BOOLEAN_MONGO_ONSTARTUP
-        fi
-      else
-        yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} Mongo database server on startup ?" "yes"
-        if [ "$?" == 0 ]
-        then
-          BOOLEAN_MONGO_ONSTARTUP=1
-        else
-          BOOLEAN_MONGO_ONSTARTUP=$BOOLEAN_MONGO_ONSTARTUP
-        fi
-      fi
+      BOOLEAN_MONGO_ONSTARTUP=0
     fi
   else
-    BOOLEAN_MONGO_ONSTARTUP=0
+    if [ "$BOOLEAN_MONGO_ONSTARTUP" == 1]
+    then
+      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} Mongo database server on startup ?" "yes"
+      if [ "$?" == 0 ]
+      then
+        BOOLEAN_MONGO_ONSTARTUP=0
+      else
+        BOOLEAN_MONGO_ONSTARTUP=$BOOLEAN_MONGO_ONSTARTUP
+      fi
+    else
+      yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} Mongo database server on startup ?" "yes"
+      if [ "$?" == 0 ]
+      then
+        BOOLEAN_MONGO_ONSTARTUP=1
+      else
+        BOOLEAN_MONGO_ONSTARTUP=$BOOLEAN_MONGO_ONSTARTUP
+      fi
+    fi
   fi
   echo "BOOLEAN_MONGO_ONSTARTUP=$BOOLEAN_MONGO_ONSTARTUP" >> $installation_cfg_tmpfile
   if [ -z "$SSL_KEY_SIZE" ]
   then
-    yes_no_function "Do you want to modify size of SSL private key, default value : ${SETCOLOR_INFO}2048${SETCOLOR_NORMAL} ?" "yes"
+    while [ -z "$SSL_KEY_SIZE" ] || [[ ! "$SSL_KEY_SIZE" =~ 512|1024|2048|4096 ]]
+    do
+      echo -e "Type size of SSL private key (possible values : ${SETCOLOR_FAILURE}512${SETCOLOR_NORMAL}, ${SETCOLOR_FAILURE}1024${SETCOLOR_NORMAL}, ${SETCOLOR_FAILURE}2048${SETCOLOR_NORMAL}, ${SETCOLOR_FAILURE}4096${SETCOLOR_NORMAL}), followed by [ENTER]:"
+      echo -en "> "
+      read SSL_KEY_SIZE
+      if [ -z "$SSL_KEY_SIZE" ]
+      then
+        SSL_KEY_SIZE='2048'
+      fi
+    done
   else
-    yes_no_function "Do you want to modify size of SSL private key, actual value : ${SETCOLOR_WARNING}${SSL_KEY_SIZE}${SETCOLOR_NORMAL} ?" "no"
-  fi
-  if [ $? -eq 0 ]
-  then
-    if [ -z "$SSL_KEY_SIZE" ]
+    yes_no_function "Can you confirm you want to modify current size of SSL private key ?" "yes"
+    if [ $? -eq 0 ]
     then
+      old_input_value=$SSL_KEY_SIZE
+      SSL_KEY_SIZE=
       while [ -z "$SSL_KEY_SIZE" ] || [[ ! "$SSL_KEY_SIZE" =~ 512|1024|2048|4096 ]]
       do
-        echo -e "Type size of SSL private key (possible values : ${SETCOLOR_FAILURE}512${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}1024${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}2048${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}4096${SETCOLOR_NORMAL}), followed by [ENTER]:"
+        echo -e "Type size of SSL private key (possible values : ${SETCOLOR_FAILURE}512${SETCOLOR_NORMAL}, ${SETCOLOR_FAILURE}1024${SETCOLOR_NORMAL}, ${SETCOLOR_FAILURE}2048${SETCOLOR_NORMAL}, ${SETCOLOR_FAILURE}4096${SETCOLOR_NORMAL}), followed by [ENTER]:"
         echo -en "> "
         read SSL_KEY_SIZE
+        if [ -z "$SSL_KEY_SIZE" ]
+        then
+          SSL_KEY_SIZE=$old_input_value
+        fi
       done
     else
-      yes_no_function "Can you confirm you want to modify current size of SSL private key ?" "yes"
-      if [ $? -eq 0 ]
-      then
-        SSL_KEY_SIZE=
-        while [ -z "$SSL_KEY_SIZE" ] || [[ ! "$SSL_KEY_SIZE" =~ 512|1024|2048|4096 ]]
-        do
-          echo -e "Type size of SSL private key (possible values : ${SETCOLOR_FAILURE}512${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}1024${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}2048${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}4096${SETCOLOR_NORMAL}), followed by [ENTER]:"
-          echo -en "> "
-          read SSL_KEY_SIZE
-        done
-      else
-        SSL_KEY_SIZE=$SSL_KEY_SIZE
-      fi
-    fi
-  else
-    if [ -z "$SSL_KEY_SIZE" ]
-    then
-      SSL_KEY_SIZE=2048
-    else
-      SSL_KEY_SIZE=$SSL_KEY_SIZE
+      SSL_KEY_SIZE=$old_input_value
     fi
   fi
   echo "SSL_KEY_SIZE='$SSL_KEY_SIZE'" >> $installation_cfg_tmpfile
   if [ -z "$SSL_KEY_DURATION" ]
   then
-    yes_no_function "Do you want to modify period of validity of SSL Certificate, default value : ${SETCOLOR_INFO}365${SETCOLOR_NORMAL} ?" "yes"
+    while [ -z "$SSL_KEY_DURATION" ] || [[ ! "$SSL_KEY_DURATION" =~ [0-9]{1,5} ]]
+    do
+      echo -e "Type period of validity (in day) of SSL certificate [${SETCOLOR_INFO}365${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -en "> "
+      read SSL_KEY_DURATION
+      if [ -z "$SSL_KEY_DURATION" ]
+      then
+        SSL_KEY_DURATION='365'
+      fi
+    done
   else
-    yes_no_function "Do you want to modify period of validity of SSL Certificate, actual value : ${SETCOLOR_WARNING}${SSL_KEY_DURATION}${SETCOLOR_NORMAL} ?" "no"
-  fi
-  if [ $? -eq 0 ]
-  then
-    if [ -z "$SSL_KEY_DURATION" ]
+    yes_no_function "Can you confirm you want to modify current period of validity of SSL Certificate ?" "yes"
+    if [ $? -eq 0 ]
     then
+      old_input_value=$SSL_KEY_DURATION
+      SSL_KEY_DURATION=
       while [ -z "$SSL_KEY_DURATION" ] || [[ ! "$SSL_KEY_DURATION" =~ [0-9]{1,5} ]]
       do
-        echo -e "Type period of validity (in day) of SSL certificate, followed by [ENTER]:"
+        echo -e "Type period of validity (in day) of SSL certificate [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
         echo -en "> "
         read SSL_KEY_DURATION
+        if [ -z "$SSL_KEY_DURATION" ]
+        then
+          SSL_KEY_DURATION=$old_input_value
+        fi
       done
     else
-      yes_no_function "Can you confirm you want to modify current period of validity of SSL Certificate ?" "yes"
-      if [ $? -eq 0 ]
-      then
-        SSL_KEY_DURATION=
-        while [ -z "$SSL_KEY_DURATION" ] || [[ ! "$SSL_KEY_DURATION" =~ [0-9]{1,5} ]]
-        do
-          echo -e "Type period of validity (in day) of SSL certificate, followed by [ENTER]:"
-          echo -en "> "
-          read SSL_KEY_DURATION
-        done
-      else
-        SSL_KEY_DURATION=$SSL_KEY_DURATION
-      fi
-    fi
-  else
-    if [ -z "$SSL_KEY_DURATION" ]
-    then
-      SSL_KEY_DURATION=365
-    else
-      SSL_KEY_DURATION=$SSL_KEY_DURATION
+      SSL_KEY_DURATION=$old_input_value
     fi
   fi
-  echo "SSL_KEY_DURATION=$SSL_KEY_DURATION" >> $installation_cfg_tmpfile
+  echo "SSL_KEY_DURATION='$SSL_KEY_DURATION'" >> $installation_cfg_tmpfile
   if [ -z "$SSL_SUBJECT_COUNTRY" ]
   then
-    yes_no_function "Do you want to modify country code of SSL Certificate, default value : ${SETCOLOR_INFO}FR${SETCOLOR_NORMAL} ?" "yes"
+    while [ -z "$SSL_SUBJECT_COUNTRY" ] || [[ ! "$SSL_SUBJECT_COUNTRY" =~ [A-Z]{2} ]]
+    do
+      echo -e "Type country code of SSL certificate [${SETCOLOR_INFO}FR${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -en "> "
+      read SSL_SUBJECT_COUNTRY
+      if [ -z "$SSL_SUBJECT_COUNTRY" ]
+      then
+        SSL_SUBJECT_COUNTRY='FR'
+      fi
+    done
   else
-    yes_no_function "Do you want to modify country code of SSL Certificate, actual value : ${SETCOLOR_WARNING}${SSL_SUBJECT_COUNTRY}${SETCOLOR_NORMAL} ?" "no"
-  fi
-  if [ $? -eq 0 ]
-  then
-    if [ -z "$SSL_SUBJECT_COUNTRY" ]
+    yes_no_function "Can you confirm you want to modify current country code of SSL Certificate ?" "yes"
+    if [ $? -eq 0 ]
     then
+      old_input_value=$SSL_SUBJECT_COUNTRY
+      SSL_SUBJECT_COUNTRY=
       while [ -z "$SSL_SUBJECT_COUNTRY" ] || [[ ! "$SSL_SUBJECT_COUNTRY" =~ [A-Z]{2} ]]
       do
-        echo -e "Type country code of SSL certificate, followed by [ENTER]:"
+        echo -e "Type country code of SSL certificate [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
         echo -en "> "
         read SSL_SUBJECT_COUNTRY
+        if [ -z "$SSL_SUBJECT_COUNTRY" ]
+        then
+          SSL_SUBJECT_COUNTRY=$old_input_value
+        fi
       done
     else
-      yes_no_function "Can you confirm you want to modify current country code of SSL Certificate ?" "yes"
-      if [ $? -eq 0 ]
-      then
-        SSL_SUBJECT_COUNTRY=
-        while [ -z "$SSL_SUBJECT_COUNTRY" ] || [[ ! "$SSL_SUBJECT_COUNTRY" =~ [A-Z]{2} ]]
-        do
-          echo -e "Type country code of SSL certificate, followed by [ENTER]:"
-          echo -en "> "
-          read SSL_SUBJECT_COUNTRY
-        done
-      else
-        SSL_SUBJECT_COUNTRY=$SSL_SUBJECT_COUNTRY
-      fi
-    fi
-  else
-    if [ -z "$SSL_SUBJECT_COUNTRY" ]
-    then
-      SSL_SUBJECT_COUNTRY='FR'
-    else
-      SSL_SUBJECT_COUNTRY=$SSL_SUBJECT_COUNTRY
+      SSL_SUBJECT_COUNTRY=$old_input_value
     fi
   fi
   echo "SSL_SUBJECT_COUNTRY='$SSL_SUBJECT_COUNTRY'" >> $installation_cfg_tmpfile
   if [ -z "$SSL_SUBJECT_STATE" ]
   then
-    yes_no_function "Do you want to modify state of SSL Certificate, default value : ${SETCOLOR_INFO}STATE${SETCOLOR_NORMAL} ?" "yes"
+    while [ -z "$SSL_SUBJECT_STATE" ]
+    do
+      echo -e "Type state of SSL certificate [${SETCOLOR_INFO}STATE${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -en "> "
+      read SSL_SUBJECT_STATE
+      if [ -z "$SSL_SUBJECT_STATE" ]
+      then
+        SSL_SUBJECT_STATE='STATE'
+      fi
+    done
   else
-    yes_no_function "Do you want to modify state of SSL Certificate, actual value : ${SETCOLOR_WARNING}${SSL_SUBJECT_STATE}${SETCOLOR_NORMAL} ?" "no"
-  fi
-  if [ $? -eq 0 ]
-  then
-    if [ -z "$SSL_SUBJECT_STATE" ]
+    yes_no_function "Can you confirm you want to modify current state of SSL Certificate ?" "yes"
+    if [ $? -eq 0 ]
     then
+      old_input_value=$SSL_SUBJECT_STATE
+      SSL_SUBJECT_STATE=
       while [ -z "$SSL_SUBJECT_STATE" ]
       do
-        echo -e "Type state of SSL certificate, followed by [ENTER]:"
+        echo -e "Type state of SSL certificate [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
         echo -en "> "
         read SSL_SUBJECT_STATE
+        if [ -z "$SSL_SUBJECT_STATE" ]
+        then
+          SSL_SUBJECT_STATE=$old_input_value
+        fi
       done
     else
-      yes_no_function "Can you confirm you want to modify current state of SSL Certificate ?" "yes"
-      if [ $? -eq 0 ]
-      then
-        SSL_SUBJECT_STATE=
-        while [ -z "$SSL_SUBJECT_STATE" ]
-        do
-          echo -e "Type state of SSL certificate, followed by [ENTER]:"
-          echo -en "> "
-          read SSL_SUBJECT_STATE
-        done
-      else
-        SSL_SUBJECT_STATE=$SSL_SUBJECT_STATE
-      fi
-    fi
-  else
-    if [ -z "$SSL_SUBJECT_STATE" ]
-    then
-      SSL_SUBJECT_STATE='STATE'
-    else
-      SSL_SUBJECT_STATE=$SSL_SUBJECT_STATE
+      SSL_SUBJECT_STATE=$old_input_value
     fi
   fi
   echo "SSL_SUBJECT_STATE='$SSL_SUBJECT_STATE'" >> $installation_cfg_tmpfile
   if [ -z "$SSL_SUBJECT_LOCALITY" ]
   then
-    yes_no_function "Do you want to modify locality of SSL Certificate, default value : ${SETCOLOR_INFO}LOCALITY${SETCOLOR_NORMAL} ?" "yes"
+    while [ -z "$SSL_SUBJECT_LOCALITY" ]
+    do
+      echo -e "Type state of SSL certificate [${SETCOLOR_INFO}LOCALITY${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -en "> "
+      read SSL_SUBJECT_LOCALITY
+      if [ -z "$SSL_SUBJECT_LOCALITY" ]
+      then
+        SSL_SUBJECT_LOCALITY='LOCALITY'
+      fi
+    done
   else
-    yes_no_function "Do you want to modify locality of SSL Certificate, actual value : ${SETCOLOR_WARNING}${SSL_SUBJECT_LOCALITY}${SETCOLOR_NORMAL} ?" "no"
-  fi
-  if [ $? -eq 0 ]
-  then
-    if [ -z "$SSL_SUBJECT_LOCALITY" ]
+    yes_no_function "Can you confirm you want to modify current locality of SSL Certificate ?" "yes"
+    if [ $? -eq 0 ]
     then
+      old_input_value=$SSL_SUBJECT_LOCALITY
+      SSL_SUBJECT_LOCALITY=
       while [ -z "$SSL_SUBJECT_LOCALITY" ]
       do
-        echo -e "Type locality of SSL certificate, followed by [ENTER]:"
+        echo -e "Type state of SSL certificate [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
         echo -en "> "
         read SSL_SUBJECT_LOCALITY
+        if [ -z "$SSL_SUBJECT_LOCALITY" ]
+        then
+          SSL_SUBJECT_LOCALITY=$old_input_value
+        fi
       done
     else
-      yes_no_function "Can you confirm you want to modify current locality of SSL Certificate ?" "yes"
-      if [ $? -eq 0 ]
-      then
-        SSL_SUBJECT_LOCALITY=
-        while [ -z "$SSL_SUBJECT_LOCALITY" ]
-        do
-          echo -e "Type locality of SSL certificate, followed by [ENTER]:"
-          echo -en "> "
-          read SSL_SUBJECT_LOCALITY
-        done
-      else
-        SSL_SUBJECT_LOCALITY=$SSL_SUBJECT_LOCALITY
-      fi
-    fi
-  else
-    if [ -z "$SSL_SUBJECT_LOCALITY" ]
-    then
-      SSL_SUBJECT_LOCALITY='LOCALITY'
-    else
-      SSL_SUBJECT_LOCALITY=$SSL_SUBJECT_LOCALITY
+      SSL_SUBJECT_LOCALITY=$old_input_value
     fi
   fi
   echo "SSL_SUBJECT_LOCALITY='$SSL_SUBJECT_LOCALITY'" >> $installation_cfg_tmpfile
   if [ -z "$SSL_SUBJECT_ORGANIZATION" ]
   then
-    yes_no_function "Do you want to modify organization name of SSL Certificate, default value : ${SETCOLOR_INFO}Organisation${SETCOLOR_NORMAL} ?" "yes"
+    while [ -z "$SSL_SUBJECT_ORGANIZATION" ]
+    do
+      echo -e "Type organization name of SSL certificate [${SETCOLOR_INFO}ORGANIZATION${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -en "> "
+      read SSL_SUBJECT_ORGANIZATION
+      if [ -z "$SSL_SUBJECT_ORGANIZATION" ]
+      then
+        SSL_SUBJECT_ORGANIZATION='ORGANIZATION'
+      fi
+    done
   else
-    yes_no_function "Do you want to modify organization name of SSL Certificate, actual value : ${SETCOLOR_WARNING}${SSL_SUBJECT_ORGANIZATION}${SETCOLOR_NORMAL} ?" "no"
-  fi
-  if [ $? -eq 0 ]
-  then
-    if [ -z "$SSL_SUBJECT_ORGANIZATION" ]
+    yes_no_function "Can you confirm you want to modify current organization name of SSL Certificate ?" "yes"
+    if [ $? -eq 0 ]
     then
+      old_input_value=$SSL_SUBJECT_ORGANIZATION
+      SSL_SUBJECT_ORGANIZATION=
       while [ -z "$SSL_SUBJECT_ORGANIZATION" ]
       do
-        echo -e "Type organization name of SSL certificate, followed by [ENTER]:"
+        echo -e "Type organization name of SSL certificate [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
         echo -en "> "
         read SSL_SUBJECT_ORGANIZATION
+        if [ -z "$SSL_SUBJECT_ORGANIZATION" ]
+        then
+          SSL_SUBJECT_ORGANIZATION=$old_input_value
+        fi
       done
     else
-      yes_no_function "Can you confirm you want to modify current organization name of SSL Certificate ?" "yes"
-      if [ $? -eq 0 ]
-      then
-        SSL_SUBJECT_ORGANIZATION=
-        while [ -z "$SSL_SUBJECT_ORGANIZATION" ]
-        do
-          echo -e "Type organization name of SSL certificate, followed by [ENTER]:"
-          echo -en "> "
-          read SSL_SUBJECT_ORGANIZATION
-        done
-      else
-        SSL_SUBJECT_ORGANIZATION=$SSL_SUBJECT_ORGANIZATION
-      fi
-    fi
-  else
-    if [ -z "$SSL_SUBJECT_ORGANIZATION" ]
-    then
-      SSL_SUBJECT_ORGANIZATION='Organisation'
-    else
-      SSL_SUBJECT_ORGANIZATION=$SSL_SUBJECT_ORGANIZATION
+      SSL_SUBJECT_ORGANIZATION=$old_input_value
     fi
   fi
   echo "SSL_SUBJECT_ORGANIZATION='$SSL_SUBJECT_ORGANIZATION'" >> $installation_cfg_tmpfile
   if [ -z "$SSL_SUBJECT_ORGANIZATIONUNIT" ]
   then
-    yes_no_function "Do you want to modify organization unit name of SSL Certificate, default value : ${SETCOLOR_INFO}Organisation Unit${SETCOLOR_NORMAL} ?" "yes"
+    while [ -z "$SSL_SUBJECT_ORGANIZATIONUNIT" ]
+    do
+      echo -e "Type organization unit name of SSL certificate [${SETCOLOR_INFO}ORGANIZATION UNIT${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -en "> "
+      read SSL_SUBJECT_ORGANIZATIONUNIT
+      if [ -z "$SSL_SUBJECT_ORGANIZATIONUNIT" ]
+      then
+        SSL_SUBJECT_ORGANIZATIONUNIT='ORGANIZATION UNIT'
+      fi
+    done
   else
-    yes_no_function "Do you want to modify organization unit name of SSL Certificate, actual value : ${SETCOLOR_WARNING}${SSL_SUBJECT_ORGANIZATIONUNIT}${SETCOLOR_NORMAL} ?" "no"
-  fi
-  if [ $? -eq 0 ]
-  then
-    if [ -z "$SSL_SUBJECT_ORGANIZATIONUNIT" ]
+    yes_no_function "Can you confirm you want to modify current organization unit name of SSL Certificate ?" "yes"
+    if [ $? -eq 0 ]
     then
+      old_input_value=$SSL_SUBJECT_ORGANIZATIONUNIT
+      SSL_SUBJECT_ORGANIZATIONUNIT=
       while [ -z "$SSL_SUBJECT_ORGANIZATIONUNIT" ]
       do
-        echo -e "Type organization unit name of SSL certificate, followed by [ENTER]:"
+        echo -e "Type organization unit name of SSL certificate [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
         echo -en "> "
         read SSL_SUBJECT_ORGANIZATIONUNIT
+        if [ -z "$SSL_SUBJECT_ORGANIZATIONUNIT" ]
+        then
+          SSL_SUBJECT_ORGANIZATIONUNIT=$old_input_value
+        fi
       done
     else
-      yes_no_function "Can you confirm you want to modify current organization unit name of SSL Certificate ?" "yes"
-      if [ $? -eq 0 ]
-      then
-        SSL_SUBJECT_ORGANIZATIONUNIT=
-        while [ -z "$SSL_SUBJECT_ORGANIZATIONUNIT" ]
-        do
-          echo -e "Type organization unit name of SSL certificate, followed by [ENTER]:"
-          echo -en "> "
-          read SSL_SUBJECT_ORGANIZATIONUNIT
-        done
-      else
-        SSL_SUBJECT_ORGANIZATIONUNIT=$SSL_SUBJECT_ORGANIZATIONUNIT
-      fi
-    fi
-  else
-    if [ -z "$SSL_SUBJECT_ORGANIZATIONUNIT" ]
-    then
-      SSL_SUBJECT_ORGANIZATIONUNIT='Organisation Unit'
-    else
-      SSL_SUBJECT_ORGANIZATIONUNIT=$SSL_SUBJECT_ORGANIZATIONUNIT
+      SSL_SUBJECT_ORGANIZATIONUNIT=$old_input_value
     fi
   fi
   echo "SSL_SUBJECT_ORGANIZATIONUNIT='$SSL_SUBJECT_ORGANIZATIONUNIT'" >> $installation_cfg_tmpfile
   if [ -z "$SSL_SUBJECT_EMAIL" ]
   then
-    yes_no_function "Do you want to modify e-mail address of SSL Certificate, default value : ${SETCOLOR_INFO}mail.address@test.fr${SETCOLOR_NORMAL} ?" "yes"
+    while [ -z "$SSL_SUBJECT_EMAIL" ]
+    do
+      echo -e "Type organization unit name of SSL certificate [${SETCOLOR_INFO}mail.address@test.fr${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -en "> "
+      read SSL_SUBJECT_EMAIL
+      if [ -z "$SSL_SUBJECT_EMAIL" ]
+      then
+        SSL_SUBJECT_EMAIL='mail.address@test.fr'
+      fi
+    done
   else
-    yes_no_function "Do you want to modify e-mail address of SSL Certificate, actual value : ${SETCOLOR_WARNING}${SSL_SUBJECT_EMAIL}${SETCOLOR_NORMAL} ?" "no"
-  fi
-  if [ $? -eq 0 ]
-  then
-    if [ -z "$SSL_SUBJECT_EMAIL" ]
+    yes_no_function "Can you confirm you want to modify current e-mail address of SSL Certificate ?" "yes"
+    if [ $? -eq 0 ]
     then
+      old_input_value=$SSL_SUBJECT_EMAIL
+      SSL_SUBJECT_EMAIL=
       while [ -z "$SSL_SUBJECT_EMAIL" ]
       do
-        echo -e "Type e-mail address of SSL certificate, followed by [ENTER]:"
+        echo -e "Type organization unit name of SSL certificate [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
         echo -en "> "
         read SSL_SUBJECT_EMAIL
+        if [ -z "$SSL_SUBJECT_EMAIL" ]
+        then
+          SSL_SUBJECT_EMAIL=$old_input_value
+        fi
       done
     else
-      yes_no_function "Can you confirm you want to modify current e-mail address of SSL Certificate ?" "yes"
-      if [ $? -eq 0 ]
-      then
-        SSL_SUBJECT_EMAIL=
-        while [ -z "$SSL_SUBJECT_EMAIL" ]
-        do
-          echo -e "Type e-mail address of SSL certificate, followed by [ENTER]:"
-          echo -en "> "
-          read SSL_SUBJECT_EMAIL
-        done
-      else
-        SSL_SUBJECT_EMAIL=$SSL_SUBJECT_EMAIL
-      fi
-    fi
-  else
-    if [ -z "$SSL_SUBJECT_EMAIL" ]
-    then
-      SSL_SUBJECT_EMAIL='mail.address@test.fr'
-    else
-      SSL_SUBJECT_EMAIL=$SSL_SUBJECT_EMAIL
+      SSL_SUBJECT_EMAIL=$old_input_value
     fi
   fi
   echo "SSL_SUBJECT_EMAIL='$SSL_SUBJECT_EMAIL'" >> $installation_cfg_tmpfile
   if [ -z "$BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN" ]
   then
-    yes_no_function "Do you want to install HQ plugin to manage ElasticSearch, default value : ${SETCOLOR_INFO}yes${SETCOLOR_NORMAL} ?" "yes"
-  else
-    if [ "$BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN" == 1 ]
-    then
-      yes_no_function "Do you want to install HQ plugin to manage ElasticSearch, actual value : ${SETCOLOR_WARNING}yes${SETCOLOR_NORMAL} ?" "yes"
-    else
-      yes_no_function "Do you want to install HQ plugin to manage ElasticSearch, actual value : ${SETCOLOR_WARNING}no${SETCOLOR_NORMAL} ?" "no"
-    fi
-  fi
-  if [ "$?" == 0 ]
-  then
-    if [ -z "$BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN" ]
+    yes_no_function "Do you want to install HQ plugin to manage ElasticSearch ?" "yes"
+    if [ "$?" == 0 ]
     then
       BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=1
     else
-      if [ "$BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN" == 1 ]
-      then
-        yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not install${SETCOLOR_NORMAL} HQ plugin ?" "yes"
-        if [ "$?" == 0 ]
-        then
-          BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=0
-        else
-          BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=$BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN
-        fi
-      else
-        yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}install${SETCOLOR_NORMAL} HQ plugin ?" "yes"
-        if [ "$?" == 0 ]
-        then
-          BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=1
-        else
-          BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=$BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN
-        fi
-      fi
+      BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=0
     fi
   else
-    BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=0
+    if [ "$BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN" == 1]
+    then
+      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not install${SETCOLOR_NORMAL} ElasticSearch HQ plugin ?" "yes"
+      if [ "$?" == 0 ]
+      then
+        BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=0
+      else
+        BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=$BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN
+      fi
+    else
+      yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}install${SETCOLOR_NORMAL} ElasticSearch HQ plugin ?" "yes"
+      if [ "$?" == 0 ]
+      then
+        BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=1
+      else
+        BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=$BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN
+      fi
+    fi
   fi
   echo "BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=$BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN" >> $installation_cfg_tmpfile
   if [ -z "$BOOLEAN_ELASTICSEARCH_ONSTARTUP" ]
   then
-    yes_no_function "Do you want to add ElasticSearch server on startup, default value : ${SETCOLOR_INFO}on${SETCOLOR_NORMAL} ?" "yes"
-  else
-    if [ "$BOOLEAN_ELASTICSEARCH_ONSTARTUP" == 1 ]
-    then
-      yes_no_function "Do you want to add ElasticSearch server on startup, actual value : ${SETCOLOR_WARNING}on${SETCOLOR_NORMAL} ?" "yes"
-    else
-      yes_no_function "Do you want to add ElasticSearch server on startup, actual value : ${SETCOLOR_WARNING}off${SETCOLOR_NORMAL} ?" "no"
-    fi
-  fi
-  if [ "$?" == 0 ]
-  then
-    if [ -z "$BOOLEAN_ELASTICSEARCH_ONSTARTUP" ]
+    yes_no_function "Do you want to add ElasticSearch server on startup ?" "yes"
+    if [ "$?" == 0 ]
     then
       BOOLEAN_ELASTICSEARCH_ONSTARTUP=1
     else
-      if [ "$BOOLEAN_ELASTICSEARCH_ONSTARTUP" == 1 ]
-      then
-        yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} ElasticSearch server on startup ?" "yes"
-        if [ "$?" == 0 ]
-        then
-          BOOLEAN_ELASTICSEARCH_ONSTARTUP=0
-        else
-          BOOLEAN_ELASTICSEARCH_ONSTARTUP=$BOOLEAN_ELASTICSEARCH_ONSTARTUP
-        fi
-      else
-        yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} ElasticSearch server on startup ?" "yes"
-        if [ "$?" == 0 ]
-        then
-          BOOLEAN_ELASTICSEARCH_ONSTARTUP=1
-        else
-          BOOLEAN_ELASTICSEARCH_ONSTARTUP=$BOOLEAN_ELASTICSEARCH_ONSTARTUP
-        fi
-      fi
+      BOOLEAN_ELASTICSEARCH_ONSTARTUP=0
     fi
   else
-    BOOLEAN_ELASTICSEARCH_ONSTARTUP=0
+    if [ "$BOOLEAN_ELASTICSEARCH_ONSTARTUP" == 1]
+    then
+      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} ElasticSearch server on startup ?" "yes"
+      if [ "$?" == 0 ]
+      then
+        BOOLEAN_ELASTICSEARCH_ONSTARTUP=0
+      else
+        BOOLEAN_ELASTICSEARCH_ONSTARTUP=$BOOLEAN_ELASTICSEARCH_ONSTARTUP
+      fi
+    else
+      yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} ElasticSearch server on startup ?" "yes"
+      if [ "$?" == 0 ]
+      then
+        BOOLEAN_ELASTICSEARCH_ONSTARTUP=1
+      else
+        BOOLEAN_ELASTICSEARCH_ONSTARTUP=$BOOLEAN_ELASTICSEARCH_ONSTARTUP
+      fi
+    fi
   fi
   echo "BOOLEAN_ELASTICSEARCH_ONSTARTUP=$BOOLEAN_ELASTICSEARCH_ONSTARTUP" >> $installation_cfg_tmpfile
   if [ -z "$GRAYLOG_SECRET_PASSWORD" ]
   then
-    yes_no_function "Do you want to modify secret password of Graylog application, default value : ${SETCOLOR_INFO}secretpassword${SETCOLOR_NORMAL} ?" "yes"
+    while [ -z "$GRAYLOG_SECRET_PASSWORD" ]
+    do
+      echo -e "Type secret password of Graylog application [${SETCOLOR_INFO}secretpassword${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -en "> "
+      read GRAYLOG_SECRET_PASSWORD
+      if [ -z "$GRAYLOG_SECRET_PASSWORD" ]
+      then
+        GRAYLOG_SECRET_PASSWORD='secretpassword'
+      fi
+    done
   else
-    yes_no_function "Do you want to modify secret password of Graylog application, actual value : ${SETCOLOR_WARNING}${GRAYLOG_SECRET_PASSWORD}${SETCOLOR_NORMAL} ?" "no"
-  fi
-  if [ $? -eq 0 ]
-  then
-    if [ -z "$GRAYLOG_SECRET_PASSWORD" ]
+    yes_no_function "Can you confirm you want to modify current secret password of Graylog application ?" "yes"
+    if [ $? -eq 0 ]
     then
+      old_input_value=$GRAYLOG_SECRET_PASSWORD
+      GRAYLOG_SECRET_PASSWORD=
       while [ -z "$GRAYLOG_SECRET_PASSWORD" ]
       do
-        echo -e "Type secret password of Graylog application, followed by [ENTER]:"
+        echo -e "Type secret password of Graylog application [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
         echo -en "> "
         read GRAYLOG_SECRET_PASSWORD
+        if [ -z "$GRAYLOG_SECRET_PASSWORD" ]
+        then
+          GRAYLOG_SECRET_PASSWORD=$old_input_value
+        fi
       done
     else
-      yes_no_function "Can you confirm you want to modify current secret password of Graylog application ?" "yes"
-      if [ $? -eq 0 ]
-      then
-        GRAYLOG_SECRET_PASSWORD=
-        while [ -z "$GRAYLOG_SECRET_PASSWORD" ]
-        do
-          echo -e "Type secret password of Graylog application, followed by [ENTER]:"
-          echo -en "> "
-          read GRAYLOG_SECRET_PASSWORD
-        done
-      else
-        GRAYLOG_SECRET_PASSWORD=$GRAYLOG_SECRET_PASSWORD
-      fi
-    fi
-  else
-    if [ -z "$GRAYLOG_SECRET_PASSWORD" ]
-    then
-      GRAYLOG_SECRET_PASSWORD='secretpassword'
-    else
-      GRAYLOG_SECRET_PASSWORD=$GRAYLOG_SECRET_PASSWORD
+      GRAYLOG_SECRET_PASSWORD=$old_input_value
     fi
   fi
   echo "GRAYLOG_SECRET_PASSWORD='$GRAYLOG_SECRET_PASSWORD'" >> $installation_cfg_tmpfile
   if [ -z "$GRAYLOG_ADMIN_USERNAME" ]
   then
-    yes_no_function "Do you want to modify login of Graylog administrator user, default value : ${SETCOLOR_INFO}admin${SETCOLOR_NORMAL} ?" "yes"
+    while [ -z "$GRAYLOG_ADMIN_USERNAME" ]
+    do
+      echo -e "Type login of Graylog administrator [${SETCOLOR_INFO}admin${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -en "> "
+      read GRAYLOG_ADMIN_USERNAME
+      if [ -z "$GRAYLOG_ADMIN_USERNAME" ]
+      then
+        GRAYLOG_ADMIN_USERNAME='admin'
+      fi
+    done
   else
-    yes_no_function "Do you want to modify login of Graylog administrator, actual value : ${SETCOLOR_WARNING}${GRAYLOG_ADMIN_USERNAME}${SETCOLOR_NORMAL} ?" "no"
-  fi
-  if [ $? -eq 0 ]
-  then
-    if [ -z "$GRAYLOG_ADMIN_USERNAME" ]
+    yes_no_function "Can you confirm you want to modify current login of Graylog administrator ?" "yes"
+    if [ $? -eq 0 ]
     then
+      old_input_value=$GRAYLOG_ADMIN_USERNAME
+      GRAYLOG_ADMIN_USERNAME=
       while [ -z "$GRAYLOG_ADMIN_USERNAME" ]
       do
-        echo -e "Type login of Graylog administrator, followed by [ENTER]:"
+        echo -e "Type login of Graylog administrator [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
         echo -en "> "
         read GRAYLOG_ADMIN_USERNAME
+        if [ -z "$GRAYLOG_ADMIN_USERNAME" ]
+        then
+          GRAYLOG_ADMIN_USERNAME=$old_input_value
+        fi
       done
     else
-      yes_no_function "Can you confirm you want to modify current login of Graylog administrator ?" "yes"
-      if [ $? -eq 0 ]
-      then
-        GRAYLOG_ADMIN_USERNAME=
-        while [ -z "$GRAYLOG_ADMIN_USERNAME" ]
-        do
-          echo -e "Type login of Graylog administrator, followed by [ENTER]:"
-          echo -en "> "
-          read GRAYLOG_ADMIN_USERNAME
-        done
-      else
-        GRAYLOG_ADMIN_USERNAME=$GRAYLOG_ADMIN_USERNAME
-      fi
-    fi
-  else
-    if [ -z "$GRAYLOG_ADMIN_USERNAME" ]
-    then
-      GRAYLOG_ADMIN_USERNAME='admin'
-    else
-      GRAYLOG_ADMIN_USERNAME=$GRAYLOG_ADMIN_USERNAME
+      GRAYLOG_ADMIN_USERNAME=$old_input_value
     fi
   fi
   echo "GRAYLOG_ADMIN_USERNAME='$GRAYLOG_ADMIN_USERNAME'" >> $installation_cfg_tmpfile
   if [ -z "$GRAYLOG_ADMIN_PASSWORD" ]
   then
-    yes_no_function "Do you want to modify password of Graylog administrator, default value : ${SETCOLOR_INFO}adminpassword${SETCOLOR_NORMAL} ?" "yes"
+    while [ -z "$GRAYLOG_ADMIN_PASSWORD" ]
+    do
+      echo -e "Type password of Graylog administrator [${SETCOLOR_INFO}adminpassword${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -en "> "
+      read GRAYLOG_ADMIN_PASSWORD
+      if [ -z "$GRAYLOG_ADMIN_PASSWORD" ]
+      then
+        GRAYLOG_ADMIN_PASSWORD='adminpassword'
+      fi
+    done
   else
-    yes_no_function "Do you want to modify password of Graylog administrator, actual value : ${SETCOLOR_WARNING}${GRAYLOG_ADMIN_PASSWORD}${SETCOLOR_NORMAL} ?" "no"
-  fi
-  if [ $? -eq 0 ]
-  then
-    if [ -z "$GRAYLOG_ADMIN_PASSWORD" ]
+    yes_no_function "Can you confirm you want to modify current password of Graylog administrator ?" "yes"
+    if [ $? -eq 0 ]
     then
+      old_input_value=$GRAYLOG_ADMIN_PASSWORD
+      GRAYLOG_ADMIN_PASSWORD=
       while [ -z "$GRAYLOG_ADMIN_PASSWORD" ]
       do
-        echo -e "Type password of Graylog administrator, followed by [ENTER]:"
+        echo -e "Type password of Graylog administrator [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
         echo -en "> "
         read GRAYLOG_ADMIN_PASSWORD
+        if [ -z "$GRAYLOG_ADMIN_PASSWORD" ]
+        then
+          GRAYLOG_ADMIN_PASSWORD=$old_input_value
+        fi
       done
     else
-      yes_no_function "Can you confirm you want to modify current password of Graylog administrator ?" "yes"
-      if [ $? -eq 0 ]
-      then
-        GRAYLOG_ADMIN_PASSWORD=
-        while [ -z "$GRAYLOG_ADMIN_PASSWORD" ]
-        do
-          echo -e "Type password of Graylog administrator, followed by [ENTER]:"
-          echo -en "> "
-          read GRAYLOG_ADMIN_PASSWORD
-        done
-      else
-        GRAYLOG_ADMIN_PASSWORD=$GRAYLOG_ADMIN_PASSWORD
-      fi
-    fi
-  else
-    if [ -z "$GRAYLOG_ADMIN_PASSWORD" ]
-    then
-      GRAYLOG_ADMIN_PASSWORD='adminpassword'
-    else
-      GRAYLOG_ADMIN_PASSWORD=$GRAYLOG_ADMIN_PASSWORD
+      GRAYLOG_ADMIN_PASSWORD=$old_input_value
     fi
   fi
   echo "GRAYLOG_ADMIN_PASSWORD='$GRAYLOG_ADMIN_PASSWORD'" >> $installation_cfg_tmpfile
-
   if [ -z "$GRAYLOG_USE_SMTP" ]
   then
-    yes_no_function "Do you want to use Simple Mail Transport Protocol (SMTP) for Graylog, default value : ${SETCOLOR_INFO}yes${SETCOLOR_NORMAL} ?" "yes"
-  else
-    if [ "$GRAYLOG_USE_SMTP" == 1 ]
-    then
-      yes_no_function "Do you want to use Simple Mail Transport Protocol (SMTP) for Graylog, actual value : ${SETCOLOR_WARNING}yes${SETCOLOR_NORMAL} ?" "yes"
-    else
-      yes_no_function "Do you want to use Simple Mail Transport Protocol (SMTP) for Graylog, actual value : ${SETCOLOR_WARNING}no${SETCOLOR_NORMAL} ?" "no"
-    fi
-  fi
-  if [ "$?" == 0 ]
-  then
-    if [ -z "$GRAYLOG_USE_SMTP" ]
+    yes_no_function "Do you want to use Simple Mail Transport Protocol (SMTP) for Graylog ?" "yes"
+    if [ "$?" == 0 ]
     then
       GRAYLOG_USE_SMTP=1
     else
-      if [ "$GRAYLOG_USE_SMTP" == 1 ]
-      then
-        yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not use${SETCOLOR_NORMAL} SMTP for Graylog ?" "yes"
-        if [ "$?" == 0 ]
-        then
-          GRAYLOG_USE_SMTP=0
-        else
-          GRAYLOG_USE_SMTP=$GRAYLOG_USE_SMTP
-        fi
-      else
-        yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}use${SETCOLOR_NORMAL} SMTP for Graylog ?" "yes"
-        if [ "$?" == 0 ]
-        then
-          GRAYLOG_USE_SMTP=1
-        else
-          GRAYLOG_USE_SMTP=$GRAYLOG_USE_SMTP
-        fi
-      fi
+      GRAYLOG_USE_SMTP=0
     fi
   else
-    GRAYLOG_USE_SMTP=0
+    if [ "$GRAYLOG_USE_SMTP" == 1]
+    then
+      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not use${SETCOLOR_NORMAL} Graylog server on startup ?" "yes"
+      if [ "$?" == 0 ]
+      then
+        GRAYLOG_USE_SMTP=0
+      else
+        GRAYLOG_USE_SMTP=$GRAYLOG_USE_SMTP
+      fi
+    else
+      yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}use${SETCOLOR_NORMAL} Graylog server on startup ?" "yes"
+      if [ "$?" == 0 ]
+      then
+        GRAYLOG_USE_SMTP=1
+      else
+        GRAYLOG_USE_SMTP=$GRAYLOG_USE_SMTP
+      fi
+    fi
   fi
-  if [ "GRAYLOG_USE_SMTP" == 1 ]
+  if [ "$GRAYLOG_USE_SMTP" == 1 ]
   then
     if [ -z "$SMTP_HOST_NAME" ]
     then
-      yes_no_function "Do you want to modify fully qualified domain name (FQDN) of SMTP server, default value : ${SETCOLOR_INFO}mail.example.com${SETCOLOR_NORMAL} ?" "yes"
+      while [ -z "$SMTP_HOST_NAME" ]
+      do
+        echo -e "Type FQDN of SMTP server [${SETCOLOR_INFO}mail.example.com${SETCOLOR_NORMAL}], followed by [ENTER]:"
+        echo -en "> "
+        read SMTP_HOST_NAME
+        if [ -z "$SMTP_HOST_NAME" ]
+        then
+          SMTP_HOST_NAME='mail.example.com'
+        fi
+      done
     else
-      yes_no_function "Do you want to modify fully qualified domain name (FQDN) of SMTP server, actual value : ${SETCOLOR_WARNING}${SMTP_HOST_NAME}${SETCOLOR_NORMAL} ?" "no"
-    fi
-    if [ $? -eq 0 ]
-    then
-      if [ -z "$SMTP_HOST_NAME" ]
+      yes_no_function "Can you confirm you want to modify current FQDN of SMTP server ?" "yes"
+      if [ $? -eq 0 ]
       then
+        old_input_value=$SMTP_HOST_NAME
+        SMTP_HOST_NAME=
         while [ -z "$SMTP_HOST_NAME" ]
         do
-          echo -e "Type FQDN of SMTP server, followed by [ENTER]:"
+          echo -e "Type FQDN of SMTP server [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
           echo -en "> "
           read SMTP_HOST_NAME
+          if [ -z "$SMTP_HOST_NAME" ]
+          then
+            SMTP_HOST_NAME=$old_input_value
+          fi
         done
       else
-        yes_no_function "Can you confirm you want to modify current FQDN of SMTP server ?" "yes"
-        if [ $? -eq 0 ]
-        then
-          SMTP_HOST_NAME=
-          while [ -z "$SMTP_HOST_NAME" ]
-          do
-            echo -e "Type FQDN of SMTP server, followed by [ENTER]:"
-            echo -en "> "
-            read SMTP_HOST_NAME
-          done
-        else
-          SMTP_HOST_NAME=$SMTP_HOST_NAME
-        fi
-      fi
-    else
-      if [ -z "$SMTP_HOST_NAME" ]
-      then
-        SMTP_HOST_NAME='mail.example.com'
-      else
-        SMTP_HOST_NAME=$SMTP_HOST_NAME
+        SMTP_HOST_NAME=$old_input_value
       fi
     fi
     if [ -z "$SMTP_DOMAIN_NAME" ]
     then
-      yes_no_function "Do you want to modify SMTP domain name, default value : ${SETCOLOR_INFO}example.com${SETCOLOR_NORMAL} ?" "yes"
+      while [ -z "$SMTP_DOMAIN_NAME" ]
+      do
+        echo -e "Type SMTP domain name [${SETCOLOR_INFO}example.com${SETCOLOR_NORMAL}], followed by [ENTER]:"
+        echo -en "> "
+        read SMTP_DOMAIN_NAME
+        if [ -z "$SMTP_DOMAIN_NAME" ]
+        then
+          SMTP_DOMAIN_NAME='example.com'
+        fi
+      done
     else
-      yes_no_function "Do you want to modify SMTP domain name, actual value : ${SETCOLOR_WARNING}${SMTP_DOMAIN_NAME}${SETCOLOR_NORMAL} ?" "no"
-    fi
-    if [ $? -eq 0 ]
-    then
-      if [ -z "$SMTP_DOMAIN_NAME" ]
+      yes_no_function "Can you confirm you want to modify current SMTP domain name ?" "yes"
+      if [ $? -eq 0 ]
       then
+        old_input_value=$SMTP_DOMAIN_NAME
+        SMTP_DOMAIN_NAME=
         while [ -z "$SMTP_DOMAIN_NAME" ]
         do
-          echo -e "Type SMTP domain name, followed by [ENTER]:"
+          echo -e "Type SMTP domain name [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
           echo -en "> "
           read SMTP_DOMAIN_NAME
+          if [ -z "$SMTP_DOMAIN_NAME" ]
+          then
+            SMTP_DOMAIN_NAME=$old_input_value
+          fi
         done
       else
-        yes_no_function "Can you confirm you want to modify current SMTP domain name ?" "yes"
-        if [ $? -eq 0 ]
-        then
-          SMTP_DOMAIN_NAME=
-          while [ -z "$SMTP_DOMAIN_NAME" ]
-          do
-            echo -e "Type SMTP domain name, followed by [ENTER]:"
-            echo -en "> "
-            read SMTP_DOMAIN_NAME
-          done
-        else
-          SMTP_DOMAIN_NAME=$SMTP_DOMAIN_NAME
-        fi
-      fi
-    else
-      if [ -z "$SMTP_DOMAIN_NAME" ]
-      then
-        SMTP_DOMAIN_NAME='example.com'
-      else
-        SMTP_DOMAIN_NAME=$SMTP_DOMAIN_NAME
+        SMTP_DOMAIN_NAME=$old_input_value
       fi
     fi
-    
     if [ -z "$SMTP_PORT_NUMBER" ]
     then
-      yes_no_function "Do you want to modify SMTP port number, default value : ${SETCOLOR_INFO}587${SETCOLOR_NORMAL} ?" "yes"
+      while [ -z "$SMTP_PORT_NUMBER" ] || [[ ! "$SMTP_PORT_NUMBER" =~ 25|465|587 ]]
+      do
+        echo -e "Type SMTP port number (possible values : ${SETCOLOR_FAILURE}25${SETCOLOR_NORMAL}, ${SETCOLOR_FAILURE}465${SETCOLOR_NORMAL}, ${SETCOLOR_FAILURE}587${SETCOLOR_NORMAL}) [${SETCOLOR_INFO}587${SETCOLOR_NORMAL}], followed by [ENTER]:"
+        echo -en "> "
+        read SMTP_PORT_NUMBER
+        if [ -z "$SMTP_PORT_NUMBER" ]
+        then
+          SMTP_PORT_NUMBER='587'
+        fi
+      done
     else
-      yes_no_function "Do you want to modify SMTP port number, actual value : ${SETCOLOR_WARNING}${SMTP_PORT_NUMBER}${SETCOLOR_NORMAL} ?" "no"
-    fi
-    if [ $? -eq 0 ]
-    then
-      if [ -z "$SMTP_PORT_NUMBER" ]
+      yes_no_function "Can you confirm you want to modify current SMTP port number ?" "yes"
+      if [ $? -eq 0 ]
       then
+        old_input_value=$SMTP_PORT_NUMBER
+        SMTP_PORT_NUMBER=
         while [ -z "$SMTP_PORT_NUMBER" ] || [[ ! "$SMTP_PORT_NUMBER" =~ 25|465|587 ]]
         do
-          echo -e "Type SMTP port number (possible values : ${SETCOLOR_FAILURE}25${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}465${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}587${SETCOLOR_NORMAL}), followed by [ENTER]:"
+          echo -e "Type SMTP port number (possible values : ${SETCOLOR_FAILURE}25${SETCOLOR_NORMAL}, ${SETCOLOR_FAILURE}465${SETCOLOR_NORMAL}, ${SETCOLOR_FAILURE}587${SETCOLOR_NORMAL}) [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
           echo -en "> "
           read SMTP_PORT_NUMBER
+          if [ -z "$SMTP_PORT_NUMBER" ]
+          then
+            SMTP_PORT_NUMBER=$old_input_value
+          fi
         done
       else
-        yes_no_function "Can you confirm you want to modify current SMTP port number ?" "yes"
-        if [ $? -eq 0 ]
-        then
-          SMTP_PORT_NUMBER=
-          while [ -z "$SMTP_PORT_NUMBER" ] || [[ ! "$SMTP_PORT_NUMBER" =~ 25|465|587 ]]
-          do
-            echo -e "Type SMTP port number (possible values : ${SETCOLOR_FAILURE}25${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}465${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}587${SETCOLOR_NORMAL}), followed by [ENTER]:"
-            echo -en "> "
-            read SMTP_PORT_NUMBER
-          done
-        else
-          SMTP_PORT_NUMBER=$SMTP_PORT_NUMBER
-        fi
-      fi
-    else
-      if [ -z "$SMTP_PORT_NUMBER" ]
-      then
-        SMTP_PORT_NUMBER='587'
-      else
-        SMTP_PORT_NUMBER=$SMTP_PORT_NUMBER
+        SMTP_PORT_NUMBER=$old_input_value
       fi
     fi
     if [ -z "$SMTP_USE_AUTH" ]
     then
-      yes_no_function "Do you want to use SMTP authentication, default value : ${SETCOLOR_INFO}yes${SETCOLOR_NORMAL} ?" "yes"
-    else
-      if [ "$SMTP_USE_AUTH" == 1 ]
-      then
-        yes_no_function "Do you want to use SMTP authentication, actual value : ${SETCOLOR_WARNING}yes${SETCOLOR_NORMAL} ?" "yes"
-      else
-        yes_no_function "Do you want to use SMTP authentication, actual value : ${SETCOLOR_WARNING}no${SETCOLOR_NORMAL} ?" "no"
-      fi
-    fi
-    if [ "$?" == 0 ]
-    then
-      if [ -z "$SMTP_USE_AUTH" ]
+      yes_no_function "Do you want to use authentication for SMTP ?" "yes"
+      if [ "$?" == 0 ]
       then
         SMTP_USE_AUTH=1
       else
-        if [ "$SMTP_USE_AUTH" == 1 ]
-        then
-          yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not use${SETCOLOR_NORMAL} SMTP authentication ?" "yes"
-          if [ "$?" == 0 ]
-          then
-            SMTP_USE_AUTH=0
-          else
-            SMTP_USE_AUTH=$SMTP_USE_AUTH
-          fi
-        else
-          yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}use${SETCOLOR_NORMAL} SMTP authentication ?" "yes"
-          if [ "$?" == 0 ]
-          then
-            SMTP_USE_AUTH=1
-          else
-            SMTP_USE_AUTH=$SMTP_USE_AUTH
-          fi
-        fi
+        SMTP_USE_AUTH=0
       fi
     else
-      SMTP_USE_AUTH=0
+      if [ "$SMTP_USE_AUTH" == 1]
+      then
+        yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not use${SETCOLOR_NORMAL} SMTP authentication ?" "yes"
+        if [ "$?" == 0 ]
+        then
+          SMTP_USE_AUTH=0
+        else
+          SMTP_USE_AUTH=$SMTP_USE_AUTH
+        fi
+      else
+        yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}use${SETCOLOR_NORMAL} SMTP authentication ?" "yes"
+        if [ "$?" == 0 ]
+        then
+          SMTP_USE_AUTH=1
+        else
+          SMTP_USE_AUTH=$SMTP_USE_AUTH
+        fi
+      fi
     fi
     if [ "$SMTP_USE_AUTH" == 1 ]
     then
       if [ -z "$SMTP_USE_TLS" ]
       then
-        yes_no_function "Do you want to use TLS for SMTP, default value : ${SETCOLOR_INFO}yes${SETCOLOR_NORMAL} ?" "yes"
-      else
-        if [ "$SMTP_USE_TLS" == 1 ]
-        then
-          yes_no_function "Do you want to use TLS for SMTP, actual value : ${SETCOLOR_WARNING}yes${SETCOLOR_NORMAL} ?" "yes"
-        else
-          yes_no_function "Do you want to use TLS for SMTP, actual value : ${SETCOLOR_WARNING}no${SETCOLOR_NORMAL} ?" "no"
-        fi
-      fi
-      if [ "$?" == 0 ]
-      then
-        if [ -z "$SMTP_USE_TLS" ]
+        yes_no_function "Do you want to use SMTP over Transport Layer Security (TLS) ?" "yes"
+        if [ "$?" == 0 ]
         then
           SMTP_USE_TLS=1
         else
-          if [ "$SMTP_USE_TLS" == 1 ]
-          then
-            yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not use${SETCOLOR_NORMAL} SMTP over TLS ?" "yes"
-            if [ "$?" == 0 ]
-            then
-              SMTP_USE_TLS=0
-            else
-              SMTP_USE_TLS=$SMTP_USE_TLS
-            fi
-          else
-            yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}use${SETCOLOR_NORMAL} SMTP over TLS ?" "yes"
-            if [ "$?" == 0 ]
-            then
-              SMTP_USE_TLS=1
-            else
-              SMTP_USE_TLS=$SMTP_USE_TLS
-            fi
-          fi
+          SMTP_USE_TLS=0
         fi
       else
-        SMTP_USE_TLS=0
+        if [ "$SMTP_USE_TLS" == 1]
+        then
+          yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not use${SETCOLOR_NORMAL} SMTP over TLS ?" "yes"
+          if [ "$?" == 0 ]
+          then
+            SMTP_USE_TLS=0
+          else
+            SMTP_USE_TLS=$SMTP_USE_TLS
+          fi
+        else
+          yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}use${SETCOLOR_NORMAL} SMTP over TLS ?" "yes"
+          if [ "$?" == 0 ]
+          then
+            SMTP_USE_TLS=1
+          else
+            SMTP_USE_TLS=$SMTP_USE_TLS
+          fi
+        fi
       fi
       if [ -z "$SMTP_USE_SSL" ]
       then
-        yes_no_function "Do you want to use SSL for SMTP, default value : ${SETCOLOR_INFO}yes${SETCOLOR_NORMAL} ?" "yes"
-      else
-        if [ "$SMTP_USE_SSL" == 1 ]
-        then
-          yes_no_function "Do you want to use SSL for SMTP, actual value : ${SETCOLOR_WARNING}yes${SETCOLOR_NORMAL} ?" "yes"
-        else
-          yes_no_function "Do you want to use SSL for SMTP, actual value : ${SETCOLOR_WARNING}no${SETCOLOR_NORMAL} ?" "no"
-        fi
-      fi
-      if [ "$?" == 0 ]
-      then
-        if [ -z "$SMTP_USE_SSL" ]
+        yes_no_function "Do you want to use SMTP over Secure Socket Layer (SSL) ?" "yes"
+        if [ "$?" == 0 ]
         then
           SMTP_USE_SSL=1
         else
-          if [ "$SMTP_USE_SSL" == 1 ]
-          then
-            yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not use${SETCOLOR_NORMAL} SMTP over SSL ?" "yes"
-            if [ "$?" == 0 ]
-            then
-              SMTP_USE_SSL=0
-            else
-              SMTP_USE_SSL=$SMTP_USE_SSL
-            fi
-          else
-            yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}use${SETCOLOR_NORMAL} SMTP over SSL ?" "yes"
-            if [ "$?" == 0 ]
-            then
-              SMTP_USE_SSL=1
-            else
-              SMTP_USE_SSL=$SMTP_USE_SSL
-            fi
-          fi
+          SMTP_USE_SSL=0
         fi
       else
-        SMTP_USE_SSL=0
+        if [ "$SMTP_USE_SSL" == 1]
+        then
+          yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not use${SETCOLOR_NORMAL} SMTP over SSL ?" "yes"
+          if [ "$?" == 0 ]
+          then
+            SMTP_USE_SSL=0
+          else
+            SMTP_USE_SSL=$SMTP_USE_SSL
+          fi
+        else
+          yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}use${SETCOLOR_NORMAL} SMTP over SSL ?" "yes"
+          if [ "$?" == 0 ]
+          then
+            SMTP_USE_SSL=1
+          else
+            SMTP_USE_SSL=$SMTP_USE_SSL
+          fi
+        fi
       fi
       if [ -z "$SMTP_AUTH_USERNAME" ]
       then
-        yes_no_function "Do you want to modify username of SMTP authentication, default value : ${SETCOLOR_INFO}you@example.com${SETCOLOR_NORMAL} ?" "yes"
+        while [ -z "$SMTP_AUTH_USERNAME" ]
+        do
+          echo -e "Type username of SMTP authentication [${SETCOLOR_INFO}you@example.com${SETCOLOR_NORMAL}], followed by [ENTER]:"
+          echo -en "> "
+          read SMTP_AUTH_USERNAME
+          if [ -z "$SMTP_AUTH_USERNAME" ]
+          then
+            SMTP_AUTH_USERNAME='you@example.com'
+          fi
+        done
       else
-        yes_no_function "Do you want to modify username of SMTP authentication, actual value : ${SETCOLOR_WARNING}${SMTP_AUTH_USERNAME}${SETCOLOR_NORMAL} ?" "no"
-      fi
-      if [ $? -eq 0 ]
-      then
-        if [ -z "$SMTP_AUTH_USERNAME" ]
+        yes_no_function "Can you confirm you want to modify current username of SMTP authentication ?" "yes"
+        if [ $? -eq 0 ]
         then
+          old_input_value=$SMTP_AUTH_USERNAME
+          SMTP_AUTH_USERNAME=
           while [ -z "$SMTP_AUTH_USERNAME" ]
           do
-            echo -e "Type username of SMTP authentication, followed by [ENTER]:"
+            echo -e "Type username of SMTP authentication [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
             echo -en "> "
             read SMTP_AUTH_USERNAME
+            if [ -z "$SMTP_AUTH_USERNAME" ]
+            then
+              SMTP_AUTH_USERNAME=$old_input_value
+            fi
           done
         else
-          yes_no_function "Can you confirm you want to modify current username of SMTP authentication ?" "yes"
-          if [ $? -eq 0 ]
-          then
-            SMTP_AUTH_USERNAME=
-            while [ -z "$SMTP_AUTH_USERNAME" ]
-            do
-              echo -e "Type username of SMTP authentication, followed by [ENTER]:"
-              echo -en "> "
-              read SMTP_AUTH_USERNAME
-            done
-          else
-            SMTP_AUTH_USERNAME=$SMTP_AUTH_USERNAME
-          fi
-        fi
-      else
-        if [ -z "$SMTP_AUTH_USERNAME" ]
-        then
-          SMTP_AUTH_USERNAME='you@example.com'
-        else
-          SMTP_AUTH_USERNAME=$SMTP_AUTH_USERNAME
+          SMTP_AUTH_USERNAME=$old_input_value
         fi
       fi
       if [ -z "$SMTP_AUTH_PASSWORD" ]
       then
-        yes_no_function "Do you want to modify password of SMTP authentication, default value : ${SETCOLOR_INFO}secret${SETCOLOR_NORMAL} ?" "yes"
+        while [ -z "$SMTP_AUTH_PASSWORD" ]
+        do
+          echo -e "Type password of SMTP authentication [${SETCOLOR_INFO}secret${SETCOLOR_NORMAL}], followed by [ENTER]:"
+          echo -en "> "
+          read SMTP_AUTH_PASSWORD
+          if [ -z "$SMTP_AUTH_PASSWORD" ]
+          then
+            SMTP_AUTH_PASSWORD='secret'
+          fi
+        done
       else
-        yes_no_function "Do you want to modify password of SMTP authentication, actual value : ${SETCOLOR_WARNING}${SMTP_AUTH_PASSWORD}${SETCOLOR_NORMAL} ?" "no"
-      fi
-      if [ $? -eq 0 ]
-      then
-        if [ -z "$SMTP_AUTH_PASSWORD" ]
+        yes_no_function "Can you confirm you want to modify current password of SMTP authentication ?" "yes"
+        if [ $? -eq 0 ]
         then
+          old_input_value=$SMTP_AUTH_PASSWORD
+          SMTP_AUTH_PASSWORD=
           while [ -z "$SMTP_AUTH_PASSWORD" ]
           do
-            echo -e "Type password of SMTP authentication, followed by [ENTER]:"
+            echo -e "Type password of SMTP authentication [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
             echo -en "> "
             read SMTP_AUTH_PASSWORD
+            if [ -z "$SMTP_AUTH_PASSWORD" ]
+            then
+              SMTP_AUTH_PASSWORD=$old_input_value
+            fi
           done
         else
-          yes_no_function "Can you confirm you want to modify current password of SMTP authentication ?" "yes"
-          if [ $? -eq 0 ]
-          then
-            SMTP_AUTH_PASSWORD=
-            while [ -z "$SMTP_AUTH_PASSWORD" ]
-            do
-              echo -e "Type password of SMTP authentication, followed by [ENTER]:"
-              echo -en "> "
-              read SMTP_AUTH_PASSWORD
-            done
-          else
-            SMTP_AUTH_PASSWORD=$SMTP_AUTH_PASSWORD
-          fi
-        fi
-      else
-        if [ -z "$SMTP_AUTH_PASSWORD" ]
-        then
-          SMTP_AUTH_PASSWORD='secret'
-        else
-          SMTP_AUTH_PASSWORD=$SMTP_AUTH_PASSWORD
+          SMTP_AUTH_PASSWORD=$old_input_value
         fi
       fi
     else
@@ -1537,122 +1348,92 @@ function set_globalvariables() {
   echo "SMTP_AUTH_PASSWORD='$SMTP_AUTH_PASSWORD'" >> $installation_cfg_tmpfile
   if [ -z "$BOOLEAN_GRAYLOGSERVER_ONSTARTUP" ]
   then
-    yes_no_function "Do you want to add Graylog server on startup, default value : ${SETCOLOR_INFO}on${SETCOLOR_NORMAL} ?" "yes"
-  else
-    if [ "$BOOLEAN_GRAYLOGSERVER_ONSTARTUP" == 1 ]
-    then
-      yes_no_function "Do you want to add Graylog server on startup, actual value : ${SETCOLOR_WARNING}on${SETCOLOR_NORMAL} ?" "yes"
-    else
-      yes_no_function "Do you want to add Graylog server on startup, actual value : ${SETCOLOR_WARNING}off${SETCOLOR_NORMAL} ?" "no"
-    fi
-  fi
-  if [ "$?" == 0 ]
-  then
-    if [ -z "$BOOLEAN_GRAYLOGSERVER_ONSTARTUP" ]
+    yes_no_function "Do you want to add Graylog server on startup ?" "yes"
+    if [ "$?" == 0 ]
     then
       BOOLEAN_GRAYLOGSERVER_ONSTARTUP=1
     else
-      if [ "$BOOLEAN_GRAYLOGSERVER_ONSTARTUP" == 1 ]
-      then
-        yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} Graylog server on startup ?" "yes"
-        if [ "$?" == 0 ]
-        then
-          BOOLEAN_GRAYLOGSERVER_ONSTARTUP=0
-        else
-          BOOLEAN_GRAYLOGSERVER_ONSTARTUP=$BOOLEAN_GRAYLOGSERVER_ONSTARTUP
-        fi
-      else
-        yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} Graylog server on startup ?" "yes"
-        if [ "$?" == 0 ]
-        then
-          BOOLEAN_GRAYLOGSERVER_ONSTARTUP=1
-        else
-          BOOLEAN_GRAYLOGSERVER_ONSTARTUP=$BOOLEAN_GRAYLOGSERVER_ONSTARTUP
-        fi
-      fi
+      BOOLEAN_GRAYLOGSERVER_ONSTARTUP=0
     fi
   else
-    BOOLEAN_GRAYLOGSERVER_ONSTARTUP=0
+    if [ "$BOOLEAN_GRAYLOGSERVER_ONSTARTUP" == 1]
+    then
+      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} Graylog server on startup ?" "yes"
+      if [ "$?" == 0 ]
+      then
+        BOOLEAN_GRAYLOGSERVER_ONSTARTUP=0
+      else
+        BOOLEAN_GRAYLOGSERVER_ONSTARTUP=$BOOLEAN_GRAYLOGSERVER_ONSTARTUP
+      fi
+    else
+      yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} Graylog server on startup ?" "yes"
+      if [ "$?" == 0 ]
+      then
+        BOOLEAN_GRAYLOGSERVER_ONSTARTUP=1
+      else
+        BOOLEAN_GRAYLOGSERVER_ONSTARTUP=$BOOLEAN_GRAYLOGSERVER_ONSTARTUP
+      fi
+    fi
   fi
   echo "BOOLEAN_GRAYLOGSERVER_ONSTARTUP=$BOOLEAN_GRAYLOGSERVER_ONSTARTUP" >> $installation_cfg_tmpfile
   if [ -z "$BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP" ]
   then
-    yes_no_function "Do you want to add Graylog web interface on startup, default value : ${SETCOLOR_INFO}on${SETCOLOR_NORMAL} ?" "yes"
-  else
-    if [ "$BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP" == 1 ]
-    then
-      yes_no_function "Do you want to add Graylog web interface on startup, actual value : ${SETCOLOR_WARNING}on${SETCOLOR_NORMAL} ?" "yes"
-    else
-      yes_no_function "Do you want to add Graylog web interface on startup, actual value : ${SETCOLOR_WARNING}off${SETCOLOR_NORMAL} ?" "no"
-    fi
-  fi
-  if [ "$?" == 0 ]
-  then
-    if [ -z "$BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP" ]
+    yes_no_function "Do you want to add Graylog web interface on startup ?" "yes"
+    if [ "$?" == 0 ]
     then
       BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=1
     else
-      if [ "$BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP" == 1 ]
-      then
-        yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} Graylog web interface on startup ?" "yes"
-        if [ "$?" == 0 ]
-        then
-          BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=0
-        else
-          BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=$BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP
-        fi
-      else
-        yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} Graylog web interface on startup ?" "yes"
-        if [ "$?" == 0 ]
-        then
-          BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=1
-        else
-          BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=$BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP
-        fi
-      fi
+      BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=0
     fi
   else
-    BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=0
+    if [ "$BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP" == 1]
+    then
+      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} Graylog web interface on startup ?" "yes"
+      if [ "$?" == 0 ]
+      then
+        BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=0
+      else
+        BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=$BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP
+      fi
+    else
+      yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} Graylog web interface on startup ?" "yes"
+      if [ "$?" == 0 ]
+      then
+        BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=1
+      else
+        BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=$BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP
+      fi
+    fi
   fi
   echo "BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=$BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP" >> $installation_cfg_tmpfile
   if [ -z "$BOOLEAN_NGINX_ONSTARTUP" ]
   then
-    yes_no_function "Do you want to add Nginx web server on startup, default value : ${SETCOLOR_INFO}on${SETCOLOR_NORMAL} ?" "yes"
-  else
-    if [ "$BOOLEAN_NGINX_ONSTARTUP" == 1 ]
-    then
-      yes_no_function "Do you want to add Nginx web server on startup, actual value : ${SETCOLOR_WARNING}on${SETCOLOR_NORMAL} ?" "yes"
-    else
-      yes_no_function "Do you want to add Nginx web server on startup, actual value : ${SETCOLOR_WARNING}off${SETCOLOR_NORMAL} ?" "no"
-    fi
-  fi
-  if [ "$?" == 0 ]
-  then
-    if [ -z "$BOOLEAN_NGINX_ONSTARTUP" ]
+    yes_no_function "Do you want to add Nginx web server on startup ?" "yes"
+    if [ "$?" == 0 ]
     then
       BOOLEAN_NGINX_ONSTARTUP=1
     else
-      if [ "$BOOLEAN_NGINX_ONSTARTUP" == 1 ]
-      then
-        yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} Nginx web server on startup ?" "yes"
-        if [ "$?" == 0 ]
-        then
-          BOOLEAN_NGINX_ONSTARTUP=0
-        else
-          BOOLEAN_NGINX_ONSTARTUP=$BOOLEAN_NGINX_ONSTARTUP
-        fi
-      else
-        yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} Nginx web server on startup ?" "yes"
-        if [ "$?" == 0 ]
-        then
-          BOOLEAN_NGINX_ONSTARTUP=1
-        else
-          BOOLEAN_NGINX_ONSTARTUP=$BOOLEAN_NGINX_ONSTARTUP
-        fi
-      fi
+      BOOLEAN_NGINX_ONSTARTUP=0
     fi
   else
-    BOOLEAN_NGINX_ONSTARTUP=0
+    if [ "$BOOLEAN_NGINX_ONSTARTUP" == 1]
+    then
+      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} Nginx web server on startup ?" "yes"
+      if [ "$?" == 0 ]
+      then
+        BOOLEAN_NGINX_ONSTARTUP=0
+      else
+        BOOLEAN_NGINX_ONSTARTUP=$BOOLEAN_NGINX_ONSTARTUP
+      fi
+    else
+      yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} Nginx web server on startup ?" "yes"
+      if [ "$?" == 0 ]
+      then
+        BOOLEAN_NGINX_ONSTARTUP=1
+      else
+        BOOLEAN_NGINX_ONSTARTUP=$BOOLEAN_NGINX_ONSTARTUP
+      fi
+    fi
   fi
   echo "BOOLEAN_NGINX_ONSTARTUP=$BOOLEAN_NGINX_ONSTARTUP" >> $installation_cfg_tmpfile
   INSTALLATION_CFG_FILE=$installation_cfg_tmpfile
