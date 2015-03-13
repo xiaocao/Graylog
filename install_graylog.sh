@@ -6,7 +6,7 @@
 #job title     : Network engineer
 #mail          : mikael.andre.1989@gmail.com
 #created       : 20150219
-#last revision : 20150311
+#last revision : 20150313
 #version       : 1.4
 #platform      : Linux
 #processor     : 64 Bits
@@ -19,6 +19,8 @@
 #==============================================================================
 # Global variables
 #==============================================================================
+# SCRIPT VARIABLES
+SCRIPT_MODE=
 # SYSTEM VARIABLES
 SERVER_PROCESSOR_TYPE=
 SERVER_IP_ADDRESS=
@@ -38,8 +40,8 @@ BOOLEAN_NTP_ONSTARTUP=
 BOOLEAN_NTP_CONFIGURE=
 NEW_NTP_ADDRESS=
 # SSH VARIABLES
-BOOLEAN_USE_OPENSSHKEY=
-OPENSSH_PERSONAL_KEY=
+BOOLEAN_USE_RSAAUTH=
+RSA_PUBLIC_KEY=
 # MONGO VARIABLES
 BOOLEAN_MONGO_ONSTARTUP=
 MONGO_ADMIN_USER="admin"
@@ -224,13 +226,26 @@ function test_internet() {
 function set_globalvariables() {
   local installation_cfg_tmpfile="$INSTALLATION_LOG_FOLDER/install_graylog_$INSTALLATION_LOG_TIMESTAMP.cfg"
   local old_input_value=
-  touch $installation_cfg_tmpfile
-  log "INFO" "Global variables: $installation_cfg_tmpfile successfully created"
+  if [ "$SCRIPT_MODE" == "i" ]
+  then
+    std_error_output=$(test_file ${installation_cfg_tmpfile})
+    if [ "$std_error_output" == "0" ]
+    then
+      log "WARN" "Global variables: $installation_cfg_tmpfile already created"
+    else
+      touch $installation_cfg_tmpfile
+      log "INFO" "Global variables: $installation_cfg_tmpfile successfully created"
+    fi
+  else
+    installation_cfg_tmpfile=$INSTALLATION_CFG_FILE
+    log "INFO" "Global variables: $installation_cfg_tmpfile successfully selected"
+  fi
   if [ -z "$NETWORK_INTERFACE_NAME" ]
   then
     while [ -z "$NETWORK_INTERFACE_NAME" ]
     do
-      echo -e "Type network interface name [${SETCOLOR_INFO}eth0${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -e "\nType network interface name, followed by [ENTER]"
+      echo -e "Default to [${SETCOLOR_INFO}eth0${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read NETWORK_INTERFACE_NAME
       if [ -z "$NETWORK_INTERFACE_NAME" ]
@@ -246,7 +261,8 @@ function set_globalvariables() {
       NETWORK_INTERFACE_NAME=
       while [ -z "$NETWORK_INTERFACE_NAME" ]
       do
-        echo -e "Type network interface name [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
+        echo -e "\nType network interface name, followed by [ENTER]"
+        echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read NETWORK_INTERFACE_NAME
         if [ -z "$NETWORK_INTERFACE_NAME" ]
@@ -259,75 +275,77 @@ function set_globalvariables() {
     fi
   fi
   echo "NETWORK_INTERFACE_NAME='$NETWORK_INTERFACE_NAME'" > $installation_cfg_tmpfile
-  if [ -z "$BOOLEAN_USE_OPENSSHKEY" ]
+  if [ -z "$BOOLEAN_USE_RSAAUTH" ]
   then
     yes_no_function "Do you want to use RSA authentication on GRAYLOG server ?" "yes"
     if [ "$?" == 0 ]
     then
-      BOOLEAN_USE_OPENSSHKEY=1
+      BOOLEAN_USE_RSAAUTH=1
     else
-      BOOLEAN_USE_OPENSSHKEY=0
+      BOOLEAN_USE_RSAAUTH=0
     fi
   else
-    if [ "$BOOLEAN_USE_OPENSSHKEY" == 1]
+    if [ "$BOOLEAN_USE_RSAAUTH" == 1 ]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not use${SETCOLOR_NORMAL} RSA authentication ?" "yes"
       if [ "$?" == 0 ]
       then
-        BOOLEAN_USE_OPENSSHKEY=0
+        BOOLEAN_USE_RSAAUTH=0
       else
-        BOOLEAN_USE_OPENSSHKEY=$BOOLEAN_USE_OPENSSHKEY
+        BOOLEAN_USE_RSAAUTH=$BOOLEAN_USE_RSAAUTH
       fi
     else
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}use${SETCOLOR_NORMAL} RSA authentication ?" "yes"
       if [ "$?" == 0 ]
       then
-        BOOLEAN_USE_OPENSSHKEY=1
+        BOOLEAN_USE_RSAAUTH=1
       else
-        BOOLEAN_USE_OPENSSHKEY=$BOOLEAN_USE_OPENSSHKEY
+        BOOLEAN_USE_RSAAUTH=$BOOLEAN_USE_RSAAUTH
       fi
     fi
   fi
-  if [ "$BOOLEAN_USE_OPENSSHKEY" == 1 ]
+  if [ "$BOOLEAN_USE_RSAAUTH" == 1 ]
   then
-    if [ -z "$OPENSSH_PERSONAL_KEY" ]
+    if [ -z "$RSA_PUBLIC_KEY" ]
     then
-      while [ -z "$OPENSSH_PERSONAL_KEY" ] || [[ ! "$OPENSSH_PERSONAL_KEY" =~ ^ssh-rsa.* ]]
+      while [ -z "$RSA_PUBLIC_KEY" ] || [[ ! "$RSA_PUBLIC_KEY" =~ ^ssh-rsa.* ]]
       do
         echo -e "Paste your RSA public key, followed by [ENTER]:"
         echo -en "> "
-        read OPENSSH_PERSONAL_KEY
+        read RSA_PUBLIC_KEY
       done
     else
       yes_no_function "Can you confirm you want to modify current RSA public key" "yes"
       if [ $? -eq 0 ]
       then
-        old_input_value=$OPENSSH_PERSONAL_KEY
-        OPENSSH_PERSONAL_KEY=
-        while [ -z "$OPENSSH_PERSONAL_KEY" ] || [[ ! "$OPENSSH_PERSONAL_KEY" =~ ^ssh-rsa.* ]]
+        old_input_value=$RSA_PUBLIC_KEY
+        RSA_PUBLIC_KEY=
+        while [ -z "$RSA_PUBLIC_KEY" ] || [[ ! "$RSA_PUBLIC_KEY" =~ ^ssh-rsa.* ]]
         do
-          echo -e "Paste your RSA public key [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
+          echo -e "Paste your RSA public key, followed by [ENTER]"
+          echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
           echo -en "> "
-          read OPENSSH_PERSONAL_KEY
-          if [ -z $OPENSSH_PERSONAL_KEY ]
+          read RSA_PUBLIC_KEY
+          if [ -z "$RSA_PUBLIC_KEY" ]
           then
-            OPENSSH_PERSONAL_KEY=$old_input_value
+            RSA_PUBLIC_KEY=$old_input_value
           fi
         done
       else
-        OPENSSH_PERSONAL_KEY=$old_input_value
+        RSA_PUBLIC_KEY=$old_input_value
       fi
     fi
   else
-    OPENSSH_PERSONAL_KEY=
+    RSA_PUBLIC_KEY=
   fi
-  echo "BOOLEAN_USE_OPENSSHKEY=$BOOLEAN_USE_OPENSSHKEY" >> $installation_cfg_tmpfile
-  echo "OPENSSH_PERSONAL_KEY='$OPENSSH_PERSONAL_KEY'" >> $installation_cfg_tmpfile
+  echo "BOOLEAN_USE_RSAAUTH=$BOOLEAN_USE_RSAAUTH" >> $installation_cfg_tmpfile
+  echo "RSA_PUBLIC_KEY='$RSA_PUBLIC_KEY'" >> $installation_cfg_tmpfile
   if [ -z "$SERVER_TIME_ZONE" ]
   then
     while [ -z "$SERVER_TIME_ZONE" ]
     do
-      echo -e "Type timezone [${SETCOLOR_INFO}Europe/Paris${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -e "\nType timezone, followed by [ENTER]"
+      echo -e "Default to [${SETCOLOR_INFO}Europe/Paris${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read SERVER_TIME_ZONE
       if [ -z "$SERVER_TIME_ZONE" ]
@@ -343,7 +361,8 @@ function set_globalvariables() {
       SERVER_TIME_ZONE=
       while [ -z "$SERVER_TIME_ZONE" ]
       do
-        echo -e "Type timezone [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
+        echo -e "\nType timezone, followed by [ENTER]"
+        echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read SERVER_TIME_ZONE
         if [ -z "$SERVER_TIME_ZONE" ]
@@ -366,7 +385,7 @@ function set_globalvariables() {
       BOOLEAN_NTP_CONFIGURE=0
     fi
   else
-    if [ "$BOOLEAN_NTP_CONFIGURE" == 1]
+    if [ "$BOOLEAN_NTP_CONFIGURE" == 1 ]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not configure${SETCOLOR_NORMAL} NTP service ?" "yes"
       if [ "$?" == 0 ]
@@ -391,7 +410,8 @@ function set_globalvariables() {
     then
       while [ -z "$NEW_NTP_ADDRESS" ]
       do
-        echo -e "Type IP address or hostname of NTP server [${SETCOLOR_INFO}ntp.test.fr${SETCOLOR_NORMAL}], followed by [ENTER]:"
+        echo -e "\nType IP address or hostname of NTP server, followed by [ENTER]"
+        echo -e "Default to [${SETCOLOR_INFO}ntp.test.fr${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read NEW_NTP_ADDRESS
         if [ -z "$NEW_NTP_ADDRESS" ]
@@ -407,7 +427,8 @@ function set_globalvariables() {
         NEW_NTP_ADDRESS=
         while [ -z "$NEW_NTP_ADDRESS" ]
         do
-          echo -e "Type IP address or hostname of NTP server [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
+          echo -e "\nType IP address or hostname of NTP server, followed by [ENTER]"
+          echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
           echo -en "> "
           read NEW_NTP_ADDRESS
           if [ -z "$NEW_NTP_ADDRESS" ]
@@ -434,7 +455,7 @@ function set_globalvariables() {
       BOOLEAN_NTP_ONSTARTUP=0
     fi
   else
-    if [ "$BOOLEAN_NTP_ONSTARTUP" == 1]
+    if [ "$BOOLEAN_NTP_ONSTARTUP" == 1 ]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} NTP service on startup ?" "yes"
       if [ "$?" == 0 ]
@@ -458,7 +479,8 @@ function set_globalvariables() {
   then
     while [ -z "$MONGO_ADMIN_PASSWORD" ]
     do
-      echo -e "Type password of Mongo administrator [${SETCOLOR_INFO}admin4mongo${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -e "\nType password of Mongo administrator, followed by [ENTER]"
+      echo -e "Default to [${SETCOLOR_INFO}admin4mongo${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read MONGO_ADMIN_PASSWORD
       if [ -z "$MONGO_ADMIN_PASSWORD" ]
@@ -474,7 +496,8 @@ function set_globalvariables() {
       MONGO_ADMIN_PASSWORD=
       while [ -z "$MONGO_ADMIN_PASSWORD" ]
       do
-        echo -e "Type password of Mongo administrator [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
+        echo -e "\nType password of Mongo administrator, followed by [ENTER]"
+        echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read MONGO_ADMIN_PASSWORD
         if [ -z "$MONGO_ADMIN_PASSWORD" ]
@@ -491,7 +514,8 @@ function set_globalvariables() {
   then
     while [ -z "$MONGO_GRAYLOG_DATABASE" ]
     do
-      echo -e "Type name of Graylog Mongo database [${SETCOLOR_INFO}graylog${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -e "\nType name of Graylog Mongo database, followed by [ENTER]"
+      echo -e "Default to [${SETCOLOR_INFO}graylog${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read MONGO_GRAYLOG_DATABASE
       if [ -z "$MONGO_GRAYLOG_DATABASE" ]
@@ -507,7 +531,8 @@ function set_globalvariables() {
       MONGO_GRAYLOG_DATABASE=
       while [ -z "$MONGO_GRAYLOG_DATABASE" ]
       do
-        echo -e "Type name of Graylog Mongo database [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
+        echo -e "\nType name of Graylog Mongo database, followed by [ENTER]"
+        echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read MONGO_GRAYLOG_DATABASE
         if [ -z "$MONGO_GRAYLOG_DATABASE" ]
@@ -524,7 +549,8 @@ function set_globalvariables() {
   then
     while [ -z "$MONGO_GRAYLOG_USER" ]
     do
-      echo -e "Type login of Mongo Graylog user [${SETCOLOR_INFO}grayloguser${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -e "\nType login of Mongo Graylog user, followed by [ENTER]"
+      echo -e "Default to [${SETCOLOR_INFO}grayloguser${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read MONGO_GRAYLOG_USER
       if [ -z "$MONGO_GRAYLOG_USER" ]
@@ -540,7 +566,8 @@ function set_globalvariables() {
       MONGO_GRAYLOG_USER=
       while [ -z "$MONGO_GRAYLOG_USER" ]
       do
-        echo -e "Type login of Mongo Graylog user [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
+        echo -e "\nType login of Mongo Graylog user, followed by [ENTER]"
+        echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read MONGO_GRAYLOG_USER
         if [ -z "$MONGO_GRAYLOG_USER" ]
@@ -557,7 +584,8 @@ function set_globalvariables() {
   then
     while [ -z "$MONGO_GRAYLOG_PASSWORD" ]
     do
-      echo -e "Type password of Mongo Graylog user [${SETCOLOR_INFO}graylog4mongo${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -e "\nType password of Mongo Graylog user, followed by [ENTER]"
+      echo -e "Default to [${SETCOLOR_INFO}graylog4mongo${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read MONGO_GRAYLOG_PASSWORD
       if [ -z "$MONGO_GRAYLOG_PASSWORD" ]
@@ -573,7 +601,8 @@ function set_globalvariables() {
       MONGO_GRAYLOG_PASSWORD=
       while [ -z "$MONGO_GRAYLOG_PASSWORD" ]
       do
-        echo -e "Type password of Mongo Graylog user [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
+        echo -e "\nType password of Mongo Graylog user, followed by [ENTER]"
+        echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read MONGO_GRAYLOG_PASSWORD
         if [ -z "$MONGO_GRAYLOG_PASSWORD" ]
@@ -596,7 +625,7 @@ function set_globalvariables() {
       BOOLEAN_MONGO_ONSTARTUP=0
     fi
   else
-    if [ "$BOOLEAN_MONGO_ONSTARTUP" == 1]
+    if [ "$BOOLEAN_MONGO_ONSTARTUP" == 1 ]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} Mongo database server on startup ?" "yes"
       if [ "$?" == 0 ]
@@ -620,7 +649,8 @@ function set_globalvariables() {
   then
     while [ -z "$SSL_KEY_SIZE" ] || [[ ! "$SSL_KEY_SIZE" =~ 512|1024|2048|4096 ]]
     do
-      echo -e "Type size of SSL private key (possible values : ${SETCOLOR_FAILURE}512${SETCOLOR_NORMAL}, ${SETCOLOR_FAILURE}1024${SETCOLOR_NORMAL}, ${SETCOLOR_FAILURE}2048${SETCOLOR_NORMAL}, ${SETCOLOR_FAILURE}4096${SETCOLOR_NORMAL}), followed by [ENTER]:"
+      echo -e "\nType size of SSL private key (possible values : ${SETCOLOR_FAILURE}512${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}1024${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}2048${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}4096${SETCOLOR_NORMAL}), followed by [ENTER]"
+      echo -e "Default to [${SETCOLOR_INFO}2048${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read SSL_KEY_SIZE
       if [ -z "$SSL_KEY_SIZE" ]
@@ -636,7 +666,8 @@ function set_globalvariables() {
       SSL_KEY_SIZE=
       while [ -z "$SSL_KEY_SIZE" ] || [[ ! "$SSL_KEY_SIZE" =~ 512|1024|2048|4096 ]]
       do
-        echo -e "Type size of SSL private key (possible values : ${SETCOLOR_FAILURE}512${SETCOLOR_NORMAL}, ${SETCOLOR_FAILURE}1024${SETCOLOR_NORMAL}, ${SETCOLOR_FAILURE}2048${SETCOLOR_NORMAL}, ${SETCOLOR_FAILURE}4096${SETCOLOR_NORMAL}), followed by [ENTER]:"
+        echo -e "\nType size of SSL private key (possible values : ${SETCOLOR_FAILURE}512${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}1024${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}2048${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}4096${SETCOLOR_NORMAL}), followed by [ENTER]"
+        echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read SSL_KEY_SIZE
         if [ -z "$SSL_KEY_SIZE" ]
@@ -653,7 +684,8 @@ function set_globalvariables() {
   then
     while [ -z "$SSL_KEY_DURATION" ] || [[ ! "$SSL_KEY_DURATION" =~ [0-9]{1,5} ]]
     do
-      echo -e "Type period of validity (in day) of SSL certificate [${SETCOLOR_INFO}365${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -e "\nType period of validity (in day) of SSL certificate, followed by [ENTER]"
+      echo -e "Default to [${SETCOLOR_INFO}365${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read SSL_KEY_DURATION
       if [ -z "$SSL_KEY_DURATION" ]
@@ -669,7 +701,8 @@ function set_globalvariables() {
       SSL_KEY_DURATION=
       while [ -z "$SSL_KEY_DURATION" ] || [[ ! "$SSL_KEY_DURATION" =~ [0-9]{1,5} ]]
       do
-        echo -e "Type period of validity (in day) of SSL certificate [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
+        echo -e "\nType period of validity (in day) of SSL certificate, followed by [ENTER]"
+        echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read SSL_KEY_DURATION
         if [ -z "$SSL_KEY_DURATION" ]
@@ -686,7 +719,8 @@ function set_globalvariables() {
   then
     while [ -z "$SSL_SUBJECT_COUNTRY" ] || [[ ! "$SSL_SUBJECT_COUNTRY" =~ [A-Z]{2} ]]
     do
-      echo -e "Type country code of SSL certificate [${SETCOLOR_INFO}FR${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -e "\nType country code of SSL certificate, followed by [ENTER]"
+      echo -e "Default to [${SETCOLOR_INFO}FR${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read SSL_SUBJECT_COUNTRY
       if [ -z "$SSL_SUBJECT_COUNTRY" ]
@@ -702,7 +736,8 @@ function set_globalvariables() {
       SSL_SUBJECT_COUNTRY=
       while [ -z "$SSL_SUBJECT_COUNTRY" ] || [[ ! "$SSL_SUBJECT_COUNTRY" =~ [A-Z]{2} ]]
       do
-        echo -e "Type country code of SSL certificate [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
+        echo -e "\nType country code of SSL certificate, followed by [ENTER]"
+        echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read SSL_SUBJECT_COUNTRY
         if [ -z "$SSL_SUBJECT_COUNTRY" ]
@@ -719,7 +754,8 @@ function set_globalvariables() {
   then
     while [ -z "$SSL_SUBJECT_STATE" ]
     do
-      echo -e "Type state of SSL certificate [${SETCOLOR_INFO}STATE${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -e "\nType state of SSL certificate, followed by [ENTER]"
+      echo -e "Default to [${SETCOLOR_INFO}STATE${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read SSL_SUBJECT_STATE
       if [ -z "$SSL_SUBJECT_STATE" ]
@@ -735,7 +771,8 @@ function set_globalvariables() {
       SSL_SUBJECT_STATE=
       while [ -z "$SSL_SUBJECT_STATE" ]
       do
-        echo -e "Type state of SSL certificate [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
+        echo -e "\nType state of SSL certificate, followed by [ENTER]"
+        echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read SSL_SUBJECT_STATE
         if [ -z "$SSL_SUBJECT_STATE" ]
@@ -752,7 +789,8 @@ function set_globalvariables() {
   then
     while [ -z "$SSL_SUBJECT_LOCALITY" ]
     do
-      echo -e "Type state of SSL certificate [${SETCOLOR_INFO}LOCALITY${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -e "\nType state of SSL certificate, followed by [ENTER]"
+      echo -e "Default to [${SETCOLOR_INFO}LOCALITY${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read SSL_SUBJECT_LOCALITY
       if [ -z "$SSL_SUBJECT_LOCALITY" ]
@@ -768,7 +806,8 @@ function set_globalvariables() {
       SSL_SUBJECT_LOCALITY=
       while [ -z "$SSL_SUBJECT_LOCALITY" ]
       do
-        echo -e "Type state of SSL certificate [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
+        echo -e "\nType state of SSL certificate, followed by [ENTER]"
+        echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read SSL_SUBJECT_LOCALITY
         if [ -z "$SSL_SUBJECT_LOCALITY" ]
@@ -785,7 +824,8 @@ function set_globalvariables() {
   then
     while [ -z "$SSL_SUBJECT_ORGANIZATION" ]
     do
-      echo -e "Type organization name of SSL certificate [${SETCOLOR_INFO}ORGANIZATION${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -e "\nType organization name of SSL certificate, followed by [ENTER]"
+      echo -e "Default to [${SETCOLOR_INFO}ORGANIZATION${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read SSL_SUBJECT_ORGANIZATION
       if [ -z "$SSL_SUBJECT_ORGANIZATION" ]
@@ -801,7 +841,8 @@ function set_globalvariables() {
       SSL_SUBJECT_ORGANIZATION=
       while [ -z "$SSL_SUBJECT_ORGANIZATION" ]
       do
-        echo -e "Type organization name of SSL certificate [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
+        echo -e "\nType organization name of SSL certificate, followed by [ENTER]"
+        echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read SSL_SUBJECT_ORGANIZATION
         if [ -z "$SSL_SUBJECT_ORGANIZATION" ]
@@ -818,7 +859,8 @@ function set_globalvariables() {
   then
     while [ -z "$SSL_SUBJECT_ORGANIZATIONUNIT" ]
     do
-      echo -e "Type organization unit name of SSL certificate [${SETCOLOR_INFO}ORGANIZATION UNIT${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -e "\nType organization unit name of SSL certificate, followed by [ENTER]"
+      echo -e "Default to [${SETCOLOR_INFO}ORGANIZATION UNIT${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read SSL_SUBJECT_ORGANIZATIONUNIT
       if [ -z "$SSL_SUBJECT_ORGANIZATIONUNIT" ]
@@ -834,7 +876,8 @@ function set_globalvariables() {
       SSL_SUBJECT_ORGANIZATIONUNIT=
       while [ -z "$SSL_SUBJECT_ORGANIZATIONUNIT" ]
       do
-        echo -e "Type organization unit name of SSL certificate [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
+        echo -e "\nType organization unit name of SSL certificate, followed by [ENTER]"
+        echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read SSL_SUBJECT_ORGANIZATIONUNIT
         if [ -z "$SSL_SUBJECT_ORGANIZATIONUNIT" ]
@@ -851,7 +894,8 @@ function set_globalvariables() {
   then
     while [ -z "$SSL_SUBJECT_EMAIL" ]
     do
-      echo -e "Type organization unit name of SSL certificate [${SETCOLOR_INFO}mail.address@test.fr${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -e "\nType organization unit name of SSL certificate, followed by [ENTER]"
+      echo -e "Default to [${SETCOLOR_INFO}mail.address@test.fr${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read SSL_SUBJECT_EMAIL
       if [ -z "$SSL_SUBJECT_EMAIL" ]
@@ -867,7 +911,8 @@ function set_globalvariables() {
       SSL_SUBJECT_EMAIL=
       while [ -z "$SSL_SUBJECT_EMAIL" ]
       do
-        echo -e "Type organization unit name of SSL certificate [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
+        echo -e "\nType organization unit name of SSL certificate, followed by [ENTER]"
+        echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read SSL_SUBJECT_EMAIL
         if [ -z "$SSL_SUBJECT_EMAIL" ]
@@ -890,7 +935,7 @@ function set_globalvariables() {
       BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=0
     fi
   else
-    if [ "$BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN" == 1]
+    if [ "$BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN" == 1 ]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not install${SETCOLOR_NORMAL} ElasticSearch HQ plugin ?" "yes"
       if [ "$?" == 0 ]
@@ -920,7 +965,7 @@ function set_globalvariables() {
       BOOLEAN_ELASTICSEARCH_ONSTARTUP=0
     fi
   else
-    if [ "$BOOLEAN_ELASTICSEARCH_ONSTARTUP" == 1]
+    if [ "$BOOLEAN_ELASTICSEARCH_ONSTARTUP" == 1 ]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} ElasticSearch server on startup ?" "yes"
       if [ "$?" == 0 ]
@@ -944,7 +989,8 @@ function set_globalvariables() {
   then
     while [ -z "$GRAYLOG_SECRET_PASSWORD" ]
     do
-      echo -e "Type secret password of Graylog application [${SETCOLOR_INFO}secretpassword${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -e "\nType secret password of Graylog application, followed by [ENTER]"
+      echo -e "Default to [${SETCOLOR_INFO}secretpassword${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read GRAYLOG_SECRET_PASSWORD
       if [ -z "$GRAYLOG_SECRET_PASSWORD" ]
@@ -960,7 +1006,8 @@ function set_globalvariables() {
       GRAYLOG_SECRET_PASSWORD=
       while [ -z "$GRAYLOG_SECRET_PASSWORD" ]
       do
-        echo -e "Type secret password of Graylog application [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
+        echo -e "\nType secret password of Graylog application, followed by [ENTER]"
+        echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read GRAYLOG_SECRET_PASSWORD
         if [ -z "$GRAYLOG_SECRET_PASSWORD" ]
@@ -977,7 +1024,8 @@ function set_globalvariables() {
   then
     while [ -z "$GRAYLOG_ADMIN_USERNAME" ]
     do
-      echo -e "Type login of Graylog administrator [${SETCOLOR_INFO}admin${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -e "\nType login of Graylog administrator, followed by [ENTER]"
+      echo -e "Default to [${SETCOLOR_INFO}admin${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read GRAYLOG_ADMIN_USERNAME
       if [ -z "$GRAYLOG_ADMIN_USERNAME" ]
@@ -993,7 +1041,8 @@ function set_globalvariables() {
       GRAYLOG_ADMIN_USERNAME=
       while [ -z "$GRAYLOG_ADMIN_USERNAME" ]
       do
-        echo -e "Type login of Graylog administrator [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
+        echo -e "\nType login of Graylog administrator, followed by [ENTER]"
+        echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read GRAYLOG_ADMIN_USERNAME
         if [ -z "$GRAYLOG_ADMIN_USERNAME" ]
@@ -1010,7 +1059,8 @@ function set_globalvariables() {
   then
     while [ -z "$GRAYLOG_ADMIN_PASSWORD" ]
     do
-      echo -e "Type password of Graylog administrator [${SETCOLOR_INFO}adminpassword${SETCOLOR_NORMAL}], followed by [ENTER]:"
+      echo -e "\nType password of Graylog administrator, followed by [ENTER]"
+      echo -e "Default to [${SETCOLOR_INFO}adminpassword${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read GRAYLOG_ADMIN_PASSWORD
       if [ -z "$GRAYLOG_ADMIN_PASSWORD" ]
@@ -1026,7 +1076,8 @@ function set_globalvariables() {
       GRAYLOG_ADMIN_PASSWORD=
       while [ -z "$GRAYLOG_ADMIN_PASSWORD" ]
       do
-        echo -e "Type password of Graylog administrator [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
+        echo -e "\nType password of Graylog administrator, followed by [ENTER]"
+        echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read GRAYLOG_ADMIN_PASSWORD
         if [ -z "$GRAYLOG_ADMIN_PASSWORD" ]
@@ -1041,40 +1092,41 @@ function set_globalvariables() {
   echo "GRAYLOG_ADMIN_PASSWORD='$GRAYLOG_ADMIN_PASSWORD'" >> $installation_cfg_tmpfile
   if [ -z "$GRAYLOG_USE_SMTP" ]
   then
-    yes_no_function "Do you want to use Simple Mail Transport Protocol (SMTP) for Graylog ?" "yes"
+    yes_no_function "Do you want to use Simple Mail Transport Protocol (SMTP) for Graylog application ?" "yes"
     if [ "$?" == 0 ]
     then
-      GRAYLOG_USE_SMTP=1
+      GRAYLOG_USE_SMTP="true"
     else
-      GRAYLOG_USE_SMTP=0
+      GRAYLOG_USE_SMTP="false"
     fi
   else
-    if [ "$GRAYLOG_USE_SMTP" == 1]
+    if [ "$GRAYLOG_USE_SMTP" == "true" ]
     then
-      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not use${SETCOLOR_NORMAL} Graylog server on startup ?" "yes"
+      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not use${SETCOLOR_NORMAL} SMTP for Graylog application ?" "yes"
       if [ "$?" == 0 ]
       then
-        GRAYLOG_USE_SMTP=0
+        GRAYLOG_USE_SMTP="false"
       else
         GRAYLOG_USE_SMTP=$GRAYLOG_USE_SMTP
       fi
     else
-      yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}use${SETCOLOR_NORMAL} Graylog server on startup ?" "yes"
+      yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}use${SETCOLOR_NORMAL} SMTP for Graylog application ?" "yes"
       if [ "$?" == 0 ]
       then
-        GRAYLOG_USE_SMTP=1
+        GRAYLOG_USE_SMTP="true"
       else
         GRAYLOG_USE_SMTP=$GRAYLOG_USE_SMTP
       fi
     fi
   fi
-  if [ "$GRAYLOG_USE_SMTP" == 1 ]
+  if [ "$GRAYLOG_USE_SMTP" == "true" ]
   then
     if [ -z "$SMTP_HOST_NAME" ]
     then
       while [ -z "$SMTP_HOST_NAME" ]
       do
-        echo -e "Type FQDN of SMTP server [${SETCOLOR_INFO}mail.example.com${SETCOLOR_NORMAL}], followed by [ENTER]:"
+        echo -e "\nType FQDN of SMTP server, followed by [ENTER]"
+        echo -e "Default to [${SETCOLOR_INFO}mail.example.com${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read SMTP_HOST_NAME
         if [ -z "$SMTP_HOST_NAME" ]
@@ -1090,7 +1142,8 @@ function set_globalvariables() {
         SMTP_HOST_NAME=
         while [ -z "$SMTP_HOST_NAME" ]
         do
-          echo -e "Type FQDN of SMTP server [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
+          echo -e "\nType FQDN of SMTP server, followed by [ENTER]"
+          echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
           echo -en "> "
           read SMTP_HOST_NAME
           if [ -z "$SMTP_HOST_NAME" ]
@@ -1106,7 +1159,8 @@ function set_globalvariables() {
     then
       while [ -z "$SMTP_DOMAIN_NAME" ]
       do
-        echo -e "Type SMTP domain name [${SETCOLOR_INFO}example.com${SETCOLOR_NORMAL}], followed by [ENTER]:"
+        echo -e "\nType SMTP domain name, followed by [ENTER]"
+        echo -e "Default to [${SETCOLOR_INFO}example.com${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read SMTP_DOMAIN_NAME
         if [ -z "$SMTP_DOMAIN_NAME" ]
@@ -1122,7 +1176,8 @@ function set_globalvariables() {
         SMTP_DOMAIN_NAME=
         while [ -z "$SMTP_DOMAIN_NAME" ]
         do
-          echo -e "Type SMTP domain name [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
+          echo -e "\nType SMTP domain name, followed by [ENTER]"
+          echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
           echo -en "> "
           read SMTP_DOMAIN_NAME
           if [ -z "$SMTP_DOMAIN_NAME" ]
@@ -1138,7 +1193,8 @@ function set_globalvariables() {
     then
       while [ -z "$SMTP_PORT_NUMBER" ] || [[ ! "$SMTP_PORT_NUMBER" =~ 25|465|587 ]]
       do
-        echo -e "Type SMTP port number (possible values : ${SETCOLOR_FAILURE}25${SETCOLOR_NORMAL}, ${SETCOLOR_FAILURE}465${SETCOLOR_NORMAL}, ${SETCOLOR_FAILURE}587${SETCOLOR_NORMAL}) [${SETCOLOR_INFO}587${SETCOLOR_NORMAL}], followed by [ENTER]:"
+        echo -e "\nType SMTP port number (possible values : ${SETCOLOR_FAILURE}25${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}465${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}587${SETCOLOR_NORMAL}), followed by [ENTER]"
+        echo -e "Default to [${SETCOLOR_INFO}587${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read SMTP_PORT_NUMBER
         if [ -z "$SMTP_PORT_NUMBER" ]
@@ -1154,7 +1210,8 @@ function set_globalvariables() {
         SMTP_PORT_NUMBER=
         while [ -z "$SMTP_PORT_NUMBER" ] || [[ ! "$SMTP_PORT_NUMBER" =~ 25|465|587 ]]
         do
-          echo -e "Type SMTP port number (possible values : ${SETCOLOR_FAILURE}25${SETCOLOR_NORMAL}, ${SETCOLOR_FAILURE}465${SETCOLOR_NORMAL}, ${SETCOLOR_FAILURE}587${SETCOLOR_NORMAL}) [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
+          echo -e "\nType SMTP port number (possible values : ${SETCOLOR_FAILURE}25${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}465${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}587${SETCOLOR_NORMAL}), followed by [ENTER]"
+          echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
           echo -en "> "
           read SMTP_PORT_NUMBER
           if [ -z "$SMTP_PORT_NUMBER" ]
@@ -1171,17 +1228,17 @@ function set_globalvariables() {
       yes_no_function "Do you want to use authentication for SMTP ?" "yes"
       if [ "$?" == 0 ]
       then
-        SMTP_USE_AUTH=1
+        SMTP_USE_AUTH="true"
       else
-        SMTP_USE_AUTH=0
+        SMTP_USE_AUTH="false"
       fi
     else
-      if [ "$SMTP_USE_AUTH" == 1]
+      if [ "$SMTP_USE_AUTH" == "true" ]
       then
         yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not use${SETCOLOR_NORMAL} SMTP authentication ?" "yes"
         if [ "$?" == 0 ]
         then
-          SMTP_USE_AUTH=0
+          SMTP_USE_AUTH="false"
         else
           SMTP_USE_AUTH=$SMTP_USE_AUTH
         fi
@@ -1189,30 +1246,30 @@ function set_globalvariables() {
         yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}use${SETCOLOR_NORMAL} SMTP authentication ?" "yes"
         if [ "$?" == 0 ]
         then
-          SMTP_USE_AUTH=1
+          SMTP_USE_AUTH="true"
         else
           SMTP_USE_AUTH=$SMTP_USE_AUTH
         fi
       fi
     fi
-    if [ "$SMTP_USE_AUTH" == 1 ]
+    if [ "$SMTP_USE_AUTH" == "true" ]
     then
       if [ -z "$SMTP_USE_TLS" ]
       then
         yes_no_function "Do you want to use SMTP over Transport Layer Security (TLS) ?" "yes"
         if [ "$?" == 0 ]
         then
-          SMTP_USE_TLS=1
+          SMTP_USE_TLS="true"
         else
-          SMTP_USE_TLS=0
+          SMTP_USE_TLS="false"
         fi
       else
-        if [ "$SMTP_USE_TLS" == 1]
+        if [ "$SMTP_USE_TLS" == "true" ]
         then
           yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not use${SETCOLOR_NORMAL} SMTP over TLS ?" "yes"
           if [ "$?" == 0 ]
           then
-            SMTP_USE_TLS=0
+            SMTP_USE_TLS="false"
           else
             SMTP_USE_TLS=$SMTP_USE_TLS
           fi
@@ -1220,7 +1277,7 @@ function set_globalvariables() {
           yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}use${SETCOLOR_NORMAL} SMTP over TLS ?" "yes"
           if [ "$?" == 0 ]
           then
-            SMTP_USE_TLS=1
+            SMTP_USE_TLS="true"
           else
             SMTP_USE_TLS=$SMTP_USE_TLS
           fi
@@ -1231,17 +1288,17 @@ function set_globalvariables() {
         yes_no_function "Do you want to use SMTP over Secure Socket Layer (SSL) ?" "yes"
         if [ "$?" == 0 ]
         then
-          SMTP_USE_SSL=1
+          SMTP_USE_SSL="true"
         else
-          SMTP_USE_SSL=0
+          SMTP_USE_SSL="false"
         fi
       else
-        if [ "$SMTP_USE_SSL" == 1]
+        if [ "$SMTP_USE_SSL" == "true" ]
         then
           yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not use${SETCOLOR_NORMAL} SMTP over SSL ?" "yes"
           if [ "$?" == 0 ]
           then
-            SMTP_USE_SSL=0
+            SMTP_USE_SSL="false"
           else
             SMTP_USE_SSL=$SMTP_USE_SSL
           fi
@@ -1249,7 +1306,7 @@ function set_globalvariables() {
           yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}use${SETCOLOR_NORMAL} SMTP over SSL ?" "yes"
           if [ "$?" == 0 ]
           then
-            SMTP_USE_SSL=1
+            SMTP_USE_SSL="true"
           else
             SMTP_USE_SSL=$SMTP_USE_SSL
           fi
@@ -1259,7 +1316,8 @@ function set_globalvariables() {
       then
         while [ -z "$SMTP_AUTH_USERNAME" ]
         do
-          echo -e "Type username of SMTP authentication [${SETCOLOR_INFO}you@example.com${SETCOLOR_NORMAL}], followed by [ENTER]:"
+          echo -e "\nType username of SMTP authentication, followed by [ENTER]"
+          echo -e "Default to [${SETCOLOR_INFO}you@example.com${SETCOLOR_NORMAL}]:"
           echo -en "> "
           read SMTP_AUTH_USERNAME
           if [ -z "$SMTP_AUTH_USERNAME" ]
@@ -1275,7 +1333,8 @@ function set_globalvariables() {
           SMTP_AUTH_USERNAME=
           while [ -z "$SMTP_AUTH_USERNAME" ]
           do
-            echo -e "Type username of SMTP authentication [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
+            echo -e "\nType username of SMTP authentication, followed by [ENTER]"
+            echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
             echo -en "> "
             read SMTP_AUTH_USERNAME
             if [ -z "$SMTP_AUTH_USERNAME" ]
@@ -1291,7 +1350,8 @@ function set_globalvariables() {
       then
         while [ -z "$SMTP_AUTH_PASSWORD" ]
         do
-          echo -e "Type password of SMTP authentication [${SETCOLOR_INFO}secret${SETCOLOR_NORMAL}], followed by [ENTER]:"
+          echo -e "\nType password of SMTP authentication, followed by [ENTER]"
+          echo -e "Default to [${SETCOLOR_INFO}secret${SETCOLOR_NORMAL}]:"
           echo -en "> "
           read SMTP_AUTH_PASSWORD
           if [ -z "$SMTP_AUTH_PASSWORD" ]
@@ -1307,7 +1367,8 @@ function set_globalvariables() {
           SMTP_AUTH_PASSWORD=
           while [ -z "$SMTP_AUTH_PASSWORD" ]
           do
-            echo -e "Type password of SMTP authentication [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}], followed by [ENTER]:"
+            echo -e "\nType password of SMTP authentication, followed by [ENTER]"
+            echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
             echo -en "> "
             read SMTP_AUTH_PASSWORD
             if [ -z "$SMTP_AUTH_PASSWORD" ]
@@ -1356,7 +1417,7 @@ function set_globalvariables() {
       BOOLEAN_GRAYLOGSERVER_ONSTARTUP=0
     fi
   else
-    if [ "$BOOLEAN_GRAYLOGSERVER_ONSTARTUP" == 1]
+    if [ "$BOOLEAN_GRAYLOGSERVER_ONSTARTUP" == 1 ]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} Graylog server on startup ?" "yes"
       if [ "$?" == 0 ]
@@ -1386,7 +1447,7 @@ function set_globalvariables() {
       BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=0
     fi
   else
-    if [ "$BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP" == 1]
+    if [ "$BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP" == 1 ]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} Graylog web interface on startup ?" "yes"
       if [ "$?" == 0 ]
@@ -1416,7 +1477,7 @@ function set_globalvariables() {
       BOOLEAN_NGINX_ONSTARTUP=0
     fi
   else
-    if [ "$BOOLEAN_NGINX_ONSTARTUP" == 1]
+    if [ "$BOOLEAN_NGINX_ONSTARTUP" == 1 ]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} Nginx web server on startup ?" "yes"
       if [ "$?" == 0 ]
@@ -1441,55 +1502,232 @@ function set_globalvariables() {
 }
 # Verify all global variables
 function verify_globalvariables() {
+  local error_counter=0
   echo -e "\n###################################################################"
-  echo -e "#${MOVE_TO_COL1}#\n# ${SETCOLOR_WARNING}Verify our variables before continue installation process${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+  echo -e "#${MOVE_TO_COL1}#\n# ${SETCOLOR_WARNING}Check your settings before continue${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
   echo -e "#${MOVE_TO_COL1}#"
   echo -e "# NETWORK_INTERFACE_NAME.............'${SETCOLOR_INFO}$NETWORK_INTERFACE_NAME${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
-  echo -e "# BOOLEAN_USE_OPENSSHKEY..............${SETCOLOR_INFO}$BOOLEAN_USE_OPENSSHKEY${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
-  echo -e "# OPENSSH_PERSONAL_KEY...............'${SETCOLOR_INFO}$OPENSSH_PERSONAL_KEY${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
+  if [[ "$BOOLEAN_USE_RSAAUTH" =~ 0|1 ]]
+  then
+    echo -e "# BOOLEAN_USE_RSAAUTH.................${SETCOLOR_INFO}$BOOLEAN_USE_RSAAUTH${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+  else
+    echo -e "# BOOLEAN_USE_RSAAUTH.................${SETCOLOR_FAILURE}$BOOLEAN_USE_RSAAUTH${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+    log "ERROR" "Global variables: BOOLEAN_USE_RSAAUTH not successfully definied by user (value=$BOOLEAN_USE_RSAAUTH)"
+    ((error_counter++))
+  fi
+  if [ "$RSA_PUBLIC_KEY" == "" ] || [[ "$RSA_PUBLIC_KEY" =~ ^ssh-rsa.* ]]
+  then
+    echo -e "# RSA_PUBLIC_KEY.....................'${SETCOLOR_INFO}$RSA_PUBLIC_KEY${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
+  else
+    echo -e "# RSA_PUBLIC_KEY.....................'${SETCOLOR_FAILURE}$RSA_PUBLIC_KEY${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
+    log "ERROR" "Global variables: BOOLEAN_USE_RSAAUTH not successfully definied by user (value=$BOOLEAN_USE_RSAAUTH)"
+    ((error_counter++))
+  fi
   echo -e "# SERVER_TIME_ZONE...................'${SETCOLOR_INFO}$SERVER_TIME_ZONE${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
-  echo -e "# BOOLEAN_NTP_CONFIGURE...............${SETCOLOR_INFO}$BOOLEAN_NTP_CONFIGURE${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+  if [[ "$BOOLEAN_NTP_CONFIGURE" =~ 0|1 ]]
+  then
+    echo -e "# BOOLEAN_NTP_CONFIGURE...............${SETCOLOR_INFO}$BOOLEAN_NTP_CONFIGURE${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+  else
+    echo -e "# BOOLEAN_NTP_CONFIGURE...............${SETCOLOR_FAILURE}$BOOLEAN_NTP_CONFIGURE${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+    log "ERROR" "Global variables: BOOLEAN_NTP_CONFIGURE not successfully definied by user (value=$BOOLEAN_NTP_CONFIGURE)"
+    ((error_counter++))
+  fi
   echo -e "# NEW_NTP_ADDRESS....................'${SETCOLOR_INFO}$NEW_NTP_ADDRESS${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
-  echo -e "# BOOLEAN_NTP_ONSTARTUP...............${SETCOLOR_INFO}$BOOLEAN_NTP_ONSTARTUP${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+  if [[ "$BOOLEAN_NTP_ONSTARTUP" =~ 0|1 ]]
+  then
+    echo -e "# BOOLEAN_NTP_ONSTARTUP...............${SETCOLOR_INFO}$BOOLEAN_NTP_ONSTARTUP${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+  else
+    echo -e "# BOOLEAN_NTP_ONSTARTUP...............${SETCOLOR_FAILURE}$BOOLEAN_NTP_ONSTARTUP${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+    log "ERROR" "Global variables: BOOLEAN_NTP_ONSTARTUP not successfully definied by user (value=$BOOLEAN_NTP_ONSTARTUP)"
+    ((error_counter++))
+  fi
   echo -e "# MONGO_ADMIN_PASSWORD...............'${SETCOLOR_INFO}$MONGO_ADMIN_PASSWORD${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
   echo -e "# MONGO_GRAYLOG_DATABASE.............'${SETCOLOR_INFO}$MONGO_GRAYLOG_DATABASE${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
   echo -e "# MONGO_GRAYLOG_USER.................'${SETCOLOR_INFO}$MONGO_GRAYLOG_USER${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
   echo -e "# MONGO_GRAYLOG_PASSWORD.............'${SETCOLOR_INFO}$MONGO_GRAYLOG_PASSWORD${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
-  echo -e "# BOOLEAN_MONGO_ONSTARTUP.............${SETCOLOR_INFO}$BOOLEAN_MONGO_ONSTARTUP${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
-  echo -e "# SSL_KEY_SIZE........................${SETCOLOR_INFO}$SSL_KEY_SIZE${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
-  echo -e "# SSL_KEY_DURATION....................${SETCOLOR_INFO}$SSL_KEY_DURATION${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
-  echo -e "# SSL_SUBJECT_COUNTRY................'${SETCOLOR_INFO}$SSL_SUBJECT_COUNTRY${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
+  if [[ "$BOOLEAN_MONGO_ONSTARTUP" =~ 0|1 ]]
+  then
+    echo -e "# BOOLEAN_MONGO_ONSTARTUP.............${SETCOLOR_INFO}$BOOLEAN_MONGO_ONSTARTUP${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+  else
+    echo -e "# BOOLEAN_MONGO_ONSTARTUP.............${SETCOLOR_FAILURE}$BOOLEAN_MONGO_ONSTARTUP${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+    log "ERROR" "Global variables: BOOLEAN_MONGO_ONSTARTUP not successfully definied by user (value=$BOOLEAN_MONGO_ONSTARTUP)"
+    ((error_counter++))
+  fi
+  if [[ "$SSL_KEY_SIZE" =~ 512|1024|2048|4096 ]]
+  then
+    echo -e "# SSL_KEY_SIZE........................${SETCOLOR_INFO}$SSL_KEY_SIZE${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+  else
+    echo -e "# SSL_KEY_SIZE........................${SETCOLOR_FAILURE}$SSL_KEY_SIZE${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+    log "ERROR" "Global variables: SSL_KEY_SIZE not successfully definied by user (value=$SSL_KEY_SIZE)"
+    ((error_counter++))
+  fi
+  if [[ "$SSL_KEY_DURATION" =~ [0-9]{1,5} ]]
+  then
+    echo -e "# SSL_KEY_DURATION....................${SETCOLOR_INFO}$SSL_KEY_DURATION${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+  else
+    echo -e "# SSL_KEY_DURATION....................${SETCOLOR_FAILURE}$SSL_KEY_DURATION${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+    log "ERROR" "Global variables: SSL_KEY_DURATION not successfully definied by user (value=$SSL_KEY_DURATION)"
+    ((error_counter++))
+  fi
+  if [[ "$SSL_SUBJECT_COUNTRY" =~ [A-Z]{2} ]]
+  then
+    echo -e "# SSL_SUBJECT_COUNTRY................'${SETCOLOR_INFO}$SSL_SUBJECT_COUNTRY${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
+  else
+    echo -e "# SSL_SUBJECT_COUNTRY................'${SETCOLOR_FAILURE}$SSL_SUBJECT_COUNTRY${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
+    log "ERROR" "Global variables: SSL_SUBJECT_COUNTRY not successfully definied by user (value=$SSL_SUBJECT_COUNTRY)"
+    ((error_counter++))
+  fi
   echo -e "# SSL_SUBJECT_STATE..................'${SETCOLOR_INFO}$SSL_SUBJECT_STATE${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
   echo -e "# SSL_SUBJECT_LOCALITY...............'${SETCOLOR_INFO}$SSL_SUBJECT_LOCALITY${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
   echo -e "# SSL_SUBJECT_ORGANIZATION...........'${SETCOLOR_INFO}$SSL_SUBJECT_ORGANIZATION${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
   echo -e "# SSL_SUBJECT_ORGANIZATIONUNIT.......'${SETCOLOR_INFO}$SSL_SUBJECT_ORGANIZATIONUNIT${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
   echo -e "# SSL_SUBJECT_EMAIL..................'${SETCOLOR_INFO}$SSL_SUBJECT_EMAIL${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
-  echo -e "# BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN.${SETCOLOR_INFO}$BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
-  echo -e "# BOOLEAN_ELASTICSEARCH_ONSTARTUP.....${SETCOLOR_INFO}$BOOLEAN_ELASTICSEARCH_ONSTARTUP${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+  if [[ "$BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN" =~ 0|1 ]]
+  then
+    echo -e "# BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN.${SETCOLOR_INFO}$BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+  else
+    echo -e "# BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN.${SETCOLOR_FAILURE}$BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+    log "ERROR" "Global variables: BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN not successfully definied by user (value=$BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN)"
+    ((error_counter++))
+  fi
+  if [[ "$BOOLEAN_ELASTICSEARCH_ONSTARTUP" =~ 0|1 ]]
+  then
+    echo -e "# BOOLEAN_ELASTICSEARCH_ONSTARTUP.....${SETCOLOR_INFO}$BOOLEAN_ELASTICSEARCH_ONSTARTUP${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+  else
+    echo -e "# BOOLEAN_ELASTICSEARCH_ONSTARTUP.....${SETCOLOR_FAILURE}$BOOLEAN_ELASTICSEARCH_ONSTARTUP${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+    log "ERROR" "Global variables: BOOLEAN_ELASTICSEARCH_ONSTARTUP not successfully definied by user (value=$BOOLEAN_ELASTICSEARCH_ONSTARTUP)"
+    ((error_counter++))
+  fi
   echo -e "# GRAYLOG_SECRET_PASSWORD............'${SETCOLOR_INFO}$GRAYLOG_SECRET_PASSWORD${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
   echo -e "# GRAYLOG_ADMIN_USERNAME.............'${SETCOLOR_INFO}$GRAYLOG_ADMIN_USERNAME${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
   echo -e "# GRAYLOG_ADMIN_PASSWORD.............'${SETCOLOR_INFO}$GRAYLOG_ADMIN_PASSWORD${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
-  echo -e "# BOOLEAN_GRAYLOGSERVER_ONSTARTUP.....${SETCOLOR_INFO}$BOOLEAN_GRAYLOGSERVER_ONSTARTUP${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
-  echo -e "# BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP.....${SETCOLOR_INFO}$BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
-  echo -e "# GRAYLOG_USE_SMTP...................'${SETCOLOR_INFO}$GRAYLOG_USE_SMTP${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
+  if [[ "$BOOLEAN_GRAYLOGSERVER_ONSTARTUP" =~ 0|1 ]]
+  then
+    echo -e "# BOOLEAN_GRAYLOGSERVER_ONSTARTUP.....${SETCOLOR_INFO}$BOOLEAN_GRAYLOGSERVER_ONSTARTUP${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+  else
+    echo -e "# BOOLEAN_GRAYLOGSERVER_ONSTARTUP.....${SETCOLOR_FAILURE}$BOOLEAN_GRAYLOGSERVER_ONSTARTUP${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+    log "ERROR" "Global variables: BOOLEAN_GRAYLOGSERVER_ONSTARTUP not successfully definied by user (value=$BOOLEAN_GRAYLOGSERVER_ONSTARTUP)"
+    ((error_counter++))
+  fi
+  if [[ "$BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP" =~ 0|1 ]]
+  then
+    echo -e "# BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP.....${SETCOLOR_INFO}$BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+  else
+    echo -e "# BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP.....${SETCOLOR_FAILURE}$BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+    log "ERROR" "Global variables: BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP not successfully definied by user (value=$BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP)"
+    ((error_counter++))
+  fi
+  if [[ "$GRAYLOG_USE_SMTP" =~ true|false ]]
+  then
+    echo -e "# GRAYLOG_USE_SMTP...................'${SETCOLOR_INFO}$GRAYLOG_USE_SMTP${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
+  else
+    echo -e "# GRAYLOG_USE_SMTP...................'${SETCOLOR_FAILURE}$GRAYLOG_USE_SMTP${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
+    log "ERROR" "Global variables: GRAYLOG_USE_SMTP not successfully definied by user (value=$GRAYLOG_USE_SMTP)"
+    ((error_counter++))
+  fi
   echo -e "# SMTP_HOST_NAME.....................'${SETCOLOR_INFO}$SMTP_HOST_NAME${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
   echo -e "# SMTP_DOMAIN_NAME...................'${SETCOLOR_INFO}$SMTP_DOMAIN_NAME${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
-  echo -e "# SMTP_PORT_NUMBER....................${SETCOLOR_INFO}$SMTP_PORT_NUMBER${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
-  echo -e "# SMTP_USE_AUTH......................'${SETCOLOR_INFO}$SMTP_USE_AUTH${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
-  echo -e "# SMTP_USE_TLS.......................'${SETCOLOR_INFO}$SMTP_USE_TLS${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
-  echo -e "# SMTP_USE_SSL.......................'${SETCOLOR_INFO}$SMTP_USE_SSL${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
+  if [[ "$SMTP_PORT_NUMBER" =~ 25|465|587 ]]
+  then
+    echo -e "# SMTP_PORT_NUMBER....................${SETCOLOR_INFO}$SMTP_PORT_NUMBER${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+  else
+    echo -e "# SMTP_PORT_NUMBER....................${SETCOLOR_FAILURE}$SMTP_PORT_NUMBER${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+    log "ERROR" "Global variables: SMTP_PORT_NUMBER not successfully definied by user (value=$SMTP_PORT_NUMBER)"
+    ((error_counter++))
+  fi
+  if [[ "$SMTP_USE_AUTH" =~ true|false ]]
+  then
+    echo -e "# SMTP_USE_AUTH......................'${SETCOLOR_INFO}$SMTP_USE_AUTH${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
+  else
+    echo -e "# SMTP_USE_AUTH......................'${SETCOLOR_FAILURE}$SMTP_USE_AUTH${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
+    log "ERROR" "Global variables: SMTP_USE_AUTH not successfully definied by user (value=$SMTP_USE_AUTH)"
+    ((error_counter++))
+  fi
+  
+  if [[ "$SMTP_USE_TLS" =~ true|false ]]
+  then
+    echo -e "# SMTP_USE_TLS.......................'${SETCOLOR_INFO}$SMTP_USE_TLS${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
+  else
+    echo -e "# SMTP_USE_TLS.......................'${SETCOLOR_FAILURE}$SMTP_USE_TLS${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
+    log "ERROR" "Global variables: SMTP_USE_TLS not successfully definied by user (value=$SMTP_USE_TLS)"
+    ((error_counter++))
+  fi
+  if [[ "$SMTP_USE_SSL" =~ true|false ]]
+  then
+    echo -e "# SMTP_USE_SSL.......................'${SETCOLOR_INFO}$SMTP_USE_SSL${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
+  else
+    echo -e "# SMTP_USE_SSL.......................'${SETCOLOR_FAILURE}$SMTP_USE_SSL${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
+    log "ERROR" "Global variables: SMTP_USE_SSL not successfully definied by user (value=$SMTP_USE_SSL)"
+    ((error_counter++))
+  fi
   echo -e "# SMTP_AUTH_USERNAME.................'${SETCOLOR_INFO}$SMTP_AUTH_USERNAME${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
   echo -e "# SMTP_AUTH_PASSWORD.................'${SETCOLOR_INFO}$SMTP_AUTH_PASSWORD${SETCOLOR_NORMAL}'${MOVE_TO_COL1}#"
-  echo -e "# BOOLEAN_NGINX_ONSTARTUP.............${SETCOLOR_INFO}$BOOLEAN_NGINX_ONSTARTUP${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+  if [[ "$BOOLEAN_NGINX_ONSTARTUP" =~ 0|1 ]]
+  then
+    echo -e "# BOOLEAN_NGINX_ONSTARTUP.............${SETCOLOR_INFO}$BOOLEAN_NGINX_ONSTARTUP${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+  else
+    echo -e "# BOOLEAN_NGINX_ONSTARTUP.............${SETCOLOR_FAILURE}$BOOLEAN_NGINX_ONSTARTUP${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
+    log "ERROR" "Global variables: BOOLEAN_NGINX_ONSTARTUP not successfully definied by user (value=$BOOLEAN_NGINX_ONSTARTUP)"
+    ((error_counter++))
+  fi
   echo -e "#${MOVE_TO_COL1}#"
   echo -e "###################################################################"
-  yes_no_function "Do you want to continue installation process ?" "yes"
-  if [ "$?" == 0 ]
+  if [ "$error_counter" -eq "0" ]
   then
-    log "INFO" "Global variables: Confirmed by user"
+    yes_no_function "All variables seem to be good.\nDo you want to continue installation process ?" "yes"
+    if [ "$?" == 0 ]
+    then
+      log "INFO" "Global variables: Confirmed by user"
+      log "INFO" "Global variables: NETWORK_INTERFACE_NAME successfully definied by user (value=$NETWORK_INTERFACE_NAME)"
+      log "INFO" "Global variables: SERVER_TIME_ZONE successfully definied by user (value=$SERVER_TIME_ZONE)"
+      log "INFO" "Global variables: BOOLEAN_NTP_ONSTARTUP successfully definied by user (value=$BOOLEAN_NTP_ONSTARTUP)"
+      log "INFO" "Global variables: BOOLEAN_NTP_CONFIGURE successfully definied by user (value=$BOOLEAN_NTP_CONFIGURE)"
+      log "INFO" "Global variables: NEW_NTP_ADDRESS successfully definied by user (value=$NEW_NTP_ADDRESS)"
+      log "INFO" "Global variables: BOOLEAN_USE_RSAAUTH successfully definied by user (value=$BOOLEAN_USE_RSAAUTH)"
+      log "INFO" "Global variables: RSA_PUBLIC_KEY successfully definied by user (value=$RSA_PUBLIC_KEY)"
+      log "INFO" "Global variables: MONGO_ADMIN_PASSWORD successfully definied by user (value=$MONGO_ADMIN_PASSWORD)"
+      log "INFO" "Global variables: MONGO_GRAYLOG_DATABASE successfully definied by user (value=$MONGO_GRAYLOG_DATABASE)"
+      log "INFO" "Global variables: MONGO_GRAYLOG_USER successfully definied by user (value=$MONGO_GRAYLOG_USER)"
+      log "INFO" "Global variables: MONGO_GRAYLOG_PASSWORD successfully definied by user (value=$MONGO_GRAYLOG_PASSWORD)"
+      log "INFO" "Global variables: BOOLEAN_MONGO_ONSTARTUP successfully definied by user (value=$BOOLEAN_MONGO_ONSTARTUP)"
+      log "INFO" "Global variables: SSL_KEY_SIZE successfully definied by user (value=$SSL_KEY_SIZE)"
+      log "INFO" "Global variables: SSL_KEY_DURATION successfully definied by user (value=$SSL_KEY_DURATION)"
+      log "INFO" "Global variables: SSL_SUBJECT_COUNTRY successfully definied by user (value=$SSL_SUBJECT_COUNTRY)"
+      log "INFO" "Global variables: SSL_SUBJECT_STATE successfully definied by user (value=$SSL_SUBJECT_STATE)"
+      log "INFO" "Global variables: SSL_SUBJECT_LOCALITY successfully definied by user (value=$SSL_SUBJECT_LOCALITY)"
+      log "INFO" "Global variables: SSL_SUBJECT_ORGANIZATION successfully definied by user (value=$SSL_SUBJECT_ORGANIZATION)"
+      log "INFO" "Global variables: SSL_SUBJECT_ORGANIZATIONUNIT successfully definied by user (value=$SSL_SUBJECT_ORGANIZATIONUNIT)"
+      log "INFO" "Global variables: SSL_SUBJECT_EMAIL successfully definied by user (value=$SSL_SUBJECT_EMAIL)"
+      log "INFO" "Global variables: BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN successfully definied by user (value=$BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN)"
+      log "INFO" "Global variables: BOOLEAN_ELASTICSEARCH_ONSTARTUP successfully definied by user (value=$BOOLEAN_ELASTICSEARCH_ONSTARTUP)"
+      log "INFO" "Global variables: GRAYLOG_SECRET_PASSWORD successfully definied by user (value=$GRAYLOG_SECRET_PASSWORD)"
+      log "INFO" "Global variables: GRAYLOG_ADMIN_USERNAME successfully definied by user (value=$GRAYLOG_ADMIN_USERNAME)"
+      log "INFO" "Global variables: GRAYLOG_ADMIN_PASSWORD successfully definied by user (value=$GRAYLOG_ADMIN_PASSWORD)"
+      log "INFO" "Global variables: GRAYLOG_USE_SMTP successfully definied by user (value=$GRAYLOG_USE_SMTP)"
+      log "INFO" "Global variables: SMTP_HOST_NAME successfully definied by user (value=$SMTP_HOST_NAME)"
+      log "INFO" "Global variables: SMTP_DOMAIN_NAME successfully definied by user (value=$SMTP_DOMAIN_NAME)"
+      log "INFO" "Global variables: SMTP_PORT_NUMBER successfully definied by user (value=$SMTP_PORT_NUMBER)"
+      log "INFO" "Global variables: SMTP_USE_AUTH successfully definied by user (value=$SMTP_USE_AUTH)"
+      log "INFO" "Global variables: SMTP_USE_TLS successfully definied by user (value=$SMTP_USE_TLS)"
+      log "INFO" "Global variables: SMTP_USE_SSL successfully definied by user (value=$SMTP_USE_SSL)"
+      log "INFO" "Global variables: SMTP_AUTH_USERNAME successfully definied by user (value=$SMTP_AUTH_USERNAME)"
+      log "INFO" "Global variables: SMTP_AUTH_PASSWORD successfully definied by user (value=$SMTP_AUTH_PASSWORD)"
+      log "INFO" "Global variables: BOOLEAN_GRAYLOGSERVER_ONSTARTUP successfully definied by user (value=$BOOLEAN_GRAYLOGSERVER_ONSTARTUP)"
+      log "INFO" "Global variables: BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP successfully definied by user (value=$BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP)"
+      log "INFO" "Global variables: BOOLEAN_NGINX_ONSTARTUP successfully definied by user (value=$BOOLEAN_NGINX_ONSTARTUP)"
+    else
+      log "WARN" "Global variables: Not confirmed by user"
+      yes_no_function "Do you want to define them again ?" "yes"
+      if [ "$?" == 0 ]
+      then
+        set_globalvariables
+      else
+        log "WARN" "GRAYLOG installation: Ended by user"
+        exit 0
+      fi
+    fi
   else
-    log "WARN" "Global variables: Not accepted by user"
-    yes_no_function "Do you want to define them again ?" "yes"
+    yes_no_function "One or more variables do not seem to be good.\nDo you want to correct them ?" "yes"
     if [ "$?" == 0 ]
     then
       set_globalvariables
@@ -2153,88 +2391,88 @@ function configure_openssh() {
     fi
   fi
 }
-# Authenticate "root" user on system using RSA keys
-function add_opensshkey() {
+# Configure RSA authentication for root user
+function configure_rsaauth() {
   local std_error_output=
   local openssh_authorizedkeys_folder="/root/.ssh"
   local openssh_authorizedkeys_file="$openssh_authorizedkeys_folder/authorized_keys"
-  echo_message "Add OpenSSH Key"
+  echo_message "Configure RSA authentication"
   std_error_output=$(test_directory ${openssh_authorizedkeys_folder})
   if [ "$std_error_output" == "0" ]
   then
-    log "INFO" "SSH personal key: $openssh_authorizedkeys_folder successfully found"
+    log "INFO" "RSA authentication: $openssh_authorizedkeys_folder successfully found"
     std_error_output=$(test_file ${openssh_authorizedkeys_file})
     if [ "$std_error_output" == "0" ]
     then
-      log "INFO" "SSH personal key: $openssh_authorizedkeys_file successfully found"
+      log "INFO" "RSA authentication: $openssh_authorizedkeys_file successfully found"
       if [ -s $openssh_authorizedkeys_file ]
       then
-        log "INFO" "SSH personal key: $openssh_authorizedkeys_file not empty"
-        std_error_output=$(echo ${OPENSSH_PERSONAL_KEY} >> ${openssh_authorizedkeys_file})
+        log "INFO" "RSA authentication: $openssh_authorizedkeys_file not empty"
+        std_error_output=$(echo ${RSA_PUBLIC_KEY} >> ${openssh_authorizedkeys_file})
         if [ "$std_error_output" == "" ]
         then
-          log "INFO" "SSH personal key: Successfully inserted"
+          log "INFO" "RSA authentication: Public key successfully inserted"
           echo_success "OK"
         else
-          log "ERROR" "SSH personal key: Not inserted"
+          log "ERROR" "RSA authentication: Public key not inserted"
           log "DEBUG" $std_error_output
           echo_failure "FAILED"
         fi
       else
-        log "INFO" "SSH personal key: $openssh_authorizedkeys_file empty"
-        std_error_output=$(echo ${OPENSSH_PERSONAL_KEY} > ${openssh_authorizedkeys_file})
+        log "INFO" "RSA authentication: $openssh_authorizedkeys_file empty"
+        std_error_output=$(echo ${RSA_PUBLIC_KEY} > ${openssh_authorizedkeys_file})
         if [ "$std_error_output" == "" ]
         then
-          log "INFO" "SSH personal key: Successfully inserted"
+          log "INFO" "RSA authentication: Public key successfully inserted"
           echo_success "OK"
         else
-          log "ERROR" "SSH personal key: Not inserted"
+          log "ERROR" "RSA authentication: Public key not inserted"
           log "DEBUG" $std_error_output
           echo_failure "FAILED"
         fi
       fi
     else
       touch $openssh_authorizedkeys_file
-      log "INFO" "SSH personal key: $openssh_authorizedkeys_file created"
-      echo $OPENSSH_PERSONAL_KEY > $openssh_authorizedkeys_file
-      log "INFO" "SSH personal key: Successfully inserted"
+      log "INFO" "RSA authentication: $openssh_authorizedkeys_file created"
+      echo $RSA_PUBLIC_KEY > $openssh_authorizedkeys_file
+      log "INFO" "RSA authentication: Public key successfully inserted"
       echo_success "OK"
     fi
   else
     std_error_output=$(mkdir ${openssh_authorizedkeys_folder})
     if [ "$std_error_output" == "" ]
     then
-      log "INFO" "SSH personal key: $openssh_authorizedkeys_folder successfully created"
+      log "INFO" "RSA authentication: $openssh_authorizedkeys_folder successfully created"
       std_error_output=$(chmod 700 ${openssh_authorizedkeys_folder})
       if [ "$std_error_output" == "" ]
       then
-        log "INFO" "SSH personal key: $openssh_authorizedkeys_folder successfully changed rights"
+        log "INFO" "RSA authentication: $openssh_authorizedkeys_folder successfully changed rights"
         std_error_output=$(touch ${openssh_authorizedkeys_file})
         if [ "$std_error_output" == "" ]
         then
-          log "INFO" "SSH personal key: $openssh_authorizedkeys_file created"
-          std_error_output=$(echo ${OPENSSH_PERSONAL_KEY} > ${openssh_authorizedkeys_file})
+          log "INFO" "RSA authentication: $openssh_authorizedkeys_file created"
+          std_error_output=$(echo ${RSA_PUBLIC_KEY} > ${openssh_authorizedkeys_file})
           if [ "$std_error_output" == "" ]
           then
-            log "INFO" "SSH personal key: Successfully inserted"
+            log "INFO" "RSA authentication: Public key successfully inserted"
             echo_success "OK"
           else
-            log "ERROR" "SSH personal key: Not inserted"
+            log "ERROR" "RSA authentication: Public key not inserted"
             log "DEBUG" $std_error_output
             echo_failure "FAILED"
           fi
         else
-          log "ERROR" "SSH personal key: $openssh_authorizedkeys_file not created"
+          log "ERROR" "RSA authentication: $openssh_authorizedkeys_file not created"
           log "DEBUG" $std_error_output
           echo_failure "FAILED"
         fi
       else
-        log "ERROR" "SSH personal key: $openssh_authorizedkeys_folder not changed rights"
+        log "ERROR" "RSA authentication: $openssh_authorizedkeys_folder not changed rights"
         log "DEBUG" $std_error_output
         echo_failure "FAILED"
       fi
     else
-      log "ERROR" "SSH personal key: $openssh_authorizedkeys_folder not created"
+      log "ERROR" "RSA authentication: $openssh_authorizedkeys_folder not created"
       log "DEBUG" $std_error_output
       echo_failure "FAILED"
     fi
@@ -3221,7 +3459,7 @@ function display_help() {
 function main {
   log "INFO" "GRAYLOG installation: Begin"
   test_internet
-  if [ "$INSTALLATION_CFG_FILE" == "" ]
+  if [ "$SCRIPT_MODE" == "i" ]
   then
     set_globalvariables
   else
@@ -3259,12 +3497,12 @@ function main {
 #  install_networkpackages
 #  configure_bashrc
 #  configure_openssh
-#  if [ $BOOLEAN_USE_OPENSSHKEY -eq 1 ]
+#  if [ $BOOLEAN_USE_RSAAUTH -eq 1 ]
 #  then
-#    add_opensshkey
+#    configure_rsaauth
 #  else
-#    echo_message "Add OpenSSH Key"
-#    log "WARN" "SSH personal key: operation cancelled by user"
+#    echo_message "Configure RSA authentication"
+#    log "WARN" "RSA authentication: operation cancelled by user"
 #    echo_passed "PASS"
 #  fi
 #  configure_postfix
@@ -3289,9 +3527,11 @@ while getopts ":hia:" options
 do
   case ${options} in
     i )
+      SCRIPT_MODE="i"
       main
       ;;
     a )
+      SCRIPT_MODE="a"
       INSTALLATION_CFG_FILE=$OPTARG
       main
       ;;
