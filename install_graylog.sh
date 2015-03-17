@@ -32,7 +32,7 @@ PUBLIC_KEY_FILE=
 INSTALLATION_LOG_TIMESTAMP=`date +%d%m%Y%H%M%S`
 INSTALLATION_LOG_FOLDER=`pwd`
 INSTALLATION_LOG_FILE="${INSTALLATION_LOG_FOLDER}/install_graylog_${INSTALLATION_LOG_TIMESTAMP}.log"
-INSTALLATION_CFG_FILE=""
+INSTALLATION_CFG_FILE=
 # NETWORK VARIABLES
 NETWORK_INTERFACE_NAME=
 # NTP VARIABLES
@@ -136,17 +136,17 @@ function yes_no_function() {
   local input_message=${1}
   local default_answer=${2}
   local user_answer="UNDEF"
-  while [[ !(${user_answer} =~ ^[Yy][Ee][Ss]$|^[Yy]$) && !(${user_answer} =~ ^[Nn][Oo]$|^[Nn]$) && !( -z ${user_answer}) ]]
+  while [[ !( "${user_answer}" =~ ^[Yy][Ee][Ss]$|^[Yy]$ ) && !( "${user_answer}" =~ ^[Nn][Oo]$|^[Nn]$ ) && !( -z "${user_answer}" ) ]]
   do
     echo -e "\n${input_message}\n[y/n], default to [${SETCOLOR_INFO}${default_answer}${SETCOLOR_NORMAL}]:"
     echo -en "> "
     read user_answer
-    if [ -z ${user_answer} ]
+    if [ -z "${user_answer}" ]
     then
       user_answer=${default_answer}
     fi
   done
-  if [[ ${user_answer} =~ ^[Yy][Ee][Ss]$|^[Yy]$ ]]
+  if [[ "${user_answer}" =~ ^[Yy][Ee][Ss]$|^[Yy]$ ]]
   then 
     return 0
   else 
@@ -158,9 +158,9 @@ function abort_installation() {
   log "ERROR" "GRAYLOG installation: Abort"
   echo_message "Check log file" ${INSTALLATION_LOG_FILE}
   echo_info "INFO"
-  if [ ${INSTALLATION_CFG_FILE} != "" ]
+  if [ ! -z "${INSTALLATION_CFG_FILE}" ]
   then
-    if [[ ${INSTALLATION_CFG_FILE} =~ .*\.cfg$ ]]
+    if [[ "${INSTALLATION_CFG_FILE}" =~ .*\.cfg$ ]]
     then
       log "INFO" "GRAYLOG installation: Retry with ${0} -f ${INSTALLATION_CFG_FILE}"
     fi
@@ -171,7 +171,7 @@ function abort_installation() {
 function test_file() {
   local input_file=${1}
   local is_exist=
-  if [ -f ${input_file} ]
+  if [ -f "${input_file}" ]
   then
     is_exist=0
   else
@@ -183,7 +183,7 @@ function test_file() {
 function test_directory() {
   local input_folder=${1}
   local is_exist=
-  if [ -d ${input_folder} ]
+  if [ -d "${input_folder}" ]
   then
     is_exist=0
   else
@@ -200,12 +200,12 @@ function test_internet() {
   echo_message "Check Internet connection"
   log "INFO" "Internet connection: Check connection to ${internet_host_name}"
   icmp_packets_received=$(ping -c ${icmp_packets_sent} -W ${icmp_time_out} ${internet_host_name} 2>&1)
-  if [[ ! ${icmp_packets_received} =~ .*unknown.* ]]
+  if [[ ! "${icmp_packets_received}" =~ .*unknown.* ]]
   then
     log "INFO" "Internet connection: DNS successfully configured"
     log "INFO" "Internet connection: ICMP packets sent=${icmp_packets_sent}"
     icmp_packets_received=$(ping -c ${icmp_packets_sent} -W ${icmp_time_out} ${internet_host_name} | grep "received" | awk -F: '{print $1}' | awk '{print $4}')
-    if [ ${icmp_packets_received} == ${icmp_packets_sent} ]
+    if [ "${icmp_packets_received}" == ${icmp_packets_sent} ]
     then
       log "INFO" "Internet connection: ICMP packets received=${icmp_packets_received}"
       echo_success "OK"
@@ -225,10 +225,10 @@ function set_globalvariables() {
   local command_output_message=
   local old_input_value=
   local installation_cfg_tmpfile="${INSTALLATION_LOG_FOLDER}/install_graylog_${INSTALLATION_LOG_TIMESTAMP}.cfg"
-  if [ ${SCRIPT_MODE} == "i" ]
+  if [ "${SCRIPT_MODE}" == "i" ]
   then
     command_output_message=$(test_file ${installation_cfg_tmpfile})
-    if [ ${command_output_message} == "0" ]
+    if [ "${command_output_message}" == "0" ]
     then
       log "WARN" "Global variables: ${installation_cfg_tmpfile} already created"
     else
@@ -239,32 +239,32 @@ function set_globalvariables() {
     installation_cfg_tmpfile=${INSTALLATION_CFG_FILE}
     log "INFO" "Global variables: ${installation_cfg_tmpfile} successfully selected"
   fi
-  if [ -z ${NETWORK_INTERFACE_NAME} ]
+  if [ -z "${NETWORK_INTERFACE_NAME}" ]
   then
-    while [ -z ${NETWORK_INTERFACE_NAME} ]
+    while [ -z "${NETWORK_INTERFACE_NAME}" ]
     do
       echo -e "\nType network interface name, followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}eth0${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read NETWORK_INTERFACE_NAME
-      if [ -z ${NETWORK_INTERFACE_NAME} ]
+      if [ -z "${NETWORK_INTERFACE_NAME}" ]
       then
         NETWORK_INTERFACE_NAME='eth0'
       fi
     done
   else
     yes_no_function "Can you confirm you want to modify current interface name ?" "yes"
-    if [ ${?} -eq 0 ]
+    if [ "${?}" == "0" ]
     then
       old_input_value=${NETWORK_INTERFACE_NAME}
       NETWORK_INTERFACE_NAME=
-      while [ -z ${NETWORK_INTERFACE_NAME} ]
+      while [ -z "${NETWORK_INTERFACE_NAME}" ]
       do
         echo -e "\nType network interface name, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read NETWORK_INTERFACE_NAME
-        if [ -z ${NETWORK_INTERFACE_NAME} ]
+        if [ -z "${NETWORK_INTERFACE_NAME}" ]
         then
           NETWORK_INTERFACE_NAME=${old_input_value}
         fi
@@ -274,20 +274,20 @@ function set_globalvariables() {
     fi
   fi
   echo "NETWORK_INTERFACE_NAME='${NETWORK_INTERFACE_NAME}'" > ${installation_cfg_tmpfile}
-  if [ -z ${BOOLEAN_RSA_AUTH} ]
+  if [ -z "${BOOLEAN_RSA_AUTH}" ]
   then
     yes_no_function "Do you want to use RSA authentication on GRAYLOG server ?" "yes"
-    if [ ${?} == 0 ]
+    if [ "${?}" == "0" ]
     then
       BOOLEAN_RSA_AUTH=1
     else
       BOOLEAN_RSA_AUTH=0
     fi
   else
-    if [ ${BOOLEAN_RSA_AUTH} == 1 ]
+    if [ "${BOOLEAN_RSA_AUTH}" == "1" ]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not use${SETCOLOR_NORMAL} RSA authentication ?" "yes"
-      if [ ${?} == 0 ]
+      if [ "${?}" == "0" ]
       then
         BOOLEAN_RSA_AUTH=0
       else
@@ -295,7 +295,7 @@ function set_globalvariables() {
       fi
     else
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}use${SETCOLOR_NORMAL} RSA authentication ?" "yes"
-      if [ ${?} == 0 ]
+      if [ "${?}" == "0" ]
       then
         BOOLEAN_RSA_AUTH=1
       else
@@ -303,11 +303,11 @@ function set_globalvariables() {
       fi
     fi
   fi
-  if [ ${BOOLEAN_RSA_AUTH} == 1 ]
+  if [ "${BOOLEAN_RSA_AUTH}" == "1" ]
   then
-    if [ -z ${RSA_PUBLIC_KEY} ]
+    if [ -z "${RSA_PUBLIC_KEY}" ]
     then
-      while [ -z ${RSA_PUBLIC_KEY} ] || [[ ! ${RSA_PUBLIC_KEY} =~ ^ssh-rsa.* ]]
+      while [ -z "${RSA_PUBLIC_KEY}" ] || [[ ! "${RSA_PUBLIC_KEY}" =~ ^ssh-rsa.* ]]
       do
         echo -e "Paste your RSA public key, followed by [ENTER]:"
         echo -en "> "
@@ -315,17 +315,17 @@ function set_globalvariables() {
       done
     else
       yes_no_function "Can you confirm you want to modify current RSA public key" "yes"
-      if [ ${?} -eq 0 ]
+      if [ "${?}" == "0" ]
       then
         old_input_value=${RSA_PUBLIC_KEY}
         RSA_PUBLIC_KEY=
-        while [ -z ${RSA_PUBLIC_KEY} ] || [[ ! ${RSA_PUBLIC_KEY} =~ ^ssh-rsa.* ]]
+        while [ -z "${RSA_PUBLIC_KEY}" ] || [[ ! "${RSA_PUBLIC_KEY}" =~ ^ssh-rsa.* ]]
         do
           echo -e "Paste your RSA public key, followed by [ENTER]"
           echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
           echo -en "> "
           read RSA_PUBLIC_KEY
-          if [ -z ${RSA_PUBLIC_KEY} ]
+          if [ -z "${RSA_PUBLIC_KEY}" ]
           then
             RSA_PUBLIC_KEY=${old_input_value}
           fi
@@ -339,32 +339,32 @@ function set_globalvariables() {
   fi
   echo "BOOLEAN_RSA_AUTH='${BOOLEAN_RSA_AUTH}'" >> ${installation_cfg_tmpfile}
   echo "RSA_PUBLIC_KEY='${RSA_PUBLIC_KEY}'" >> ${installation_cfg_tmpfile}
-  if [ -z ${SERVER_TIME_ZONE} ]
+  if [ -z "${SERVER_TIME_ZONE}" ]
   then
-    while [ -z ${SERVER_TIME_ZONE} ]
+    while [ -z "${SERVER_TIME_ZONE}" ]
     do
       echo -e "\nType timezone, followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}Europe/Paris${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read SERVER_TIME_ZONE
-      if [ -z ${SERVER_TIME_ZONE} ]
+      if [ -z "${SERVER_TIME_ZONE}" ]
       then
         SERVER_TIME_ZONE='Europe/Paris'
       fi
     done
   else
     yes_no_function "Can you confirm you want to modify current time zone ?" "yes"
-    if [ ${?} -eq 0 ]
+    if [ "${?}" == "0" ]
     then
       old_input_value=${SERVER_TIME_ZONE}
       SERVER_TIME_ZONE=
-      while [ -z ${SERVER_TIME_ZONE} ]
+      while [ -z "${SERVER_TIME_ZONE}" ]
       do
         echo -e "\nType timezone, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read SERVER_TIME_ZONE
-        if [ -z ${SERVER_TIME_ZONE} ]
+        if [ -z "${SERVER_TIME_ZONE}" ]
         then
           SERVER_TIME_ZONE=${old_input_value}
         fi
@@ -374,20 +374,20 @@ function set_globalvariables() {
     fi
   fi
   echo "SERVER_TIME_ZONE='${SERVER_TIME_ZONE}'" >> ${installation_cfg_tmpfile}
-  if [ -z ${BOOLEAN_NTP_CONFIGURE} ]
+  if [ -z "${BOOLEAN_NTP_CONFIGURE}" ]
   then
     yes_no_function "Do you want to configure NTP service ?" "yes"
-    if [ ${?} == 0 ]
+    if [ "${?}" == "0" ]
     then
       BOOLEAN_NTP_CONFIGURE=1
     else
       BOOLEAN_NTP_CONFIGURE=0
     fi
   else
-    if [ ${BOOLEAN_NTP_CONFIGURE} == 1 ]
+    if [ "${BOOLEAN_NTP_CONFIGURE}" == "1" ]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not configure${SETCOLOR_NORMAL} NTP service ?" "yes"
-      if [ ${?} == 0 ]
+      if [ "${?}" == "0" ]
       then
         BOOLEAN_NTP_CONFIGURE=0
       else
@@ -395,7 +395,7 @@ function set_globalvariables() {
       fi
     else
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}configure${SETCOLOR_NORMAL} NTP service ?" "yes"
-      if [ ${?} == 0 ]
+      if [ "${?}" == "0" ]
       then
         BOOLEAN_NTP_CONFIGURE=1
       else
@@ -403,34 +403,34 @@ function set_globalvariables() {
       fi
     fi
   fi
-  if [ ${BOOLEAN_NTP_CONFIGURE} == 1 ]
+  if [ "${BOOLEAN_NTP_CONFIGURE}" == "1" ]
   then
-    if [ -z ${NEW_NTP_ADDRESS} ]
+    if [ -z "${NEW_NTP_ADDRESS}" ]
     then
-      while [ -z ${NEW_NTP_ADDRESS} ] || [[ ! ${NEW_NTP_ADDRESS} =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ ! ${NEW_NTP_ADDRESS} =~ (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?) ]]
+      while [ -z "${NEW_NTP_ADDRESS}" ] || [[ ! "${NEW_NTP_ADDRESS}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ "${NEW_NTP_ADDRESS}" =~ (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?) ]]
       do
         echo -e "\nType IP address or hostname of NTP server, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_INFO}ntp.test.fr${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read NEW_NTP_ADDRESS
-        if [ -z ${NEW_NTP_ADDRESS} ]
+        if [ -z "${NEW_NTP_ADDRESS}" ]
         then
           NEW_NTP_ADDRESS='ntp.test.fr'
         fi
       done
     else
       yes_no_function "Can you confirm you want to modify current NTP server ?" "yes"
-      if [ ${?} -eq 0 ]
+      if [ "${?}" == "0" ]
       then
         old_input_value=${NEW_NTP_ADDRESS}
         NEW_NTP_ADDRESS=
-        while [ -z ${NEW_NTP_ADDRESS} ] || [[ ! ${NEW_NTP_ADDRESS} =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ ! ${NEW_NTP_ADDRESS} =~ (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?) ]]
+        while [ -z "${NEW_NTP_ADDRESS}" ] || [[ ! "${NEW_NTP_ADDRESS}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ ! "${NEW_NTP_ADDRESS}" =~ (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?) ]]
         do
           echo -e "\nType IP address or hostname of NTP server, followed by [ENTER]"
           echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
           echo -en "> "
           read NEW_NTP_ADDRESS
-          if [ -z ${NEW_NTP_ADDRESS} ]
+          if [ -z "${NEW_NTP_ADDRESS}" ]
           then
             NEW_NTP_ADDRESS=${old_input_value}
           fi
@@ -444,20 +444,20 @@ function set_globalvariables() {
   fi
   echo "BOOLEAN_NTP_CONFIGURE='${BOOLEAN_NTP_CONFIGURE}'" >> ${installation_cfg_tmpfile}
   echo "NEW_NTP_ADDRESS='${NEW_NTP_ADDRESS}'" >> ${installation_cfg_tmpfile}
-  if [ -z ${BOOLEAN_NTP_ONSTARTUP} ]
+  if [ -z "${BOOLEAN_NTP_ONSTARTUP}" ]
   then
     yes_no_function "Do you want to add NTP service on startup ?" "yes"
-    if [ ${?} == 0 ]
+    if [ "${?}" == "0" ]
     then
       BOOLEAN_NTP_ONSTARTUP=1
     else
       BOOLEAN_NTP_ONSTARTUP=0
     fi
   else
-    if [ ${BOOLEAN_NTP_ONSTARTUP} == 1 ]
+    if [ "${BOOLEAN_NTP_ONSTARTUP}" == "1" ]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} NTP service on startup ?" "yes"
-      if [ ${?} == 0 ]
+      if [ "${?}" == "0" ]
       then
         BOOLEAN_NTP_ONSTARTUP=0
       else
@@ -465,7 +465,7 @@ function set_globalvariables() {
       fi
     else
       yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} NTP service on startup ?" "yes"
-      if [ ${?} == 0 ]
+      if [ "${?}" == "0" ]
       then
         BOOLEAN_NTP_ONSTARTUP=1
       else
@@ -474,32 +474,32 @@ function set_globalvariables() {
     fi
   fi
   echo "BOOLEAN_NTP_ONSTARTUP='${BOOLEAN_NTP_ONSTARTUP}'" >> ${installation_cfg_tmpfile}
-  if [ -z ${MONGO_ADMIN_PASSWORD} ]
+  if [ -z "${MONGO_ADMIN_PASSWORD}" ]
   then
-    while [ -z ${MONGO_ADMIN_PASSWORD} ]
+    while [ -z "${MONGO_ADMIN_PASSWORD}" ]
     do
       echo -e "\nType password of Mongo administrator, followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}admin4mongo${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read MONGO_ADMIN_PASSWORD
-      if [ -z ${MONGO_ADMIN_PASSWORD} ]
+      if [ -z "${MONGO_ADMIN_PASSWORD}" ]
       then
         MONGO_ADMIN_PASSWORD='admin4mongo'
       fi
     done
   else
     yes_no_function "Can you confirm you want to modify current password of Mongo administrator ?" "yes"
-    if [ ${?} -eq 0 ]
+    if [ "${?}" == "0" ]
     then
       old_input_value=${MONGO_ADMIN_PASSWORD}
       MONGO_ADMIN_PASSWORD=
-      while [ -z ${MONGO_ADMIN_PASSWORD} ]
+      while [ -z "${MONGO_ADMIN_PASSWORD}" ]
       do
         echo -e "\nType password of Mongo administrator, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read MONGO_ADMIN_PASSWORD
-        if [ -z ${MONGO_ADMIN_PASSWORD} ]
+        if [ -z "${MONGO_ADMIN_PASSWORD}" ]
         then
           MONGO_ADMIN_PASSWORD=${old_input_value}
         fi
@@ -509,32 +509,32 @@ function set_globalvariables() {
     fi
   fi
   echo "MONGO_ADMIN_PASSWORD='${MONGO_ADMIN_PASSWORD}'" >> ${installation_cfg_tmpfile}
-  if [ -z ${MONGO_GRAYLOG_DATABASE} ]
+  if [ -z "${MONGO_GRAYLOG_DATABASE}" ]
   then
-    while [ -z ${MONGO_GRAYLOG_DATABASE} ]
+    while [ -z "${MONGO_GRAYLOG_DATABASE}" ]
     do
       echo -e "\nType name of Graylog Mongo database, followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}graylog${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read MONGO_GRAYLOG_DATABASE
-      if [ -z ${MONGO_GRAYLOG_DATABASE} ]
+      if [ -z "${MONGO_GRAYLOG_DATABASE}" ]
       then
         MONGO_GRAYLOG_DATABASE='graylog'
       fi
     done
   else
     yes_no_function "Can you confirm you want to modify current name of Graylog Mongo database ?" "yes"
-    if [ ${?} -eq 0 ]
+    if [ "${?}" == "0" ]
     then
       old_input_value=${MONGO_GRAYLOG_DATABASE}
       MONGO_GRAYLOG_DATABASE=
-      while [ -z ${MONGO_GRAYLOG_DATABASE} ]
+      while [ -z "${MONGO_GRAYLOG_DATABASE}" ]
       do
         echo -e "\nType name of Graylog Mongo database, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read MONGO_GRAYLOG_DATABASE
-        if [ -z ${MONGO_GRAYLOG_DATABASE} ]
+        if [ -z "${MONGO_GRAYLOG_DATABASE}" ]
         then
           MONGO_GRAYLOG_DATABASE=${old_input_value}
         fi
@@ -544,32 +544,32 @@ function set_globalvariables() {
     fi
   fi
   echo "MONGO_GRAYLOG_DATABASE='${MONGO_GRAYLOG_DATABASE}'" >> ${installation_cfg_tmpfile}
-  if [ -z ${MONGO_GRAYLOG_USER} ]
+  if [ -z "${MONGO_GRAYLOG_USER}" ]
   then
-    while [ -z ${MONGO_GRAYLOG_USER} ]
+    while [ -z "${MONGO_GRAYLOG_USER}" ]
     do
       echo -e "\nType login of Mongo Graylog user, followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}grayloguser${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read MONGO_GRAYLOG_USER
-      if [ -z ${MONGO_GRAYLOG_USER} ]
+      if [ -z "${MONGO_GRAYLOG_USER}" ]
       then
         MONGO_GRAYLOG_USER='grayloguser'
       fi
     done
   else
     yes_no_function "Can you confirm you want to modify current login of Mongo Graylog user ?" "yes"
-    if [ ${?} -eq 0 ]
+    if [ "${?}" == "0" ]
     then
       old_input_value=${MONGO_GRAYLOG_USER}
       MONGO_GRAYLOG_USER=
-      while [ -z ${MONGO_GRAYLOG_USER} ]
+      while [ -z "${MONGO_GRAYLOG_USER}" ]
       do
         echo -e "\nType login of Mongo Graylog user, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read MONGO_GRAYLOG_USER
-        if [ -z ${MONGO_GRAYLOG_USER} ]
+        if [ -z "${MONGO_GRAYLOG_USER}" ]
         then
           MONGO_GRAYLOG_USER=${old_input_value}
         fi
@@ -579,32 +579,32 @@ function set_globalvariables() {
     fi
   fi
   echo "MONGO_GRAYLOG_USER='${MONGO_GRAYLOG_USER}'" >> ${installation_cfg_tmpfile}
-  if [ -z ${MONGO_GRAYLOG_PASSWORD} ]
+  if [ -z "${MONGO_GRAYLOG_PASSWORD}" ]
   then
-    while [ -z ${MONGO_GRAYLOG_PASSWORD} ]
+    while [ -z "${MONGO_GRAYLOG_PASSWORD}" ]
     do
       echo -e "\nType password of Mongo Graylog user, followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}graylog4mongo${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read MONGO_GRAYLOG_PASSWORD
-      if [ -z ${MONGO_GRAYLOG_PASSWORD} ]
+      if [ -z "${MONGO_GRAYLOG_PASSWORD}" ]
       then
         MONGO_GRAYLOG_PASSWORD='graylog4mongo'
       fi
     done
   else
     yes_no_function "Can you confirm you want to modify current password of Mongo Graylog user ?" "yes"
-    if [ ${?} -eq 0 ]
+    if [ "${?}" == "0" ]
     then
       old_input_value=${MONGO_GRAYLOG_PASSWORD}
       MONGO_GRAYLOG_PASSWORD=
-      while [ -z ${MONGO_GRAYLOG_PASSWORD} ]
+      while [ -z "${MONGO_GRAYLOG_PASSWORD}" ]
       do
         echo -e "\nType password of Mongo Graylog user, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read MONGO_GRAYLOG_PASSWORD
-        if [ -z ${MONGO_GRAYLOG_PASSWORD} ]
+        if [ -z "${MONGO_GRAYLOG_PASSWORD}" ]
         then
           MONGO_GRAYLOG_PASSWORD=${old_input_value}
         fi
@@ -614,20 +614,20 @@ function set_globalvariables() {
     fi
   fi
   echo "MONGO_GRAYLOG_PASSWORD='${MONGO_GRAYLOG_PASSWORD}'" >> ${installation_cfg_tmpfile}
-  if [ -z ${BOOLEAN_MONGO_ONSTARTUP} ]
+  if [ -z "${BOOLEAN_MONGO_ONSTARTUP}" ]
   then
     yes_no_function "Do you want to add Mongo database server on startup ?" "yes"
-    if [ ${?} == 0 ]
+    if [ "${?}" == "0" ]
     then
       BOOLEAN_MONGO_ONSTARTUP=1
     else
       BOOLEAN_MONGO_ONSTARTUP=0
     fi
   else
-    if [ ${BOOLEAN_MONGO_ONSTARTUP} == 1 ]
+    if [ "${BOOLEAN_MONGO_ONSTARTUP}" == "1" ]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} Mongo database server on startup ?" "yes"
-      if [ ${?} == 0 ]
+      if [ "${?}" == "0" ]
       then
         BOOLEAN_MONGO_ONSTARTUP=0
       else
@@ -635,7 +635,7 @@ function set_globalvariables() {
       fi
     else
       yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} Mongo database server on startup ?" "yes"
-      if [ ${?} == 0 ]
+      if [ "${?}" == "0" ]
       then
         BOOLEAN_MONGO_ONSTARTUP=1
       else
@@ -644,32 +644,32 @@ function set_globalvariables() {
     fi
   fi
   echo "BOOLEAN_MONGO_ONSTARTUP='${BOOLEAN_MONGO_ONSTARTUP}'" >> ${installation_cfg_tmpfile}
-  if [ -z ${SSL_KEY_SIZE} ]
+  if [ -z "${SSL_KEY_SIZE}" ]
   then
-    while [ -z ${SSL_KEY_SIZE} ] || [[ ! ${SSL_KEY_SIZE} =~ 512|1024|2048|4096 ]]
+    while [ -z "${SSL_KEY_SIZE}" ] || [[ ! "${SSL_KEY_SIZE}" =~ 512|1024|2048|4096 ]]
     do
       echo -e "\nType size of SSL private key (possible values : ${SETCOLOR_FAILURE}512${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}1024${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}2048${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}4096${SETCOLOR_NORMAL}), followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}2048${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read SSL_KEY_SIZE
-      if [ -z ${SSL_KEY_SIZE} ]
+      if [ -z "${SSL_KEY_SIZE}" ]
       then
         SSL_KEY_SIZE='2048'
       fi
     done
   else
     yes_no_function "Can you confirm you want to modify current size of SSL private key ?" "yes"
-    if [ ${?} -eq 0 ]
+    if [ "${?}" == "0" ]
     then
       old_input_value=${SSL_KEY_SIZE}
       SSL_KEY_SIZE=
-      while [ -z ${SSL_KEY_SIZE} ] || [[ ! ${SSL_KEY_SIZE} =~ 512|1024|2048|4096 ]]
+      while [ -z "${SSL_KEY_SIZE}" ] || [[ ! "${SSL_KEY_SIZE}" =~ 512|1024|2048|4096 ]]
       do
         echo -e "\nType size of SSL private key (possible values : ${SETCOLOR_FAILURE}512${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}1024${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}2048${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}4096${SETCOLOR_NORMAL}), followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read SSL_KEY_SIZE
-        if [ -z ${SSL_KEY_SIZE} ]
+        if [ -z "${SSL_KEY_SIZE}" ]
         then
           SSL_KEY_SIZE=${old_input_value}
         fi
@@ -679,32 +679,32 @@ function set_globalvariables() {
     fi
   fi
   echo "SSL_KEY_SIZE='${SSL_KEY_SIZE}'" >> ${installation_cfg_tmpfile}
-  if [ -z ${SSL_KEY_DURATION} ]
+  if [ -z "${SSL_KEY_DURATION}" ]
   then
-    while [ -z ${SSL_KEY_DURATION} ] || [[ ! ${SSL_KEY_DURATION} =~ [0-9]{1,5} ]]
+    while [ -z "${SSL_KEY_DURATION}" ] || [[ ! "${SSL_KEY_DURATION}" =~ [0-9]{1,5} ]]
     do
       echo -e "\nType period of validity (in day) of SSL certificate, followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}365${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read SSL_KEY_DURATION
-      if [ -z ${SSL_KEY_DURATION} ]
+      if [ -z "${SSL_KEY_DURATION}" ]
       then
         SSL_KEY_DURATION='365'
       fi
     done
   else
     yes_no_function "Can you confirm you want to modify current period of validity of SSL Certificate ?" "yes"
-    if [ ${?} -eq 0 ]
+    if [ "${?}" == "0" ]
     then
       old_input_value=${SSL_KEY_DURATION}
       SSL_KEY_DURATION=
-      while [ -z ${SSL_KEY_DURATION} ] || [[ ! ${SSL_KEY_DURATION} =~ [0-9]{1,5} ]]
+      while [ -z "${SSL_KEY_DURATION}" ] || [[ ! "${SSL_KEY_DURATION}" =~ [0-9]{1,5} ]]
       do
         echo -e "\nType period of validity (in day) of SSL certificate, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read SSL_KEY_DURATION
-        if [ -z ${SSL_KEY_DURATION} ]
+        if [ -z "${SSL_KEY_DURATION}" ]
         then
           SSL_KEY_DURATION=${old_input_value}
         fi
@@ -714,32 +714,32 @@ function set_globalvariables() {
     fi
   fi
   echo "SSL_KEY_DURATION='${SSL_KEY_DURATION}'" >> ${installation_cfg_tmpfile}
-  if [ -z ${SSL_SUBJECT_COUNTRY} ]
+  if [ -z "${SSL_SUBJECT_COUNTRY}" ]
   then
-    while [ -z ${SSL_SUBJECT_COUNTRY} ] || [[ ! ${SSL_SUBJECT_COUNTRY} =~ [A-Z]{2} ]]
+    while [ -z "${SSL_SUBJECT_COUNTRY}" ] || [[ ! "${SSL_SUBJECT_COUNTRY}" =~ [A-Z]{2} ]]
     do
       echo -e "\nType country code of SSL certificate, followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}FR${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read SSL_SUBJECT_COUNTRY
-      if [ -z ${SSL_SUBJECT_COUNTRY} ]
+      if [ -z "${SSL_SUBJECT_COUNTRY}" ]
       then
         SSL_SUBJECT_COUNTRY='FR'
       fi
     done
   else
     yes_no_function "Can you confirm you want to modify current country code of SSL Certificate ?" "yes"
-    if [ ${?} -eq 0 ]
+    if [ "${?}" == "0" ]
     then
       old_input_value=${SSL_SUBJECT_COUNTRY}
       SSL_SUBJECT_COUNTRY=
-      while [ -z ${SSL_SUBJECT_COUNTRY} ] || [[ ! ${SSL_SUBJECT_COUNTRY} =~ [A-Z]{2} ]]
+      while [ -z "${SSL_SUBJECT_COUNTRY}" ] || [[ ! "${SSL_SUBJECT_COUNTRY}" =~ [A-Z]{2} ]]
       do
         echo -e "\nType country code of SSL certificate, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read SSL_SUBJECT_COUNTRY
-        if [ -z ${SSL_SUBJECT_COUNTRY} ]
+        if [ -z "${SSL_SUBJECT_COUNTRY}" ]
         then
           SSL_SUBJECT_COUNTRY=${old_input_value}
         fi
@@ -749,32 +749,32 @@ function set_globalvariables() {
     fi
   fi
   echo "SSL_SUBJECT_COUNTRY='${SSL_SUBJECT_COUNTRY}'" >> ${installation_cfg_tmpfile}
-  if [ -z ${SSL_SUBJECT_STATE} ]
+  if [ -z "${SSL_SUBJECT_STATE}" ]
   then
-    while [ -z ${SSL_SUBJECT_STATE} ]
+    while [ -z "${SSL_SUBJECT_STATE}" ]
     do
       echo -e "\nType state of SSL certificate, followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}STATE${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read SSL_SUBJECT_STATE
-      if [ -z ${SSL_SUBJECT_STATE} ]
+      if [ -z "${SSL_SUBJECT_STATE}" ]
       then
         SSL_SUBJECT_STATE='STATE'
       fi
     done
   else
     yes_no_function "Can you confirm you want to modify current state of SSL Certificate ?" "yes"
-    if [ ${?} -eq 0 ]
+    if [ "${?}" == "0" ]
     then
       old_input_value=${SSL_SUBJECT_STATE}
       SSL_SUBJECT_STATE=
-      while [ -z ${SSL_SUBJECT_STATE} ]
+      while [ -z "${SSL_SUBJECT_STATE}" ]
       do
         echo -e "\nType state of SSL certificate, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read SSL_SUBJECT_STATE
-        if [ -z ${SSL_SUBJECT_STATE} ]
+        if [ -z "${SSL_SUBJECT_STATE}" ]
         then
           SSL_SUBJECT_STATE=${old_input_value}
         fi
@@ -784,32 +784,32 @@ function set_globalvariables() {
     fi
   fi
   echo "SSL_SUBJECT_STATE='${SSL_SUBJECT_STATE}'" >> ${installation_cfg_tmpfile}
-  if [ -z ${SSL_SUBJECT_LOCALITY} ]
+  if [ -z "${SSL_SUBJECT_LOCALITY}" ]
   then
-    while [ -z ${SSL_SUBJECT_LOCALITY} ]
+    while [ -z "${SSL_SUBJECT_LOCALITY}" ]
     do
       echo -e "\nType state of SSL certificate, followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}LOCALITY${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read SSL_SUBJECT_LOCALITY
-      if [ -z ${SSL_SUBJECT_LOCALITY} ]
+      if [ -z "${SSL_SUBJECT_LOCALITY}" ]
       then
         SSL_SUBJECT_LOCALITY='LOCALITY'
       fi
     done
   else
     yes_no_function "Can you confirm you want to modify current locality of SSL Certificate ?" "yes"
-    if [ ${?} -eq 0 ]
+    if [ "${?}" == "0" ]
     then
       old_input_value=${SSL_SUBJECT_LOCALITY}
       SSL_SUBJECT_LOCALITY=
-      while [ -z ${SSL_SUBJECT_LOCALITY} ]
+      while [ -z "${SSL_SUBJECT_LOCALITY}" ]
       do
         echo -e "\nType state of SSL certificate, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read SSL_SUBJECT_LOCALITY
-        if [ -z ${SSL_SUBJECT_LOCALITY} ]
+        if [ -z "${SSL_SUBJECT_LOCALITY}" ]
         then
           SSL_SUBJECT_LOCALITY=${old_input_value}
         fi
@@ -819,32 +819,32 @@ function set_globalvariables() {
     fi
   fi
   echo "SSL_SUBJECT_LOCALITY='${SSL_SUBJECT_LOCALITY}'" >> ${installation_cfg_tmpfile}
-  if [ -z ${SSL_SUBJECT_ORGANIZATION} ]
+  if [ -z "${SSL_SUBJECT_ORGANIZATION}" ]
   then
-    while [ -z ${SSL_SUBJECT_ORGANIZATION} ]
+    while [ -z "${SSL_SUBJECT_ORGANIZATION}" ]
     do
       echo -e "\nType organization name of SSL certificate, followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}ORGANIZATION${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read SSL_SUBJECT_ORGANIZATION
-      if [ -z ${SSL_SUBJECT_ORGANIZATION} ]
+      if [ -z "${SSL_SUBJECT_ORGANIZATION}" ]
       then
         SSL_SUBJECT_ORGANIZATION='ORGANIZATION'
       fi
     done
   else
     yes_no_function "Can you confirm you want to modify current organization name of SSL Certificate ?" "yes"
-    if [ ${?} -eq 0 ]
+    if [ "${?}" == "0" ]
     then
       old_input_value=${SSL_SUBJECT_ORGANIZATION}
       SSL_SUBJECT_ORGANIZATION=
-      while [ -z ${SSL_SUBJECT_ORGANIZATION} ]
+      while [ -z "${SSL_SUBJECT_ORGANIZATION}" ]
       do
         echo -e "\nType organization name of SSL certificate, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read SSL_SUBJECT_ORGANIZATION
-        if [ -z ${SSL_SUBJECT_ORGANIZATION} ]
+        if [ -z "${SSL_SUBJECT_ORGANIZATION}" ]
         then
           SSL_SUBJECT_ORGANIZATION=${old_input_value}
         fi
@@ -854,32 +854,32 @@ function set_globalvariables() {
     fi
   fi
   echo "SSL_SUBJECT_ORGANIZATION='${SSL_SUBJECT_ORGANIZATION}'" >> ${installation_cfg_tmpfile}
-  if [ -z "${SSL_SUBJECT_ORGANIZATION}UNIT" ]
+  if [ -z "${SSL_SUBJECT_ORGANIZATIONUNIT}" ]
   then
-    while [ -z "${SSL_SUBJECT_ORGANIZATION}UNIT" ]
+    while [ -z "${SSL_SUBJECT_ORGANIZATIONUNIT}" ]
     do
       echo -e "\nType organization unit name of SSL certificate, followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}ORGANIZATION UNIT${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read SSL_SUBJECT_ORGANIZATIONUNIT
-      if [ -z ${SSL_SUBJECT_ORGANIZATIONUNIT} ]
+      if [ -z "${SSL_SUBJECT_ORGANIZATIONUNIT}" ]
       then
         SSL_SUBJECT_ORGANIZATIONUNIT='ORGANIZATION UNIT'
       fi
     done
   else
     yes_no_function "Can you confirm you want to modify current organization unit name of SSL Certificate ?" "yes"
-    if [ ${?} -eq 0 ]
+    if [ "${?}" == "0" ]
     then
       old_input_value=${SSL_SUBJECT_ORGANIZATIONUNIT}
       SSL_SUBJECT_ORGANIZATIONUNIT=
-      while [ -z ${SSL_SUBJECT_ORGANIZATIONUNIT} ]
+      while [ -z "${SSL_SUBJECT_ORGANIZATIONUNIT}" ]
       do
         echo -e "\nType organization unit name of SSL certificate, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read SSL_SUBJECT_ORGANIZATIONUNIT
-        if [ -z ${SSL_SUBJECT_ORGANIZATIONUNIT} ]
+        if [ -z "${SSL_SUBJECT_ORGANIZATIONUNIT}" ]
         then
           SSL_SUBJECT_ORGANIZATIONUNIT=${old_input_value}
         fi
@@ -889,32 +889,32 @@ function set_globalvariables() {
     fi
   fi
   echo "SSL_SUBJECT_ORGANIZATIONUNIT='${SSL_SUBJECT_ORGANIZATIONUNIT}'" >> ${installation_cfg_tmpfile}
-  if [ -z ${SSL_SUBJECT_EMAIL} ]
+  if [ -z "${SSL_SUBJECT_EMAIL}" ]
   then
-    while [ -z ${SSL_SUBJECT_EMAIL} ] || [[ ! ${SSL_SUBJECT_EMAIL} =~ ^[a-z0-9\,\!\#\$\%\&\'\*\+\/\=\?\^_\`\{\|\}\~-]+(\.[a-z0-9\,\!\#\$\%\&\'\*\+\/\=\?\^_\`\{\|\}\~-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*\.([a-z]{2,})$ ]]
+    while [ -z "${SSL_SUBJECT_EMAIL}" ] || [[ ! "${SSL_SUBJECT_EMAIL}" =~ ^[a-z0-9\,\!\#\$\%\&\'\*\+\/\\\=\?\^_\`\{\|\}\~\-]+(\.[a-z0-9\,\!\#\$\%\&\'\*\+\/\\\=\?\^\_\`\{\|\}\~\-]+)*@[a-z0-9\-]+(\.[a-z0-9\-]+)*\.([a-z]{2,})$ ]]
     do
       echo -e "\nType organization unit name of SSL certificate, followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}mail.address@test.fr${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read SSL_SUBJECT_EMAIL
-      if [ -z ${SSL_SUBJECT_EMAIL} ]
+      if [ -z "${SSL_SUBJECT_EMAIL}" ]
       then
         SSL_SUBJECT_EMAIL='mail.address@test.fr'
       fi
     done
   else
     yes_no_function "Can you confirm you want to modify current e-mail address of SSL Certificate ?" "yes"
-    if [ ${?} -eq 0 ]
+    if [ "${?}" == "0" ]
     then
       old_input_value=${SSL_SUBJECT_EMAIL}
       SSL_SUBJECT_EMAIL=
-      while [ -z ${SSL_SUBJECT_EMAIL} ] || [[ ! ${SSL_SUBJECT_EMAIL} =~ ^[a-z0-9\,\!\#\$\%\&\'\*\+\/\=\?\^_\`\{\|\}\~-]+(\.[a-z0-9\,\!\#\$\%\&\'\*\+\/\=\?\^_\`\{\|\}\~-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*\.([a-z]{2,})$ ]]
+      while [ -z "${SSL_SUBJECT_EMAIL}" ] || [[ ! "${SSL_SUBJECT_EMAIL}" =~ ^[a-z0-9\,\!\#\$\%\&\'\*\+\/\\\=\?\^_\`\{\|\}\~\-]+(\.[a-z0-9\,\!\#\$\%\&\'\*\+\/\\\=\?\^\_\`\{\|\}\~\-]+)*@[a-z0-9\-]+(\.[a-z0-9\-]+)*\.([a-z]{2,})$ ]]
       do
         echo -e "\nType organization unit name of SSL certificate, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read SSL_SUBJECT_EMAIL
-        if [ -z ${SSL_SUBJECT_EMAIL} ]
+        if [ -z "${SSL_SUBJECT_EMAIL}" ]
         then
           SSL_SUBJECT_EMAIL=${old_input_value}
         fi
@@ -924,20 +924,20 @@ function set_globalvariables() {
     fi
   fi
   echo "SSL_SUBJECT_EMAIL='${SSL_SUBJECT_EMAIL}'" >> ${installation_cfg_tmpfile}
-  if [ -z ${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN} ]
+  if [ -z "${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN}" ]
   then
     yes_no_function "Do you want to install HQ plugin to manage ElasticSearch ?" "yes"
-    if [ ${?} == 0 ]
+    if [ "${?}" == "0" ]
     then
       BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=1
     else
       BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=0
     fi
   else
-    if [ ${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN} == 1 ]
+    if [ "${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN}" == "1" ]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not install${SETCOLOR_NORMAL} ElasticSearch HQ plugin ?" "yes"
-      if [ ${?} == 0 ]
+      if [ "${?}" == "0" ]
       then
         BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=0
       else
@@ -945,7 +945,7 @@ function set_globalvariables() {
       fi
     else
       yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}install${SETCOLOR_NORMAL} ElasticSearch HQ plugin ?" "yes"
-      if [ ${?} == 0 ]
+      if [ "${?}" == "0" ]
       then
         BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=1
       else
@@ -953,21 +953,21 @@ function set_globalvariables() {
       fi
     fi
   fi
-  echo "BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN}" >> ${installation_cfg_tmpfile}
-  if [ -z ${BOOLEAN_ELASTICSEARCH_ONSTARTUP} ]
+  echo "BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN='${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN}'" >> ${installation_cfg_tmpfile}
+  if [ -z "${BOOLEAN_ELASTICSEARCH_ONSTARTUP}" ]
   then
     yes_no_function "Do you want to add ElasticSearch server on startup ?" "yes"
-    if [ ${?} == 0 ]
+    if [ "${?}" == "0" ]
     then
       BOOLEAN_ELASTICSEARCH_ONSTARTUP=1
     else
       BOOLEAN_ELASTICSEARCH_ONSTARTUP=0
     fi
   else
-    if [ ${BOOLEAN_ELASTICSEARCH_ONSTARTUP} == 1 ]
+    if [ "${BOOLEAN_ELASTICSEARCH_ONSTARTUP}" == "1" ]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} ElasticSearch server on startup ?" "yes"
-      if [ ${?} == 0 ]
+      if [ "${?}" == "0" ]
       then
         BOOLEAN_ELASTICSEARCH_ONSTARTUP=0
       else
@@ -975,7 +975,7 @@ function set_globalvariables() {
       fi
     else
       yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} ElasticSearch server on startup ?" "yes"
-      if [ ${?} == 0 ]
+      if [ "${?}" == "0" ]
       then
         BOOLEAN_ELASTICSEARCH_ONSTARTUP=1
       else
@@ -983,33 +983,33 @@ function set_globalvariables() {
       fi
     fi
   fi
-  echo "BOOLEAN_ELASTICSEARCH_ONSTARTUP=${BOOLEAN_ELASTICSEARCH_ONSTARTUP}" >> ${installation_cfg_tmpfile}
-  if [ -z ${GRAYLOG_SECRET_PASSWORD} ]
+  echo "BOOLEAN_ELASTICSEARCH_ONSTARTUP='${BOOLEAN_ELASTICSEARCH_ONSTARTUP}'" >> ${installation_cfg_tmpfile}
+  if [ -z "${GRAYLOG_SECRET_PASSWORD}" ]
   then
-    while [ -z ${GRAYLOG_SECRET_PASSWORD} ]
+    while [ -z "${GRAYLOG_SECRET_PASSWORD}" ]
     do
       echo -e "\nType secret password of Graylog application, followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}secretpassword${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read GRAYLOG_SECRET_PASSWORD
-      if [ -z ${GRAYLOG_SECRET_PASSWORD} ]
+      if [ -z "${GRAYLOG_SECRET_PASSWORD}" ]
       then
         GRAYLOG_SECRET_PASSWORD='secretpassword'
       fi
     done
   else
     yes_no_function "Can you confirm you want to modify current secret password of Graylog application ?" "yes"
-    if [ ${?} -eq 0 ]
+    if [ "${?}" == "0" ]
     then
       old_input_value=${GRAYLOG_SECRET_PASSWORD}
       GRAYLOG_SECRET_PASSWORD=
-      while [ -z ${GRAYLOG_SECRET_PASSWORD} ]
+      while [ -z "${GRAYLOG_SECRET_PASSWORD}" ]
       do
         echo -e "\nType secret password of Graylog application, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read GRAYLOG_SECRET_PASSWORD
-        if [ -z ${GRAYLOG_SECRET_PASSWORD} ]
+        if [ -z "${GRAYLOG_SECRET_PASSWORD}" ]
         then
           GRAYLOG_SECRET_PASSWORD=${old_input_value}
         fi
@@ -1019,32 +1019,32 @@ function set_globalvariables() {
     fi
   fi
   echo "GRAYLOG_SECRET_PASSWORD='${GRAYLOG_SECRET_PASSWORD}'" >> ${installation_cfg_tmpfile}
-  if [ -z ${GRAYLOG_ADMIN_USERNAME} ]
+  if [ -z "${GRAYLOG_ADMIN_USERNAME}" ]
   then
-    while [ -z ${GRAYLOG_ADMIN_USERNAME} ]
+    while [ -z "${GRAYLOG_ADMIN_USERNAME}" ]
     do
       echo -e "\nType login of Graylog administrator, followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}admin${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read GRAYLOG_ADMIN_USERNAME
-      if [ -z ${GRAYLOG_ADMIN_USERNAME} ]
+      if [ -z "${GRAYLOG_ADMIN_USERNAME}" ]
       then
         GRAYLOG_ADMIN_USERNAME='admin'
       fi
     done
   else
     yes_no_function "Can you confirm you want to modify current login of Graylog administrator ?" "yes"
-    if [ ${?} -eq 0 ]
+    if [ "${?}" == "0" ]
     then
       old_input_value=${GRAYLOG_ADMIN_USERNAME}
       GRAYLOG_ADMIN_USERNAME=
-      while [ -z ${GRAYLOG_ADMIN_USERNAME} ]
+      while [ -z "${GRAYLOG_ADMIN_USERNAME}" ]
       do
         echo -e "\nType login of Graylog administrator, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read GRAYLOG_ADMIN_USERNAME
-        if [ -z ${GRAYLOG_ADMIN_USERNAME} ]
+        if [ -z "${GRAYLOG_ADMIN_USERNAME}" ]
         then
           GRAYLOG_ADMIN_USERNAME=${old_input_value}
         fi
@@ -1054,32 +1054,32 @@ function set_globalvariables() {
     fi
   fi
   echo "GRAYLOG_ADMIN_USERNAME='${GRAYLOG_ADMIN_USERNAME}'" >> ${installation_cfg_tmpfile}
-  if [ -z ${GRAYLOG_ADMIN_PASSWORD} ]
+  if [ -z "${GRAYLOG_ADMIN_PASSWORD}" ]
   then
-    while [ -z ${GRAYLOG_ADMIN_PASSWORD} ]
+    while [ -z "${GRAYLOG_ADMIN_PASSWORD}" ]
     do
       echo -e "\nType password of Graylog administrator, followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}adminpassword${SETCOLOR_NORMAL}]:"
       echo -en "> "
       read GRAYLOG_ADMIN_PASSWORD
-      if [ -z ${GRAYLOG_ADMIN_PASSWORD} ]
+      if [ -z "${GRAYLOG_ADMIN_PASSWORD}" ]
       then
         GRAYLOG_ADMIN_PASSWORD='adminpassword'
       fi
     done
   else
     yes_no_function "Can you confirm you want to modify current password of Graylog administrator ?" "yes"
-    if [ ${?} -eq 0 ]
+    if [ "${?}" == "0" ]
     then
       old_input_value=${GRAYLOG_ADMIN_PASSWORD}
       GRAYLOG_ADMIN_PASSWORD=
-      while [ -z ${GRAYLOG_ADMIN_PASSWORD} ]
+      while [ -z "${GRAYLOG_ADMIN_PASSWORD}" ]
       do
         echo -e "\nType password of Graylog administrator, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read GRAYLOG_ADMIN_PASSWORD
-        if [ -z ${GRAYLOG_ADMIN_PASSWORD} ]
+        if [ -z "${GRAYLOG_ADMIN_PASSWORD}" ]
         then
           GRAYLOG_ADMIN_PASSWORD=${old_input_value}
         fi
@@ -1089,20 +1089,20 @@ function set_globalvariables() {
     fi
   fi
   echo "GRAYLOG_ADMIN_PASSWORD='${GRAYLOG_ADMIN_PASSWORD}'" >> ${installation_cfg_tmpfile}
-  if [ -z ${BOOLEAN_GRAYLOG_SMTP} ]
+  if [ -z "${BOOLEAN_GRAYLOG_SMTP}" ]
   then
     yes_no_function "Do you want to use Simple Mail Transport Protocol (SMTP) for Graylog application ?" "yes"
-    if [ ${?} == 0 ]
+    if [ "${?}" == "0" ]
     then
       BOOLEAN_GRAYLOG_SMTP="true"
     else
       BOOLEAN_GRAYLOG_SMTP="false"
     fi
   else
-    if [ ${BOOLEAN_GRAYLOG_SMTP} == "true" ]
+    if [ "${BOOLEAN_GRAYLOG_SMTP}" == "true" ]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not use${SETCOLOR_NORMAL} SMTP for Graylog application ?" "yes"
-      if [ ${?} == 0 ]
+      if [ "${?}" == "0" ]
       then
         BOOLEAN_GRAYLOG_SMTP="false"
       else
@@ -1110,7 +1110,7 @@ function set_globalvariables() {
       fi
     else
       yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}use${SETCOLOR_NORMAL} SMTP for Graylog application ?" "yes"
-      if [ ${?} == 0 ]
+      if [ "${?}" == "0" ]
       then
         BOOLEAN_GRAYLOG_SMTP="true"
       else
@@ -1118,34 +1118,34 @@ function set_globalvariables() {
       fi
     fi
   fi
-  if [ ${BOOLEAN_GRAYLOG_SMTP} == "true" ]
+  if [ "${BOOLEAN_GRAYLOG_SMTP}" == "true" ]
   then
-    if [ -z ${SMTP_HOST_NAME} ]
+    if [ -z "${SMTP_HOST_NAME}" ]
     then
-      while [ -z ${SMTP_HOST_NAME} ] || [[ ! ${SMTP_HOST_NAME} =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ ! ${SMTP_HOST_NAME} =~ (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?) ]]
+      while [ -z "${SMTP_HOST_NAME}" ] || [[ ! "${SMTP_HOST_NAME}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ ! "${SMTP_HOST_NAME}" =~ (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?) ]]
       do
         echo -e "\nType FQDN of SMTP server, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_INFO}mail.example.com${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read SMTP_HOST_NAME
-        if [ -z ${SMTP_HOST_NAME} ]
+        if [ -z "${SMTP_HOST_NAME}" ]
         then
           SMTP_HOST_NAME='mail.example.com'
         fi
       done
     else
       yes_no_function "Can you confirm you want to modify current FQDN of SMTP server ?" "yes"
-      if [ ${?} -eq 0 ]
+      if [ "${?}" == "0" ]
       then
         old_input_value=${SMTP_HOST_NAME}
         SMTP_HOST_NAME=
-        while [ -z ${SMTP_HOST_NAME} ] || [[ ! ${SMTP_HOST_NAME} =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ ! ${SMTP_HOST_NAME} =~ (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?) ]]
+        while [ -z "${SMTP_HOST_NAME}" ] || [[ ! "${SMTP_HOST_NAME}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ ! "${SMTP_HOST_NAME}" =~ (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?) ]]
         do
           echo -e "\nType FQDN of SMTP server, followed by [ENTER]"
           echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
           echo -en "> "
           read SMTP_HOST_NAME
-          if [ -z ${SMTP_HOST_NAME} ]
+          if [ -z "${SMTP_HOST_NAME}" ]
           then
             SMTP_HOST_NAME=${old_input_value}
           fi
@@ -1154,9 +1154,9 @@ function set_globalvariables() {
         SMTP_HOST_NAME=${old_input_value}
       fi
     fi
-    if [ -z ${SMTP_DOMAIN_NAME} ]
+    if [ -z "${SMTP_DOMAIN_NAME}" ]
     then
-      while [ -z ${SMTP_DOMAIN_NAME} ] || [[ ! ${SMTP_DOMAIN_NAME} =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
+      while [ -z "${SMTP_DOMAIN_NAME}" ] || [[ ! "${SMTP_DOMAIN_NAME}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
       do
         echo -e "\nType SMTP domain name, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_INFO}example.com${SETCOLOR_NORMAL}]:"
@@ -1169,17 +1169,17 @@ function set_globalvariables() {
       done
     else
       yes_no_function "Can you confirm you want to modify current SMTP domain name ?" "yes"
-      if [ ${?} -eq 0 ]
+      if [ "${?}" == "0" ]
       then
         old_input_value=${SMTP_DOMAIN_NAME}
         SMTP_DOMAIN_NAME=
-        while [ -z ${SMTP_DOMAIN_NAME} ] || [[ ! ${SMTP_DOMAIN_NAME} =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
+        while [ -z "${SMTP_DOMAIN_NAME}" ] || [[ ! "${SMTP_DOMAIN_NAME}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
         do
           echo -e "\nType SMTP domain name, followed by [ENTER]"
           echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
           echo -en "> "
           read SMTP_DOMAIN_NAME
-          if [ -z ${SMTP_DOMAIN_NAME} ]
+          if [ -z "${SMTP_DOMAIN_NAME}" ]
           then
             SMTP_DOMAIN_NAME=${old_input_value}
           fi
@@ -1188,32 +1188,32 @@ function set_globalvariables() {
         SMTP_DOMAIN_NAME=${old_input_value}
       fi
     fi
-    if [ -z ${SMTP_PORT_NUMBER} ]
+    if [ -z "${SMTP_PORT_NUMBER}" ]
     then
-      while [ -z ${SMTP_PORT_NUMBER} ] || [[ ! ${SMTP_PORT_NUMBER} =~ 25|465|587 ]]
+      while [ -z "${SMTP_PORT_NUMBER}" ] || [[ ! "${SMTP_PORT_NUMBER}" =~ 25|465|587 ]]
       do
         echo -e "\nType SMTP port number (possible values : ${SETCOLOR_FAILURE}25${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}465${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}587${SETCOLOR_NORMAL}), followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_INFO}587${SETCOLOR_NORMAL}]:"
         echo -en "> "
         read SMTP_PORT_NUMBER
-        if [ -z ${SMTP_PORT_NUMBER} ]
+        if [ -z "${SMTP_PORT_NUMBER}" ]
         then
           SMTP_PORT_NUMBER='587'
         fi
       done
     else
       yes_no_function "Can you confirm you want to modify current SMTP port number ?" "yes"
-      if [ ${?} -eq 0 ]
+      if [ "${?}" == "0" ]
       then
         old_input_value=${SMTP_PORT_NUMBER}
         SMTP_PORT_NUMBER=
-        while [ -z ${SMTP_PORT_NUMBER} ] || [[ ! ${SMTP_PORT_NUMBER} =~ 25|465|587 ]]
+        while [ -z "${SMTP_PORT_NUMBER}" ] || [[ ! "${SMTP_PORT_NUMBER}" =~ 25|465|587 ]]
         do
           echo -e "\nType SMTP port number (possible values : ${SETCOLOR_FAILURE}25${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}465${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}587${SETCOLOR_NORMAL}), followed by [ENTER]"
           echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
           echo -en "> "
           read SMTP_PORT_NUMBER
-          if [ -z ${SMTP_PORT_NUMBER} ]
+          if [ -z "${SMTP_PORT_NUMBER}" ]
           then
             SMTP_PORT_NUMBER=${old_input_value}
           fi
@@ -1222,20 +1222,20 @@ function set_globalvariables() {
         SMTP_PORT_NUMBER=${old_input_value}
       fi
     fi
-    if [ -z ${BOOLEAN_SMTP_AUTH} ]
+    if [ -z "${BOOLEAN_SMTP_AUTH}" ]
     then
       yes_no_function "Do you want to use authentication for SMTP ?" "yes"
-      if [ ${?} == 0 ]
+      if [ "${?}" == "0" ]
       then
         BOOLEAN_SMTP_AUTH="true"
       else
         BOOLEAN_SMTP_AUTH="false"
       fi
     else
-      if [ ${BOOLEAN_SMTP_AUTH} == "true" ]
+      if [ "${BOOLEAN_SMTP_AUTH}" == "true" ]
       then
         yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not use${SETCOLOR_NORMAL} SMTP authentication ?" "yes"
-        if [ ${?} == 0 ]
+        if [ "${?}" == "0" ]
         then
           BOOLEAN_SMTP_AUTH="false"
         else
@@ -1243,7 +1243,7 @@ function set_globalvariables() {
         fi
       else
         yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}use${SETCOLOR_NORMAL} SMTP authentication ?" "yes"
-        if [ ${?} == 0 ]
+        if [ "${?}" == "0" ]
         then
           BOOLEAN_SMTP_AUTH="true"
         else
@@ -1251,22 +1251,22 @@ function set_globalvariables() {
         fi
       fi
     fi
-    if [ ${BOOLEAN_SMTP_AUTH} == "true" ]
+    if [ "${BOOLEAN_SMTP_AUTH}" == "true" ]
     then
-      if [ -z ${BOOLEAN_SMTP_TLS} ]
+      if [ -z "${BOOLEAN_SMTP_TLS}" ]
       then
         yes_no_function "Do you want to use SMTP over Transport Layer Security (TLS) ?" "yes"
-        if [ ${?} == 0 ]
+        if [ "${?}" == "0" ]
         then
           BOOLEAN_SMTP_TLS="true"
         else
           BOOLEAN_SMTP_TLS="false"
         fi
       else
-        if [ ${BOOLEAN_SMTP_TLS} == "true" ]
+        if [ "${BOOLEAN_SMTP_TLS}" == "true" ]
         then
           yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not use${SETCOLOR_NORMAL} SMTP over TLS ?" "yes"
-          if [ ${?} == 0 ]
+          if [ "${?}" == "0" ]
           then
             BOOLEAN_SMTP_TLS="false"
           else
@@ -1274,7 +1274,7 @@ function set_globalvariables() {
           fi
         else
           yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}use${SETCOLOR_NORMAL} SMTP over TLS ?" "yes"
-          if [ ${?} == 0 ]
+          if [ "${?}" == "0" ]
           then
             BOOLEAN_SMTP_TLS="true"
           else
@@ -1282,20 +1282,20 @@ function set_globalvariables() {
           fi
         fi
       fi
-      if [ -z ${BOOLEAN_SMTP_SSL} ]
+      if [ -z "${BOOLEAN_SMTP_SSL}" ]
       then
         yes_no_function "Do you want to use SMTP over Secure Socket Layer (SSL) ?" "yes"
-        if [ ${?} == 0 ]
+        if [ "${?}" == "0" ]
         then
           BOOLEAN_SMTP_SSL="true"
         else
           BOOLEAN_SMTP_SSL="false"
         fi
       else
-        if [ ${BOOLEAN_SMTP_SSL} == "true" ]
+        if [ "${BOOLEAN_SMTP_SSL}" == "true" ]
         then
           yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not use${SETCOLOR_NORMAL} SMTP over SSL ?" "yes"
-          if [ ${?} == 0 ]
+          if [ "${?}" == "0" ]
           then
             BOOLEAN_SMTP_SSL="false"
           else
@@ -1303,7 +1303,7 @@ function set_globalvariables() {
           fi
         else
           yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}use${SETCOLOR_NORMAL} SMTP over SSL ?" "yes"
-          if [ ${?} == 0 ]
+          if [ "${?}" == "0" ]
           then
             BOOLEAN_SMTP_SSL="true"
           else
@@ -1311,32 +1311,32 @@ function set_globalvariables() {
           fi
         fi
       fi
-      if [ -z ${SMTP_AUTH_USERNAME} ]
+      if [ -z "${SMTP_AUTH_USERNAME}" ]
       then
-        while [ -z ${SMTP_AUTH_USERNAME} ]
+        while [ -z "${SMTP_AUTH_USERNAME}" ]
         do
           echo -e "\nType username of SMTP authentication, followed by [ENTER]"
           echo -e "Default to [${SETCOLOR_INFO}you@example.com${SETCOLOR_NORMAL}]:"
           echo -en "> "
           read SMTP_AUTH_USERNAME
-          if [ -z ${SMTP_AUTH_USERNAME} ]
+          if [ -z "${SMTP_AUTH_USERNAME}" ]
           then
             SMTP_AUTH_USERNAME='you@example.com'
           fi
         done
       else
         yes_no_function "Can you confirm you want to modify current username of SMTP authentication ?" "yes"
-        if [ ${?} -eq 0 ]
+        if [ "${?}" == "0" ]
         then
           old_input_value=${SMTP_AUTH_USERNAME}
           SMTP_AUTH_USERNAME=
-          while [ -z ${SMTP_AUTH_USERNAME} ]
+          while [ -z "${SMTP_AUTH_USERNAME}" ]
           do
             echo -e "\nType username of SMTP authentication, followed by [ENTER]"
             echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
             echo -en "> "
             read SMTP_AUTH_USERNAME
-            if [ -z ${SMTP_AUTH_USERNAME} ]
+            if [ -z "${SMTP_AUTH_USERNAME}" ]
             then
               SMTP_AUTH_USERNAME=${old_input_value}
             fi
@@ -1345,7 +1345,7 @@ function set_globalvariables() {
           SMTP_AUTH_USERNAME=${old_input_value}
         fi
       fi
-      if [ -z ${SMTP_AUTH_PASSWORD} ]
+      if [ -z "${SMTP_AUTH_PASSWORD}" ]
       then
         while [ -z ${SMTP_AUTH_PASSWORD} ]
         do
@@ -1353,18 +1353,18 @@ function set_globalvariables() {
           echo -e "Default to [${SETCOLOR_INFO}secret${SETCOLOR_NORMAL}]:"
           echo -en "> "
           read SMTP_AUTH_PASSWORD
-          if [ -z ${SMTP_AUTH_PASSWORD} ]
+          if [ -z "${SMTP_AUTH_PASSWORD}" ]
           then
             SMTP_AUTH_PASSWORD='secret'
           fi
         done
       else
         yes_no_function "Can you confirm you want to modify current password of SMTP authentication ?" "yes"
-        if [ ${?} -eq 0 ]
+        if [ "${?}" == "0" ]
         then
           old_input_value=${SMTP_AUTH_PASSWORD}
           SMTP_AUTH_PASSWORD=
-          while [ -z ${SMTP_AUTH_PASSWORD} ]
+          while [ -z "${SMTP_AUTH_PASSWORD}" ]
           do
             echo -e "\nType password of SMTP authentication, followed by [ENTER]"
             echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
@@ -1406,20 +1406,20 @@ function set_globalvariables() {
   echo "BOOLEAN_SMTP_SSL='${BOOLEAN_SMTP_SSL}'" >> ${installation_cfg_tmpfile}
   echo "SMTP_AUTH_USERNAME='${SMTP_AUTH_USERNAME}'" >> ${installation_cfg_tmpfile}
   echo "SMTP_AUTH_PASSWORD='${SMTP_AUTH_PASSWORD}'" >> ${installation_cfg_tmpfile}
-  if [ -z ${BOOLEAN_GRAYLOGSERVER_ONSTARTUP} ]
+  if [ -z "${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}" ]
   then
     yes_no_function "Do you want to add Graylog server on startup ?" "yes"
-    if [ ${?} == 0 ]
+    if [ "${?}" == "0" ]
     then
       BOOLEAN_GRAYLOGSERVER_ONSTARTUP=1
     else
       BOOLEAN_GRAYLOGSERVER_ONSTARTUP=0
     fi
   else
-    if [ ${BOOLEAN_GRAYLOGSERVER_ONSTARTUP} == 1 ]
+    if [ "${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}" == "1" ]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} Graylog server on startup ?" "yes"
-      if [ ${?} == 0 ]
+      if [ "${?}" == "0" ]
       then
         BOOLEAN_GRAYLOGSERVER_ONSTARTUP=0
       else
@@ -1427,7 +1427,7 @@ function set_globalvariables() {
       fi
     else
       yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} Graylog server on startup ?" "yes"
-      if [ ${?} == 0 ]
+      if [ "${?}" == "0" ]
       then
         BOOLEAN_GRAYLOGSERVER_ONSTARTUP=1
       else
@@ -1436,20 +1436,20 @@ function set_globalvariables() {
     fi
   fi
   echo "BOOLEAN_GRAYLOGSERVER_ONSTARTUP='${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}'" >> ${installation_cfg_tmpfile}
-  if [ -z ${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP} ]
+  if [ -z "${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}" ]
   then
     yes_no_function "Do you want to add Graylog web interface on startup ?" "yes"
-    if [ ${?} == 0 ]
+    if [ "${?}" == "0" ]
     then
       BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=1
     else
       BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=0
     fi
   else
-    if [ ${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP} == 1 ]
+    if [ "${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}" == "1" ]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} Graylog web interface on startup ?" "yes"
-      if [ ${?} == 0 ]
+      if [ "${?}" == "0" ]
       then
         BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=0
       else
@@ -1457,7 +1457,7 @@ function set_globalvariables() {
       fi
     else
       yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} Graylog web interface on startup ?" "yes"
-      if [ ${?} == 0 ]
+      if [ "${?}" == "0" ]
       then
         BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=1
       else
@@ -1466,20 +1466,20 @@ function set_globalvariables() {
     fi
   fi
   echo "BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP='${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}'" >> ${installation_cfg_tmpfile}
-  if [ -z ${BOOLEAN_NGINX_ONSTARTUP} ]
+  if [ -z "${BOOLEAN_NGINX_ONSTARTUP}" ]
   then
     yes_no_function "Do you want to add Nginx web server on startup ?" "yes"
-    if [ ${?} == 0 ]
+    if [ "${?}" == "0" ]
     then
       BOOLEAN_NGINX_ONSTARTUP=1
     else
       BOOLEAN_NGINX_ONSTARTUP=0
     fi
   else
-    if [ ${BOOLEAN_NGINX_ONSTARTUP} == 1 ]
+    if [ "${BOOLEAN_NGINX_ONSTARTUP}" == "1" ]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} Nginx web server on startup ?" "yes"
-      if [ ${?} == 0 ]
+      if [ "${?}" == "0" ]
       then
         BOOLEAN_NGINX_ONSTARTUP=0
       else
@@ -1487,7 +1487,7 @@ function set_globalvariables() {
       fi
     else
       yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} Nginx web server on startup ?" "yes"
-      if [ ${?} == 0 ]
+      if [ "${?}" == "0" ]
       then
         BOOLEAN_NGINX_ONSTARTUP=1
       else
@@ -1505,7 +1505,7 @@ function verify_globalvariables() {
   echo -e "\n###################################################################"
   echo -e "#${MOVE_TO_COL1}#\n# ${SETCOLOR_WARNING}Check your settings before continue${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
   echo -e "#${MOVE_TO_COL1}#"
-  if [ ! ${NETWORK_INTERFACE_NAME} == "" ]
+  if [ ! -z "${NETWORK_INTERFACE_NAME}" ]
   then
     echo -e "# ${SETCOLOR_SUCCESS}NETWORK_INTERFACE_NAME${SETCOLOR_NORMAL}.............'${NETWORK_INTERFACE_NAME}'${MOVE_TO_COL1}#"
   else
@@ -1513,7 +1513,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: NETWORK_INTERFACE_NAME not successfully definied by user (value=${NETWORK_INTERFACE_NAME})"
     ((error_counter++))
   fi
-  if [[ ${BOOLEAN_RSA_AUTH} =~ 0|1 ]]
+  if [[ "${BOOLEAN_RSA_AUTH}" =~ 0|1 ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_RSA_AUTH${SETCOLOR_NORMAL}...................'${BOOLEAN_RSA_AUTH}'${MOVE_TO_COL1}#"
   else
@@ -1521,9 +1521,9 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: BOOLEAN_RSA_AUTH not successfully definied by user (value=${BOOLEAN_RSA_AUTH})"
     ((error_counter++))
   fi
-  if [[ ${BOOLEAN_RSA_AUTH} =~ 1 ]]
+  if [[ "${BOOLEAN_RSA_AUTH}" == "1" ]]
   then
-    if [[ ${RSA_PUBLIC_KEY} =~ ^ssh-rsa.* ]]
+    if [[ "${RSA_PUBLIC_KEY}" =~ ^ssh-rsa.* ]]
     then
       echo -e "# ${SETCOLOR_SUCCESS}RSA_PUBLIC_KEY${SETCOLOR_NORMAL}.....................'${RSA_PUBLIC_KEY}'${MOVE_TO_COL1}#"
     else
@@ -1534,7 +1534,7 @@ function verify_globalvariables() {
   else
     echo -e "# RSA_PUBLIC_KEY.....................'${RSA_PUBLIC_KEY}'${MOVE_TO_COL1}#"
   fi
-  if [ ! ${SERVER_TIME_ZONE} == "" ]
+  if [ ! -z "${SERVER_TIME_ZONE}" ]
   then
     echo -e "# ${SETCOLOR_SUCCESS}SERVER_TIME_ZONE${SETCOLOR_NORMAL}...................'${SERVER_TIME_ZONE}'${MOVE_TO_COL1}#"
   else
@@ -1542,7 +1542,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: SERVER_TIME_ZONE not successfully definied by user (value=${SERVER_TIME_ZONE})"
     ((error_counter++))
   fi
-  if [[ ${BOOLEAN_NTP_CONFIGURE} =~ 0|1 ]]
+  if [[ "${BOOLEAN_NTP_CONFIGURE}" =~ 0|1 ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_NTP_CONFIGURE${SETCOLOR_NORMAL}..............'${BOOLEAN_NTP_CONFIGURE}'${MOVE_TO_COL1}#"
   else
@@ -1550,9 +1550,9 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: BOOLEAN_NTP_CONFIGURE not successfully definied by user (value=${BOOLEAN_NTP_CONFIGURE})"
     ((error_counter++))
   fi
-  if [[ ${BOOLEAN_NTP_CONFIGURE} =~ 1 ]]
+  if [[ "${BOOLEAN_NTP_CONFIGURE}" == "1" ]]
   then
-    if [ ${NEW_NTP_ADDRESS} == "" ] || [[ ${NEW_NTP_ADDRESS} =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ ${NEW_NTP_ADDRESS} =~ (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?) ]]
+    if [ -z "${NEW_NTP_ADDRESS}" ] || [[ "${NEW_NTP_ADDRESS}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ "${NEW_NTP_ADDRESS}" =~ (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?) ]]
     then
       echo -e "# ${SETCOLOR_SUCCESS}NEW_NTP_ADDRESS${SETCOLOR_NORMAL}....................'${NEW_NTP_ADDRESS}'${MOVE_TO_COL1}#"
     else
@@ -1563,7 +1563,7 @@ function verify_globalvariables() {
   else
     echo -e "# NEW_NTP_ADDRESS....................'${NEW_NTP_ADDRESS}'${MOVE_TO_COL1}#"
   fi
-  if [[ ${BOOLEAN_NTP_ONSTARTUP} =~ 0|1 ]]
+  if [[ "${BOOLEAN_NTP_ONSTARTUP}" =~ 0|1 ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_NTP_ONSTARTUP${SETCOLOR_NORMAL}..............'${BOOLEAN_NTP_ONSTARTUP}'${MOVE_TO_COL1}#"
   else
@@ -1571,7 +1571,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: BOOLEAN_NTP_ONSTARTUP not successfully definied by user (value=${BOOLEAN_NTP_ONSTARTUP})"
     ((error_counter++))
   fi
-  if [ ! ${MONGO_ADMIN_PASSWORD} == "" ]
+  if [ ! -z "${MONGO_ADMIN_PASSWORD}" ]
   then
     echo -e "# ${SETCOLOR_SUCCESS}MONGO_ADMIN_PASSWORD${SETCOLOR_NORMAL}...............'${MONGO_ADMIN_PASSWORD}'${MOVE_TO_COL1}#"
   else
@@ -1579,7 +1579,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: MONGO_ADMIN_PASSWORD not successfully definied by user (value=${MONGO_ADMIN_PASSWORD})"
     ((error_counter++))
   fi
-  if [ ! ${MONGO_GRAYLOG_DATABASE} == "" ]
+  if [ ! -z "${MONGO_GRAYLOG_DATABASE}" ]
   then
     echo -e "# ${SETCOLOR_SUCCESS}MONGO_GRAYLOG_DATABASE${SETCOLOR_NORMAL}.............'${MONGO_GRAYLOG_DATABASE}'${MOVE_TO_COL1}#"
   else
@@ -1587,15 +1587,15 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: MONGO_GRAYLOG_DATABASE not successfully definied by user (value=${MONGO_GRAYLOG_DATABASE})"
     ((error_counter++))
   fi
-  if [ ! ${MONGO_GRAYLOG_USER} == "" ]
+  if [ ! -z "${MONGO_GRAYLOG_USER}" ]
   then
     echo -e "# ${SETCOLOR_SUCCESS}MONGO_GRAYLOG_USER${SETCOLOR_NORMAL}.................'${MONGO_GRAYLOG_USER}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}MONGO_GRAYLOG_USER${SETCOLOR_NORMAL}.................'${MONGO_GRAYLOG_USER'}${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}MONGO_GRAYLOG_USER${SETCOLOR_NORMAL}.................'${MONGO_GRAYLOG_USER}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: MONGO_GRAYLOG_USER not successfully definied by user (value=${MONGO_GRAYLOG_USER})"
     ((error_counter++))
   fi
-  if [ ! ${MONGO_GRAYLOG_PASSWORD} == "" ]
+  if [ ! -z "${MONGO_GRAYLOG_PASSWORD}" ]
   then
     echo -e "# ${SETCOLOR_SUCCESS}MONGO_GRAYLOG_PASSWORD${SETCOLOR_NORMAL}.............'${MONGO_GRAYLOG_PASSWORD}'${MOVE_TO_COL1}#"
   else
@@ -1603,7 +1603,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: MONGO_GRAYLOG_PASSWORD not successfully definied by user (value=${MONGO_GRAYLOG_PASSWORD})"
     ((error_counter++))
   fi
-  if [[ ${BOOLEAN_MONGO_ONSTARTUP} =~ 0|1 ]]
+  if [[ "${BOOLEAN_MONGO_ONSTARTUP}" =~ 0|1 ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_MONGO_ONSTARTUP${SETCOLOR_NORMAL}............'${BOOLEAN_MONGO_ONSTARTUP}'${MOVE_TO_COL1}#"
   else
@@ -1611,7 +1611,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: BOOLEAN_MONGO_ONSTARTUP not successfully definied by user (value=${BOOLEAN_MONGO_ONSTARTUP})"
     ((error_counter++))
   fi
-  if [[ ${SSL_KEY_SIZE} =~ 512|1024|2048|4096 ]]
+  if [[ "${SSL_KEY_SIZE}" =~ 512|1024|2048|4096 ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}SSL_KEY_SIZE${SETCOLOR_NORMAL}.......................'${SSL_KEY_SIZE}'${MOVE_TO_COL1}#"
   else
@@ -1619,7 +1619,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: SSL_KEY_SIZE not successfully definied by user (value=${SSL_KEY_SIZE})"
     ((error_counter++))
   fi
-  if [[ ${SSL_KEY_DURATION} =~ [0-9]{1,5} ]]
+  if [[ "${SSL_KEY_DURATION}" =~ [0-9]{1,5} ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}SSL_KEY_DURATION${SETCOLOR_NORMAL}...................'${SSL_KEY_DURATION}'${MOVE_TO_COL1}#"
   else
@@ -1627,7 +1627,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: SSL_KEY_DURATION not successfully definied by user (value=${SSL_KEY_DURATION})"
     ((error_counter++))
   fi
-  if [[ ${SSL_SUBJECT_COUNTRY} =~ [A-Z]{2} ]]
+  if [[ "${SSL_SUBJECT_COUNTRY}" =~ [A-Z]{2} ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}SSL_SUBJECT_COUNTRY${SETCOLOR_NORMAL}................'${SSL_SUBJECT_COUNTRY}'${MOVE_TO_COL1}#"
   else
@@ -1635,7 +1635,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: SSL_SUBJECT_COUNTRY not successfully definied by user (value=${SSL_SUBJECT_COUNTRY})"
     ((error_counter++))
   fi
-  if [ ! ${SSL_SUBJECT_STATE} == "" ]
+  if [ ! -z "${SSL_SUBJECT_STATE}" ]
   then
     echo -e "# ${SETCOLOR_SUCCESS}SSL_SUBJECT_STATE${SETCOLOR_NORMAL}..................'${SSL_SUBJECT_STATE}'${MOVE_TO_COL1}#"
   else
@@ -1643,7 +1643,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: SSL_SUBJECT_STATE not successfully definied by user (value=${SSL_SUBJECT_STATE})"
     ((error_counter++))
   fi
-  if [ ! ${SSL_SUBJECT_LOCALITY} == "" ]
+  if [ ! -z "${SSL_SUBJECT_LOCALITY}" ]
   then
     echo -e "# ${SETCOLOR_SUCCESS}SSL_SUBJECT_LOCALITY${SETCOLOR_NORMAL}...............'${SSL_SUBJECT_LOCALITY}'${MOVE_TO_COL1}#"
   else
@@ -1651,7 +1651,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: SSL_SUBJECT_LOCALITY not successfully definied by user (value=${SSL_SUBJECT_LOCALITY})"
     ((error_counter++))
   fi
-  if [ ! ${SSL_SUBJECT_ORGANIZATION} == "" ]
+  if [ ! -z "${SSL_SUBJECT_ORGANIZATION}" ]
   then
     echo -e "# ${SETCOLOR_SUCCESS}SSL_SUBJECT_ORGANIZATION${SETCOLOR_NORMAL}...........'${SSL_SUBJECT_ORGANIZATION}'${MOVE_TO_COL1}#"
   else
@@ -1659,7 +1659,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: SSL_SUBJECT_ORGANIZATION not successfully definied by user (value=${SSL_SUBJECT_ORGANIZATION})"
     ((error_counter++))
   fi
-  if [ ! ${SSL_SUBJECT_ORGANIZATIONUNIT} == "" ]
+  if [ ! -z "${SSL_SUBJECT_ORGANIZATIONUNIT}" ]
   then
     echo -e "# ${SETCOLOR_SUCCESS}SSL_SUBJECT_ORGANIZATIONUNIT${SETCOLOR_NORMAL}.......'${SSL_SUBJECT_ORGANIZATIONUNIT}'${MOVE_TO_COL1}#"
   else
@@ -1667,7 +1667,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: SSL_SUBJECT_ORGANIZATIONUNIT not successfully definied by user (value=${SSL_SUBJECT_ORGANIZATIONUNIT})"
     ((error_counter++))
   fi
-  if [ ! ${SSL_SUBJECT_EMAIL} == "" ] || [[ ${SSL_SUBJECT_EMAIL} =~ ^[a-z0-9\,\!\#\$\%\&\'\*\+\/\=\?\^_\`\{\|\}\~-]+(\.[a-z0-9\,\!\#\$\%\&\'\*\+\/\=\?\^_\`\{\|\}\~-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*\.([a-z]{2,})$ ]]
+  if [ ! -z "${SSL_SUBJECT_EMAIL}" ] || [[ "${SSL_SUBJECT_EMAIL}" =~ ^[a-z0-9\,\!\#\$\%\&\'\*\+\/\\\=\?\^_\`\{\|\}\~\-]+(\.[a-z0-9\,\!\#\$\%\&\'\*\+\/\\\=\?\^\_\`\{\|\}\~\-]+)*@[a-z0-9\-]+(\.[a-z0-9\-]+)*\.([a-z]{2,})$ ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}SSL_SUBJECT_EMAIL${SETCOLOR_NORMAL}..................'${SSL_SUBJECT_EMAIL}'${MOVE_TO_COL1}#"
   else
@@ -1675,7 +1675,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: SSL_SUBJECT_EMAIL not successfully definied by user (value=${SSL_SUBJECT_EMAIL})"
     ((error_counter++))
   fi
-  if [[ ${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN} =~ 0|1 ]]
+  if [[ "${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN}" =~ 0|1 ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN${SETCOLOR_NORMAL}.'${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN}'${MOVE_TO_COL1}#"
   else
@@ -1683,7 +1683,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN not successfully definied by user (value=${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN})"
     ((error_counter++))
   fi
-  if [[ ${BOOLEAN_ELASTICSEARCH_ONSTARTUP} =~ 0|1 ]]
+  if [[ "${BOOLEAN_ELASTICSEARCH_ONSTARTUP}" =~ 0|1 ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_ELASTICSEARCH_ONSTARTUP${SETCOLOR_NORMAL}....'${BOOLEAN_ELASTICSEARCH_ONSTARTUP}'${MOVE_TO_COL1}#"
   else
@@ -1691,7 +1691,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: BOOLEAN_ELASTICSEARCH_ONSTARTUP not successfully definied by user (value=${BOOLEAN_ELASTICSEARCH_ONSTARTUP})"
     ((error_counter++))
   fi
-  if [ ! ${GRAYLOG_SECRET_PASSWORD} == "" ]
+  if [ ! -z "${GRAYLOG_SECRET_PASSWORD}" ]
   then
     echo -e "# ${SETCOLOR_SUCCESS}GRAYLOG_SECRET_PASSWORD${SETCOLOR_NORMAL}............'${GRAYLOG_SECRET_PASSWORD}'${MOVE_TO_COL1}#"
   else
@@ -1699,7 +1699,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: GRAYLOG_SECRET_PASSWORD not successfully definied by user (value=${GRAYLOG_SECRET_PASSWORD})"
     ((error_counter++))
   fi
-  if [ ! ${GRAYLOG_ADMIN_USERNAME} == "" ]
+  if [ ! -z "${GRAYLOG_ADMIN_USERNAME}" ]
   then
     echo -e "# ${SETCOLOR_SUCCESS}GRAYLOG_ADMIN_USERNAME${SETCOLOR_NORMAL}.............'${GRAYLOG_ADMIN_USERNAME}'${MOVE_TO_COL1}#"
   else
@@ -1707,7 +1707,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: GRAYLOG_ADMIN_USERNAME not successfully definied by user (value=${GRAYLOG_ADMIN_USERNAME})"
     ((error_counter++))
   fi
-  if [ ! ${GRAYLOG_ADMIN_PASSWORD} == "" ]
+  if [ ! -z "${GRAYLOG_ADMIN_PASSWORD}" ]
   then
     echo -e "# ${SETCOLOR_SUCCESS}GRAYLOG_ADMIN_PASSWORD${SETCOLOR_NORMAL}.............'${GRAYLOG_ADMIN_PASSWORD}'${MOVE_TO_COL1}#"
   else
@@ -1715,7 +1715,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: GRAYLOG_ADMIN_PASSWORD not successfully definied by user (value=${GRAYLOG_ADMIN_PASSWORD})"
     ((error_counter++))
   fi
-  if [[ ${BOOLEAN_GRAYLOGSERVER_ONSTARTUP} =~ 0|1 ]]
+  if [[ "${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}" =~ 0|1 ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_GRAYLOGSERVER_ONSTARTUP${SETCOLOR_NORMAL}....'${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}'${MOVE_TO_COL1}#"
   else
@@ -1723,7 +1723,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: BOOLEAN_GRAYLOGSERVER_ONSTARTUP not successfully definied by user (value=${BOOLEAN_GRAYLOGSERVER_ONSTARTUP})"
     ((error_counter++))
   fi
-  if [[ ${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP} =~ 0|1 ]]
+  if [[ "${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}" =~ 0|1 ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP${SETCOLOR_NORMAL}....'${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}'${MOVE_TO_COL1}#"
   else
@@ -1731,7 +1731,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP not successfully definied by user (value=${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP})"
     ((error_counter++))
   fi
-  if [[ ${BOOLEAN_GRAYLOG_SMTP} =~ true|false ]]
+  if [[ "${BOOLEAN_GRAYLOG_SMTP}" =~ true|false ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_GRAYLOG_SMTP${SETCOLOR_NORMAL}...............'${BOOLEAN_GRAYLOG_SMTP}'${MOVE_TO_COL1}#"
   else
@@ -1739,9 +1739,9 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: BOOLEAN_GRAYLOG_SMTP not successfully definied by user (value=${BOOLEAN_GRAYLOG_SMTP})"
     ((error_counter++))
   fi
-  if [[ ${BOOLEAN_GRAYLOG_SMTP} =~ true ]]
+  if [[ "${BOOLEAN_GRAYLOG_SMTP}" =~ true ]]
   then
-    if [[ ${SMTP_HOST_NAME} =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ ${SMTP_HOST_NAME} =~ (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?) ]]
+    if [[ "${SMTP_HOST_NAME}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ "${SMTP_HOST_NAME}" =~ (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?) ]]
     then
       echo -e "# ${SETCOLOR_SUCCESS}SMTP_HOST_NAME${SETCOLOR_NORMAL}.....................'${SMTP_HOST_NAME}'${MOVE_TO_COL1}#"
     else
@@ -1752,9 +1752,9 @@ function verify_globalvariables() {
   else
     echo -e "# SMTP_HOST_NAME.....................'${SMTP_HOST_NAME}'${MOVE_TO_COL1}#"
   fi
-  if [[ ${BOOLEAN_GRAYLOG_SMTP} =~ true ]]
+  if [[ "${BOOLEAN_GRAYLOG_SMTP}" =~ true ]]
   then
-    if [[ ${SMTP_DOMAIN_NAME} =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
+    if [[ "${SMTP_DOMAIN_NAME}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
     then
       echo -e "# ${SETCOLOR_SUCCESS}SMTP_DOMAIN_NAME${SETCOLOR_NORMAL}...................'${SMTP_DOMAIN_NAME}'${MOVE_TO_COL1}#"
     else
@@ -1765,9 +1765,9 @@ function verify_globalvariables() {
   else
     echo -e "# SMTP_DOMAIN_NAME...................'${SMTP_DOMAIN_NAME}'${MOVE_TO_COL1}#"
   fi
-  if [[ ${BOOLEAN_GRAYLOG_SMTP} =~ true ]]
+  if [[ "${BOOLEAN_GRAYLOG_SMTP}" =~ true ]]
   then
-    if [[ ${SMTP_PORT_NUMBER} =~ 25|465|587 ]]
+    if [[ "${SMTP_PORT_NUMBER}" =~ 25|465|587 ]]
     then
       echo -e "# ${SETCOLOR_SUCCESS}SMTP_PORT_NUMBER${SETCOLOR_NORMAL}...................'${SMTP_PORT_NUMBER}'${MOVE_TO_COL1}#"
     else
@@ -1778,7 +1778,7 @@ function verify_globalvariables() {
   else
     echo -e "# SMTP_PORT_NUMBER...................'${SMTP_PORT_NUMBER}'${MOVE_TO_COL1}#"
   fi
-  if [[ ${BOOLEAN_SMTP_AUTH} =~ true|false ]]
+  if [[ "${BOOLEAN_SMTP_AUTH}" =~ true|false ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_SMTP_AUTH${SETCOLOR_NORMAL}..................'${BOOLEAN_SMTP_AUTH}'${MOVE_TO_COL1}#"
   else
@@ -1786,25 +1786,35 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: BOOLEAN_SMTP_AUTH not successfully definied by user (value=${BOOLEAN_SMTP_AUTH})"
     ((error_counter++))
   fi
-  if [[ ${BOOLEAN_SMTP_TLS} =~ true|false ]]
+  if [[ "${BOOLEAN_GRAYLOG_SMTP}" =~ true ]]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_SMTP_TLS${SETCOLOR_NORMAL}...................'${BOOLEAN_SMTP_TLS}'${MOVE_TO_COL1}#"
+    if [[ "${BOOLEAN_SMTP_TLS}" =~ true|false ]]
+    then
+      echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_SMTP_TLS${SETCOLOR_NORMAL}...................'${BOOLEAN_SMTP_TLS}'${MOVE_TO_COL1}#"
+    else
+      echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_SMTP_TLS${SETCOLOR_NORMAL}...................'${BOOLEAN_SMTP_TLS}'${MOVE_TO_COL1}#"
+      log "ERROR" "Global variables: BOOLEAN_SMTP_TLS not successfully definied by user (value=${BOOLEAN_SMTP_TLS})"
+      ((error_counter++))
+    fi
   else
-    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_SMTP_TLS${SETCOLOR_NORMAL}...................'${BOOLEAN_SMTP_TLS}'${MOVE_TO_COL1}#"
-    log "ERROR" "Global variables: BOOLEAN_SMTP_TLS not successfully definied by user (value=${BOOLEAN_SMTP_TLS})"
-    ((error_counter++))
+    echo -e "# BOOLEAN_SMTP_TLS...................'${BOOLEAN_SMTP_TLS}'${MOVE_TO_COL1}#"
   fi
-  if [[ ${BOOLEAN_SMTP_SSL} =~ true|false ]]
+  if [[ "${BOOLEAN_GRAYLOG_SMTP}" =~ true ]]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_SMTP_SSL${SETCOLOR_NORMAL}...................'${BOOLEAN_SMTP_SSL}'${MOVE_TO_COL1}#"
+    if [[ "${BOOLEAN_SMTP_SSL}" =~ true|false ]]
+    then
+      echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_SMTP_SSL${SETCOLOR_NORMAL}...................'${BOOLEAN_SMTP_SSL}'${MOVE_TO_COL1}#"
+    else
+      echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_SMTP_SSL${SETCOLOR_NORMAL}...................'${BOOLEAN_SMTP_SSL}'${MOVE_TO_COL1}#"
+      log "ERROR" "Global variables: BOOLEAN_SMTP_SSL not successfully definied by user (value=${BOOLEAN_SMTP_SSL})"
+      ((error_counter++))
+    fi
   else
-    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_SMTP_SSL${SETCOLOR_NORMAL}...................'${BOOLEAN_SMTP_SSL}'${MOVE_TO_COL1}#"
-    log "ERROR" "Global variables: BOOLEAN_SMTP_SSL not successfully definied by user (value=${BOOLEAN_SMTP_SSL})"
-    ((error_counter++))
+    echo -e "# BOOLEAN_SMTP_SSL...................'${BOOLEAN_SMTP_SSL}'${MOVE_TO_COL1}#"
   fi
-  if [[ ${BOOLEAN_SMTP_AUTH} =~ true ]]
+  if [[ "${BOOLEAN_SMTP_AUTH}" =~ true ]]
   then
-    if [ ! ${SMTP_AUTH_USERNAME} == "" ]
+    if [ ! -z "${SMTP_AUTH_USERNAME}" ]
     then
       echo -e "# ${SETCOLOR_SUCCESS}SMTP_AUTH_USERNAME${SETCOLOR_NORMAL}.................'${SMTP_AUTH_USERNAME}'${MOVE_TO_COL1}#"
     else
@@ -1815,9 +1825,9 @@ function verify_globalvariables() {
   else
     echo -e "# SMTP_AUTH_USERNAME.................'${SMTP_AUTH_USERNAME}'${MOVE_TO_COL1}#"
   fi
-  if [[ ${BOOLEAN_SMTP_AUTH} =~ true ]]
+  if [[ "${BOOLEAN_SMTP_AUTH}" =~ true ]]
   then
-    if [ ! ${SMTP_AUTH_PASSWORD} == "" ]
+    if [ ! -z "${SMTP_AUTH_PASSWORD}" ]
     then
       echo -e "# ${SETCOLOR_SUCCESS}SMTP_AUTH_PASSWORD${SETCOLOR_NORMAL}.................'${SMTP_AUTH_PASSWORD}'${MOVE_TO_COL1}#"
     else
@@ -1829,7 +1839,7 @@ function verify_globalvariables() {
     echo -e "# SMTP_AUTH_PASSWORD.................'${SMTP_AUTH_PASSWORD}'${MOVE_TO_COL1}#"
   fi
   
-  if [[ ${BOOLEAN_NGINX_ONSTARTUP} =~ 0|1 ]]
+  if [[ "${BOOLEAN_NGINX_ONSTARTUP}" =~ 0|1 ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_NGINX_ONSTARTUP${SETCOLOR_NORMAL}............'${BOOLEAN_NGINX_ONSTARTUP}'${MOVE_TO_COL1}#"
   else
@@ -1839,11 +1849,11 @@ function verify_globalvariables() {
   fi
   echo -e "#${MOVE_TO_COL1}#"
   echo -e "###################################################################"
-  if [ ${error_counter} -eq "0" ]
+  if [ "${error_counter}" == "0" ]
   then
     log "INFO" "Global variables: Successfully definied by user"
     yes_no_function "All variables seem to be good.\nDo you want to continue installation process ?" "yes"
-    if [ ${?} == 0 ]
+    if [ "${?}" == "0" ]
     then
       log "INFO" "Global variables: Confirmed by user"
       log "INFO" "Global variables: NETWORK_INTERFACE_NAME successfully definied by user (value=${NETWORK_INTERFACE_NAME})"
@@ -1886,7 +1896,7 @@ function verify_globalvariables() {
     else
       log "WARN" "Global variables: Not confirmed by user"
       yes_no_function "Do you want to define them again ?" "yes"
-      if [ ${?} == 0 ]
+      if [ "${?}" == "0" ]
       then
         set_globalvariables
       else
@@ -1896,7 +1906,7 @@ function verify_globalvariables() {
     fi
   else
     yes_no_function "One or more variables do not seem to be good.\nDo you want to correct them ?" "yes"
-    if [ ${?} == 0 ]
+    if [ "${?}" == "0" ]
     then
       set_globalvariables
     else
@@ -1914,7 +1924,7 @@ function get_sysinfo() {
   local os_minor_version=
   echo_message "Check all system informations"
   SERVER_IP_ADDRESS=$(ifconfig ${NETWORK_INTERFACE_NAME} 2>> ${INSTALLATION_LOG_FILE} | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}')
-  if [ ${SERVER_IP_ADDRESS} != "" ]
+  if [ ! -z "${SERVER_IP_ADDRESS}" ]
   then
     log "INFO" "System informations: IP address=${SERVER_IP_ADDRESS}"
   else
@@ -1922,7 +1932,7 @@ function get_sysinfo() {
     ((error_counter++))
   fi
   SERVER_HOST_NAME=$(hostname)
-  if [ ${SERVER_HOST_NAME} != "" ]
+  if [ ! -z "${SERVER_HOST_NAME}" ]
   then
     log "INFO" "System informations: FQDN=${SERVER_HOST_NAME}"
   else
@@ -1930,7 +1940,7 @@ function get_sysinfo() {
     ((error_counter++))
   fi
   SERVER_SHORT_NAME=$(hostname -s)
-  if [ ${SERVER_SHORT_NAME} != "" ]
+  if [ ! -z "${SERVER_SHORT_NAME}" ]
   then
     log "INFO" "System informations: Short name=${SERVER_SHORT_NAME}"
   else
@@ -1938,7 +1948,7 @@ function get_sysinfo() {
     ((error_counter++))
   fi
   SERVER_PROCESSOR_TYPE=$(uname -p)
-  if [ ${SERVER_PROCESSOR_TYPE} == "x86_64" ]
+  if [ "${SERVER_PROCESSOR_TYPE}" == "x86_64" ]
   then
     log "INFO" "System informations: Processor type=${SERVER_PROCESSOR_TYPE}"
   else
@@ -1946,20 +1956,20 @@ function get_sysinfo() {
     ((error_counter++))
   fi
   command_output_message=$(test_file ${centos_release_file})
-  if [ ${command_output_message} == "0" ]
+  if [ "${command_output_message}" == "0" ]
   then
     log "INFO" "System informations: OS name=CentOS"
     os_major_version=`sed -rn 's/.*\s.*\s.*([0-9])\.[0-9].*/\1/p' ${centos_release_file}`
     os_minor_version=`sed -rn 's/.*\s.*\s.*[0-9]\.([0-9]).*/\1/p' ${centos_release_file}`
-    if [ ${os_major_version} == "6" ] && [[ ${os_minor_version} =~ [5-6] ]]
+    if [ "${os_major_version}" == "6" ] && [[ "${os_minor_version}" =~ [5-6] ]]
     then
       log "INFO" "System informations: OS major version=${os_major_version}"
       log "INFO" "System informations: OS minor version=${os_minor_version}"
-    elif [ ${os_major_version} != "6" ] && [[ ${os_minor_version} =~ [5-6] ]]
+    elif [ "${os_major_version}" != "6" ] && [[ "${os_minor_version}" =~ [5-6] ]]
     then
       log "ERROR" "System informations: OS major version=${os_major_version}"
       ((error_counter++))
-    elif [ ${os_major_version} == "6" ] && [[ ! ${os_minor_version} =~ [5-6] ]]
+    elif [ "${os_major_version}" == "6" ] && [[ ! "${os_minor_version}" =~ [5-6] ]]
     then
       log "ERROR" "System informations: OS minor version=${os_minor_version}"
       ((error_counter++))
@@ -1972,7 +1982,7 @@ function get_sysinfo() {
     log "ERROR" "System informations: ${centos_release_file} not found"
     ((error_counter++))
   fi
-  if [ ${error_counter} -eq "0" ]
+  if [ "${error_counter}" == "0" ]
   then
     echo_success "OK"
   else
@@ -1996,24 +2006,24 @@ function generate_sslkeys() {
   echo_message "Generate SSL keys"
   command1_output_message=$(test_directory ${private_key_folder})
   command2_output_message=$(test_directory ${public_key_folder})
-  if [ ${command1_output_message} == "0" ] && [ ${command2_output_message} == "0" ]
+  if [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "0" ]
   then
     log "INFO" "SSL keys: ${private_key_folder} successfully found"
     log "INFO" "SSL keys: ${public_key_folder} successfully found"
     command1_output_message=$(test_file ${PRIVATE_KEY_FILE})
     command2_output_message=$(test_file ${PUBLIC_KEY_FILE})
-    if [ ${command1_output_message} == "0" ] && [ ${command2_output_message} == "0" ]
+    if [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "0" ]
     then
       log "WARN" "SSL keys: ${PRIVATE_KEY_FILE} already generated"
       log "WARN" "SSL keys: ${PUBLIC_KEY_FILE} already generated"
       echo_passed "PASS"
-    elif [ ${command1_output_message} == "0" ] && [ ${command2_output_message} == "1" ]
+    elif [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "1" ]
     then
       log "WARN" "SSL keys: ${PRIVATE_KEY_FILE} already generated"
       log "ERROR" "SSL keys: ${PUBLIC_KEY_FILE} not found"
       echo_failure "FAILED"
       abort_installation
-    elif [ ${command1_output_message} == "1" ] && [ ${command2_output_message} == "0" ]
+    elif [ "${command1_output_message}" == "1" ] && [ "${command2_output_message}" == "0" ]
     then
       log "ERROR" "SSL keys: ${PRIVATE_KEY_FILE} not found"
       log "WARN" "SSL keys: ${PUBLIC_KEY_FILE} already generated"
@@ -2025,7 +2035,7 @@ function generate_sslkeys() {
       &>/dev/null
       private_key_md5fingerprint=$(openssl rsa -noout -modulus -in ${PRIVATE_KEY_FILE} | openssl md5 | sed -rn 's/.*=\s(.*)/\1/p')
       public_key_md5fingerprint=$(openssl x509 -noout -modulus -in ${PUBLIC_KEY_FILE} | openssl md5 | sed -rn 's/.*=\s(.*)/\1/p')
-      if [ ${private_key_md5fingerprint} == ${public_key_md5fingerprint} ]
+      if [ "${private_key_md5fingerprint}" == ${public_key_md5fingerprint} ]
       then
         log "INFO" "SSL keys: Private key location=${PRIVATE_KEY_FILE}"
         log "INFO" "SSL keys: Private key MD5 fingerprint=${private_key_md5fingerprint}"
@@ -2042,13 +2052,13 @@ function generate_sslkeys() {
         abort_installation
       fi
     fi
-  elif [ ${command1_output_message} == "0" ] && [ ${command2_output_message} == "1" ]
+  elif [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "1" ]
   then
     log "INFO" "SSL keys: ${private_key_folder} successfully found"
     log "ERROR" "SSL keys: ${public_key_folder} not found"
     echo_failure "FAILED"
     abort_installation
-  elif [ ${command1_output_message} == "1" ] && [ ${command2_output_message} == "0" ]
+  elif [ "${command1_output_message}" == "1" ] && [ "${command2_output_message}" == "0" ]
   then
     log "ERROR" "SSL keys: ${private_key_folder} not found"
     log "INFO" "SSL keys: ${public_key_folder} successfully found"
@@ -2079,14 +2089,14 @@ function configure_yum() {
   local graylog_repo_file="/etc/yum.repos.d/graylog.repo"
   echo_message "Configure YUM repositories"
   command_output_message=$(test_file ${epel_repo_file})
-  if [ ${command_output_message} == "0" ]
+  if [ "${command_output_message}" == "0" ]
   then
     log "WARN" "YUM repositories: EPEL repository already installed"
     ((warning_counter++))
   else
     rpm --import ${epel_key_url}
     command_output_message=$(rpm -U ${epel_rpm_url} 2>&1 >/dev/null)
-    if [ ${command_output_message} == "" ]
+    if [ -z "${command_output_message}" ]
     then
       log "INFO" "YUM repositories: EPEL repository successfully installed"
     else
@@ -2096,20 +2106,20 @@ function configure_yum() {
     fi
   fi
   command_output_message=$(test_file ${nginx_repo_file})
-  if [ ${command_output_message} == "0" ]
+  if [ "${command_output_message}" == "0" ]
   then
     log "WARN" "YUM repositories: NGINX repository already installed"
     ((warning_counter++))
   else
     rpm --import ${nginx_key_url}
     command_output_message=$(rpm -U ${nginx_rpm_url} 2>&1 >/dev/null)
-    if [ ${command_output_message} == "" ]
+    if [ -z "${command_output_message}" ]
     then
       log "INFO" "YUM repositories: NGINX repository successfully installed"
       command_output_message=$(sed -i \
       -e "s/\(baseurl=http:\/\/nginx\.org\/packages\)\(\/centos\/6\/\$basearch\/\)/\1\/mainline\2/" \
       ${nginx_repo_file} 2>&1 >/dev/null)
-      if [ ${command_output_message} == "" ]
+      if [ -z "${command_output_message}" ]
       then
         log "INFO" "YUM repositories: NGINX repository successfully configured"
       else
@@ -2124,7 +2134,7 @@ function configure_yum() {
     fi
   fi
   command_output_message=$(test_file ${mongodb_repo_file})
-  if [ ${command_output_message} == "0" ]
+  if [ "${command_output_message}" == "0" ]
   then
     log "WARN" "YUM repositories: MONGO repository already installed"
     ((warning_counter++))
@@ -2137,7 +2147,7 @@ gpgcheck=0
 enabled=1
 EOF
 2>&1 >/dev/null)
-    if [ ${command_output_message} == "" ]
+    if [ -z "${command_output_message}" ]
     then
       log "INFO" "YUM repositories: MONGO repository successfully installed"
     else
@@ -2147,7 +2157,7 @@ EOF
     fi
   fi
   command_output_message=$(test_file ${elasticsearch_repo_file})
-  if [ ${command_output_message} == "0" ]
+  if [ "${command_output_message}" == "0" ]
   then
     log "WARN" "YUM repositories: ELASTICSEARCH repository already installed"
     ((warning_counter++))
@@ -2162,7 +2172,7 @@ gpgkey=http://packages.elasticsearch.org/GPG-KEY-elasticsearch
 enabled=1
 EOF
 2>&1 >/dev/null)
-    if [ ${command_output_message} == "" ]
+    if [ -z "${command_output_message}" ]
     then
       log "INFO" "YUM repositories: ELASTICSEARCH repository successfully installed"
     else
@@ -2172,13 +2182,13 @@ EOF
     fi
   fi
   command_output_message=$(test_file ${graylog_repo_file})
-  if [ ${command_output_message} == "0" ]
+  if [ "${command_output_message}" == "0" ]
   then
     log "WARN" "YUM repositories: GRAYLOG repository already installed"
     ((warning_counter++))
   else
     command_output_message=$(rpm -U ${graylog_rpm_url} 2>&1 >/dev/null)
-    if [ ${command_output_message} == "" ]
+    if [ -z "${command_output_message}" ]
     then
       log "INFO" "YUM repositories: GRAYLOG repository successfully installed"
     else
@@ -2187,10 +2197,10 @@ EOF
       ((error_counter++))
     fi
   fi
-  if [ ${error_counter} -eq "0" ] && [ ${warning_counter} -eq "0" ]
+  if [ "${error_counter}" == "0" ] && [ "${warning_counter}" == "0" ]
   then
     echo_success "OK"
-  elif [ ${error_counter} -eq "0" ] && [ ${warning_counter} -ne "0" ]
+  elif [ "${error_counter}" == "0" ] && [ "${warning_counter}" =! "0" ]
   then
     echo_warning "WARN"
   else
@@ -2204,7 +2214,7 @@ function initialize_yum() {
   local command_output_message=
   echo_message "Initialize YUM"
   command_output_message=$(yum clean all 2>&1 >/dev/null)
-  if [ ${command_output_message} == "" ] || [ ${command_output_message} =~ [Ww]arning.* ]
+  if [ -z "${command_output_message}" ] || [ "${command_output_message}" =~ [Ww]arning.* ]
   then
     log "INFO" "YUM repositories: Successfully cleaned"
   else
@@ -2213,7 +2223,7 @@ function initialize_yum() {
     ((error_counter++))
   fi
   command_output_message=$(yum makecache 2>&1 >/dev/null)
-  if [ ${command_output_message} == "" ] || [ ${command_output_message} =~ [Ww]arning.* ]
+  if [ -z "${command_output_message}" ] || [ "${command_output_message}" =~ [Ww]arning.* ]
   then
     log "INFO" "YUM cache: Successfully created"
   else
@@ -2221,7 +2231,7 @@ function initialize_yum() {
     log "DEBUG" ${command_output_message}
     ((error_counter++))
   fi
-  if [ ${error_counter} -eq "0" ]
+  if [ "${error_counter}" == "0" ]
   then
     echo_success "OK"
   else
@@ -2234,10 +2244,10 @@ function upgrade_os() {
   local command_output_message=
   echo_message "Install YUM plugin"
   command_output_message=$(yum list installed | grep -w yum-presto)
-  if [ ${command_output_message} == "" ]
+  if [ -z "${command_output_message}" ]
   then
     command_output_message=$(yum -y install yum-presto 2>&1 >/dev/null)
-    if [ ${command_output_message} == "" ] || [[ ${command_output_message} =~ [Ww]arning.* ]]
+    if [ -z "${command_output_message}" ] || [[ "${command_output_message}" =~ [Ww]arning.* ]]
     then
       log "INFO" "YUM plugin: yum-presto successfully installed"
       echo_success "OK"
@@ -2253,7 +2263,7 @@ function upgrade_os() {
   fi
   echo_message "Upgrade operating system"
   command_output_message=$(yum -y update 2>&1 >/dev/null)
-  if [ ${command_output_message} == "" ] || [[ ${command_output_message} =~ [Ww]arning.* ]]
+  if [ -z "${command_output_message}" ] || [[ "${command_output_message}" =~ [Ww]arning.* ]]
   then
     log "INFO" "Upgrade operation: Successfully completed"
     echo_success "OK"
@@ -2272,34 +2282,34 @@ function install_ntp() {
   local ntp_backup_file="${ntp_config_file}.dist"
   echo_message "Install NTP service"
   command_output_message=$(yum list installed | grep -w ntp)
-  if [[ ${command_output_message} =~ ^ntp\..* ]]
+  if [[ "${command_output_message}" =~ ^ntp\..* ]]
   then
     ((installed_counter++))
   fi
-  if [ ${installed_counter} -eq "1" ]
+  if [ "${installed_counter}" == "1" ]
   then
     log "WARN" "NTP service: Already installed"
     echo_passed "PASS"
   else
     command_output_message=$(yum -y install ntp 2>&1 >/dev/null)
-    if [ ${command_output_message} == "" ] || [[ ${command_output_message} =~ [Ww]arning.* ]]
+    if [ -z "${command_output_message}" ] || [[ "${command_output_message}" =~ [Ww]arning.* ]]
     then
       log "INFO" "NTP service: Successfully installed"
       echo_success "OK"
       echo_message "Configure NTP service"
       command_output_message=$(test_file ${ntp_backup_file})
-      if [ ${command_output_message} == "0" ]
+      if [ "${command_output_message}" == "0" ]
       then
         log "WARN" "NTP service: Already configured"
         echo_passed "PASS"
       else
-        if [ ${BOOLEAN_NTP_CONFIGURE} == 1 ]
+        if [ "${BOOLEAN_NTP_CONFIGURE}" == "1" ]
         then
           command_output_message=$(sed -i.dist \
           -e "s/\(# Please consider.*\)/\1\nserver ${NEW_NTP_ADDRESS}/" \
           -e "s/\(server\s[0-9]\..*\)/#\1/" \
           ${ntp_config_file} 2>&1 >/dev/null)
-          if [ ${command_output_message} == "" ]
+          if [ -z "${command_output_message}" ]
           then
             log "INFO" "NTP service: Successfully configured"
             echo_success "OK"
@@ -2316,7 +2326,7 @@ function install_ntp() {
       fi
       echo_message "Start NTP service"
       command_output_message=$(service ntpd start on 2>&1 >/dev/null)
-      if [ ${command_output_message} == "" ]
+      if [ -z "${command_output_message}" ]
       then
         log "INFO" "NTP service: Successfully started"
         echo_success "OK"
@@ -2327,10 +2337,10 @@ function install_ntp() {
         abort_installation
       fi
       echo_message "Add NTP service on startup"
-      if [ ${BOOLEAN_NTP_ONSTARTUP} == 1 ]
+      if [ "${BOOLEAN_NTP_ONSTARTUP}" == "1" ]
       then
         command_output_message=$(chkconfig ntpd on 2>&1 >/dev/null)
-        if [ ${command_output_message} == "" ]
+        if [ -z "${command_output_message}" ]
         then
           log "INFO" "NTP service: Successfully added on startup"
           echo_success "OK"
@@ -2341,7 +2351,7 @@ function install_ntp() {
         fi
       else
         command1_output_message=$(chkconfig ntpd off 2>&1 >/dev/null)
-        if [ ${command1_output_message} == "" ]
+        if [ -z "${command1_output_message}" ]
         then
           log "WARN" "NTP service: Not added on startup by user"
           echo_passed "PASS"
@@ -2365,32 +2375,32 @@ function install_lsbpackages() {
   local command_output_message=
   echo_message "Install LSB packages"
   command_output_message=$(yum list installed | grep -w redhat-lsb-core)
-  if [[ ${command_output_message} =~ ^redhat-lsb-core\..* ]]
+  if [[ "${command_output_message}" =~ ^redhat-lsb-core\..* ]]
   then
     ((installed_counter++))
   fi
   command_output_message=$(yum list installed | grep -w mlocate)
-  if [[ ${command_output_message} =~ ^mlocate\..* ]]
+  if [[ "${command_output_message}" =~ ^mlocate\..* ]]
   then
     ((installed_counter++))
   fi
   command_output_message=$(yum list installed | grep -w bash-completion)
-  if [[ ${command_output_message} =~ ^bash-completion\..* ]]
+  if [[ "${command_output_message}" =~ ^bash-completion\..* ]]
   then
     ((installed_counter++))
   fi
   command_output_message=$(yum list installed | grep -w vim-enhanced)
-  if [[ ${command_output_message} =~ ^vim-enhanced\..* ]]
+  if [[ "${command_output_message}" =~ ^vim-enhanced\..* ]]
   then
     ((installed_counter++))
   fi
-  if [ ${installed_counter} -eq "4" ]
+  if [ "${installed_counter}" == "4" ]
   then
     log "WARN" "LSB packages: Already installed"
     echo_passed "PASS"
   else
     command_output_message=$(yum -y install vim redhat-lsb-core mlocate bash-completion 2>&1 >/dev/null)
-    if [ ${command_output_message} == "" ] || [[ ${command_output_message} =~ [Ww]arning.* ]]
+    if [ -z "${command_output_message}" ] || [[ ${command_output_message} =~ [Ww]arning.* ]]
     then
       log "INFO" "LSB packages: Successfully installed"
       echo_success "OK"
@@ -2408,48 +2418,48 @@ function install_networkpackages() {
   local command_output_message=
   echo_message "Install network packages"
   command_output_message=$(yum list installed | grep -w wget)
-  if [[ ${command_output_message} =~ ^wget\..* ]]
+  if [[ "${command_output_message}" =~ ^wget\..* ]]
   then
     ((installed_counter++))
   fi
   command_output_message=$(yum list installed | grep -w tcpdump)
-  if [[ ${command_output_message} =~ ^tcpdump\..* ]]
+  if [[ "${command_output_message}" =~ ^tcpdump\..* ]]
   then
     ((installed_counter++))
   fi
   command_output_message=$(yum list installed | grep -w traceroute)
-  if [[ ${command_output_message} =~ ^traceroute\..* ]]
+  if [[ "${command_output_message}" =~ ^traceroute\..* ]]
   then
     ((installed_counter++))
   fi
   command_output_message=$(yum list installed | grep -w bind-utils)
-  if [[ ${command_output_message} =~ ^bind-utils\..* ]]
+  if [[ "${command_output_message}" =~ ^bind-utils\..* ]]
   then
     ((installed_counter++))
   fi
   command_output_message=$(yum list installed | grep -w telnet)
-  if [[ ${command_output_message} =~ ^telnet\..* ]]
+  if [[ "${command_output_message}" =~ ^telnet\..* ]]
   then
     ((installed_counter++))
   fi
   command_output_message=$(yum list installed | grep -w openssh-clients)
-  if [[ ${command_output_message} =~ ^openssh-clients\..* ]]
+  if [[ "${command_output_message}" =~ ^openssh-clients\..* ]]
   then
     ((installed_counter++))
   fi
   command_output_message=$(yum list installed | grep -w system-config-firewall-tui)
-  if [[ ${command_output_message} =~ ^system-config-firewall-tui\..* ]]
+  if [[ "${command_output_message}" =~ ^system-config-firewall-tui\..* ]]
   then
     ((installed_counter++))
   fi
   
-  if [ ${installed_counter} -eq "7" ]
+  if [ "${installed_counter}" == "7" ]
   then
     log "INFO" "Network packages: Already installed"
     echo_passed "PASS"
   else
     command_output_message=$(yum -y install wget tcpdump traceroute bind-utils telnet openssh-clients system-config-firewall 2>&1 >/dev/null)
-    if [ ${command_output_message} == "" ] || [[ ${command_output_message} =~ [Ww]arning.* ]]
+    if [ -z "${command_output_message}" ] || [[ ${command_output_message} =~ [Ww]arning.* ]]
     then
       log "INFO" "Network packages: Successfully installed"
       echo_success "OK"
@@ -2468,13 +2478,13 @@ function configure_bashrc() {
   local bashrc_backup_file="${bashrc_config_file}.dist"
   echo_message "Configure Bourne-Again shell"
   command_output_message=$(test_file ${bashrc_backup_file})
-  if [ ${command_output_message} == "0" ]
+  if [ "${command_output_message}" == "0" ]
   then
     log "WARN" "Bourne-Again shell: Already configured"
     echo_passed "PASS"
   else
     command_output_message=$(cp -p ${bashrc_config_file} ${bashrc_backup_file} 2>&1 >/dev/null)
-    if [ ${command_output_message} == "" ]
+    if [ -z "${command_output_message}" ]
     then
       log "INFO" "Bourne-Again shell: Successfully backed-up"
       command_output_message=$(cat << EOF > ${bashrc_config_file}
@@ -2503,7 +2513,7 @@ if [ -f /etc/bashrc ]; then
 fi
 EOF
 2>&1 >/dev/null)
-      if [ ${command_output_message} == "" ]
+      if [ -z "${command_output_message}" ]
       then
         log "INFO" "Bourne-Again shell: Successfully configured"
         echo_success "OK"
@@ -2528,7 +2538,7 @@ function configure_openssh() {
   local openssh_hostrsakey_file="${opensshd_config_folder}/ssh_host_rsa_key"
   echo_message "Configure SSH service"
   command_output_message=$(test_file ${opensshd_backup_file})
-  if [ ${command_output_message} == "0" ]
+  if [ "${command_output_message}" == "0" ]
   then
     log "WARN" "SSH service: Already configured"
     echo_passed "PASS"
@@ -2537,14 +2547,14 @@ function configure_openssh() {
     -e "s/#\(ListenAddress\)\s0.0.0.0/\1 ${SERVER_IP_ADDRESS}/g" \
     -e "s/#\(ListenAddress\)\s::/\1 127.0.0.1/g" \
     ${opensshd_config_file} 2>&1 >/dev/null)
-    if [ ${command_output_message} == "" ]
+    if [ -z "${command_output_message}" ]
     then
 #      ssh-keygen -b 2048 -t rsa -f ${openssh_hostrsakey_file}
       log "INFO" "SSH service: Successfully configured"
       echo_success "OK"
       echo_message "Restart SSH service"
       command_output_message=$(service sshd restart 2>&1 >/dev/null)
-      if [ ${command_output_message} == "" ]
+      if [ -z "${command_output_message}" ]
       then
         log "INFO" "SSH service: Successfully restarted"
         echo_success "OK"
@@ -2567,18 +2577,18 @@ function configure_rsaauth() {
   local openssh_authorizedkeys_file="${openssh_authorizedkeys_folder}/authorized_keys"
   echo_message "Configure RSA authentication"
   command_output_message=$(test_directory ${openssh_authorizedkeys_folder})
-  if [ ${command_output_message} == "0" ]
+  if [ "${command_output_message}" == "0" ]
   then
     log "INFO" "RSA authentication: ${openssh_authorizedkeys_folder} successfully found"
     command_output_message=$(test_file ${openssh_authorizedkeys_file})
-    if [ ${command_output_message} == "0" ]
+    if [ "${command_output_message}" == "0" ]
     then
       log "INFO" "RSA authentication: ${openssh_authorizedkeys_file} successfully found"
-      if [ -s ${openssh_authorizedkeys_file} ]
+      if [ -s "${openssh_authorizedkeys_file}" ]
       then
         log "INFO" "RSA authentication: ${openssh_authorizedkeys_file} not empty"
         command_output_message=$(echo ${RSA_PUBLIC_KEY} >> ${openssh_authorizedkeys_file})
-        if [ ${command_output_message} == "" ]
+        if [ -z "${command_output_message}" ]
         then
           log "INFO" "RSA authentication: Public key successfully inserted"
           echo_success "OK"
@@ -2590,7 +2600,7 @@ function configure_rsaauth() {
       else
         log "INFO" "RSA authentication: ${openssh_authorizedkeys_file} empty"
         command_output_message=$(echo ${RSA_PUBLIC_KEY} > ${openssh_authorizedkeys_file})
-        if [ ${command_output_message} == "" ]
+        if [ -z "${command_output_message}" ]
         then
           log "INFO" "RSA authentication: Public key successfully inserted"
           echo_success "OK"
@@ -2609,19 +2619,19 @@ function configure_rsaauth() {
     fi
   else
     command_output_message=$(mkdir ${openssh_authorizedkeys_folder})
-    if [ ${command_output_message} == "" ]
+    if [ -z "${command_output_message}" ]
     then
       log "INFO" "RSA authentication: ${openssh_authorizedkeys_folder} successfully created"
       command_output_message=$(chmod 700 ${openssh_authorizedkeys_folder})
-      if [ ${command_output_message} == "" ]
+      if [ -z "${command_output_message}" ]
       then
         log "INFO" "RSA authentication: ${openssh_authorizedkeys_folder} successfully changed rights"
         command_output_message=$(touch ${openssh_authorizedkeys_file})
-        if [ ${command_output_message} == "" ]
+        if [ -z "${command_output_message}" ]
         then
           log "INFO" "RSA authentication: ${openssh_authorizedkeys_file} created"
           command_output_message=$(echo ${RSA_PUBLIC_KEY} > ${openssh_authorizedkeys_file})
-          if [ ${command_output_message} == "" ]
+          if [ -z "${command_output_message}" ]
           then
             log "INFO" "RSA authentication: Public key successfully inserted"
             echo_success "OK"
@@ -2655,7 +2665,7 @@ function configure_postfix() {
   local postfix_backup_file="${postfix_config_file}.dist"
   echo_message "Configure POSTFIX service"
   command_output_message=$(test_file ${postfix_backup_file})
-  if [ ${command_output_message} == "0" ]
+  if [ "${command_output_message}" == "0" ]
   then
     log "WARN" "POSTFIX service: Already configured"
     echo_passed "PASS"
@@ -2663,13 +2673,13 @@ function configure_postfix() {
     command_output_message=$(sed -i.dist \
     -e "s/\(inet_protocols\s=\).*/\1 ipv4/g" \
     ${postfix_config_file} 2>&1 >/dev/null)
-    if [ ${command_output_message} == "" ]
+    if [ -z "${command_output_message}" ]
     then
       log "INFO" "POSTFIX service: Successfully configured"
       echo_success "OK"
       echo_message "Restart POSTFIX service"
       command_output_message=$(service postfix restart 2>&1 >/dev/null)
-      if [ ${command_output_message} == "" ]
+      if [ -z "${command_output_message}" ]
       then
         log "INFO" "POSTFIX service: Successfully restarted"
         echo_success "OK"
@@ -2692,7 +2702,7 @@ function configure_hostsfile() {
   local hosts_backup_file="${hosts_definiton_file}.dist"
   echo_message "Configure hosts file"
   command_output_message=$(test_file ${hosts_backup_file})
-  if [ ${command_output_message} == "0" ]
+  if [ "${command_output_message}" == "0" ]
   then
     log "WARN" "HOSTS file: Already configured"
     echo_passed "PASS"
@@ -2701,7 +2711,7 @@ function configure_hostsfile() {
     -e "s/^\(127.0.0.1\)\s*\(.*\)/\1\t\2/g" \
     -e "s/^\(::1\)\s*\(.*\)/\1\t\t\2\n${SERVER_IP_ADDRESS}\t${SERVER_HOST_NAME}/g" \
     ${hosts_definiton_file} 2>&1 >/dev/null)
-    if [ ${command_output_message} == "" ]
+    if [ -z "${command_output_message}" ]
     then
       log "INFO" "HOSTS file: Successfully configured"
       echo_success "OK"
@@ -2721,7 +2731,7 @@ function configure_selinux() {
   local selinux_backup_file="${selinux_config_file}.dist"
   echo_message "Configure SELINUX module"
   command_output_message=$(test_file ${selinux_backup_file})
-  if [ ${command_output_message} == "0" ]
+  if [ "${command_output_message}" == "0" ]
   then
     log "WARN" "SELINUX module: Already configured"
     echo_passed "PASS"
@@ -2729,7 +2739,7 @@ function configure_selinux() {
     command_output_message=$(sed -i.dist \
     -e "s/\(SELINUX\)=enforcing/\1=disabled/g" \
     ${selinux_config_file} 2>&1 >/dev/null)
-    if [ ${command_output_message} == "" ]
+    if [ -z "${command_output_message}" ]
     then
       log "INFO" "SELINUX module: Successfully configured"
       echo_success "OK"
@@ -2753,47 +2763,47 @@ function install_mongodb() {
   local mongodb_admin_database="admin"
   echo_message "Install MONGO database server"
   command_output_message=$(yum list installed | grep mongodb-org.x)
-  if [[ ${command_output_message} =~ ^mongodb-org\..* ]]
+  if [[ "${command_output_message}" =~ ^mongodb-org\..* ]]
   then
     ((installed_counter++))
   fi
   command_output_message=$(yum list installed | grep -w mongodb-org-mongos)
-  if [[ ${command_output_message} =~ ^mongodb-org-mongos\..* ]]
+  if [[ "${command_output_message}" =~ ^mongodb-org-mongos\..* ]]
   then
     ((installed_counter++))
   fi
   command_output_message=$(yum list installed | grep -w mongodb-org-server)
-  if [[ ${command_output_message} =~ ^mongodb-org-server\..* ]]
+  if [[ "${command_output_message}" =~ ^mongodb-org-server\..* ]]
   then
     ((installed_counter++))
   fi
   command_output_message=$(yum list installed | grep -w mongodb-org-shell)
-  if [[ ${command_output_message} =~ ^mongodb-org-shell\..* ]]
+  if [[ "${command_output_message}" =~ ^mongodb-org-shell\..* ]]
   then
     ((installed_counter++))
   fi
   command_output_message=$(yum list installed | grep -w mongodb-org-tools)
-  if [[ ${command_output_message} =~ ^mongodb-org-tools\..* ]]
+  if [[ "${command_output_message}" =~ ^mongodb-org-tools\..* ]]
   then
     ((installed_counter++))
   fi
-  if [ ${installed_counter} -eq "5" ]
+  if [ "${installed_counter}" == "5" ]
   then
     log "INFO" "MONGO database server: Already installed"
     echo_passed "PASS"
   else
     command_output_message=$(yum -y install mongodb-org 2>&1 >/dev/null)
-    if [ ${command_output_message} == "" ] || [[ ${command_output_message} =~ [Ww]arning.* ]]
+    if [ -z "${command_output_message}" ] || [[ "${command_output_message}" =~ [Ww]arning.* ]]
     then
       log "INFO" "MONGO database server: Successfully installed"
       command_output_message=$(test_file ${mongodb_init_file})
-      if [ ${command_output_message} == "0" ]
+      if [ "${command_output_message}" == "0" ]
       then
         log "INFO" "MONGO database server: ${mongodb_init_file} successfully found"
         command_output_message=$(sed -i \
         -e "s/\(.*daemon\)\(.*--user \"\$MONGO_USER\" \"\$NUMACTL \$mongod \$OPTIONS >\/dev\/null 2>&1\"\)/\1 --check \$mongod\2/" \
         ${mongodb_init_file} 2>&1 >/dev/null)
-        if [ ${command_output_message} == "" ]
+        if [ -z "${command_output_message}" ]
         then
           log "INFO" "MONGO database server: ${mongodb_init_file} successfully modified"
         else
@@ -2801,11 +2811,11 @@ function install_mongodb() {
           log "DEBUG" ${command_output_message}
         fi
         command_output_message=$(service mongod start 2>&1 >/dev/null)
-        if [ ${command_output_message} == "" ]
+        if [ -z "${command_output_message}" ]
         then
           log "INFO" "MONGO database server: Successfully started"
           command_output_message=$(test_file ${mongodb_backup_file})
-          if [ ${command_output_message} == "0" ]
+          if [ "${command_output_message}" == "0" ]
           then
             log "WARN" "MONGO database server: ${mongodb_config_file} already backed-up"
           else
@@ -2830,7 +2840,7 @@ quit()
 EOF
 2>&1 >/dev/null)
             success_word_occurrence=$(( (`cat <<<${command_output_message} | wc -c` - `sed "s/${success_word_definition}//g" <<<${command_output_message} | wc -c`) / ${#success_word_definition} ))
-            if [ ${success_word_occurrence} == 2 ]
+            if [ "${success_word_occurrence}" == "2" ]
             then
               log "INFO" "MONGO database server: Successfully set password (${MONGO_ADMIN_PASSWORD}) for user ${MONGO_ADMIN_USER}"
               log "INFO" "MONGO database server: Successfully set role 'root' to user ${MONGO_ADMIN_USER} on database ${mongodb_admin_database}"
@@ -2845,13 +2855,13 @@ EOF
               -e "s/#\(quota=true\)/\1/" \
               -e "s/#\(httpinterface=\)true/\1false/" \
               ${mongodb_config_file} 2>&1 >/dev/null)
-              if [ ${command_output_message} == "" ]
+              if [ -z "${command_output_message}" ]
               then
                 log "INFO" "MONGO database server: Successfully configured"
                 echo_success "OK"
                 echo_message "Restart MONGO database server"
                 command_output_message=$(service mongod restart 2>&1 >/dev/null)
-                if [ ${command_output_message} == "" ]
+                if [ -z "${command_output_message}" ]
                 then
                   log "INFO" "MONGO database server: Successfully restarted"
                   echo_success "OK"
@@ -2881,10 +2891,10 @@ EOF
           abort_installation
         fi
         echo_message "Add MONGO database server on startup"
-        if [ ${BOOLEAN_MONGO_ONSTARTUP} == 1 ]
+        if [ "${BOOLEAN_MONGO_ONSTARTUP}" == "1" ]
         then
           command_output_message=$(chkconfig mongod on 2>&1 >/dev/null)
-          if [ ${command_output_message} == "" ]
+          if [ -z "${command_output_message}" ]
           then
             log "INFO" "MONGO database server: Successfully added on startup"
             echo_success "OK"
@@ -2895,7 +2905,7 @@ EOF
           fi
         else
           command_output_message=$(chkconfig mongod off 2>&1 >/dev/null)
-          if [ ${command_output_message} == "" ]
+          if [ -z "${command_output_message}" ]
           then
             log "WARN" "MONGO database server: Not added on startup by user"
             echo_passed "PASS"
@@ -2925,17 +2935,17 @@ function install_java() {
   local command_output_message=
   echo_message "Install Java Runtime Environment"
   command_output_message=$(yum list installed | grep java-)
-  if [[ ${command_output_message} =~ ^java.* ]]
+  if [[ "${command_output_message}" =~ ^java.* ]]
   then
     ((installed_counter++))
   fi
-  if [ ${installed_counter} -eq "1" ]
+  if [ "${installed_counter}" == "1" ]
   then
     log "WARN" "Java Runtime Environment: Already installed"
     echo_passed "PASS"
   else
     command_output_message=$(yum -y install jre 2>&1 >/dev/null)
-    if [ ${command_output_message} == "" ] || [[ ${command_output_message} =~ [Ww]arning.* ]]
+    if [ -z "${command_output_message}" ] || [[ "${command_output_message}" =~ [Ww]arning.* ]]
     then
       log "INFO" "Java Runtime Environment: Successfully installed"
       echo_success "OK"
@@ -2959,33 +2969,33 @@ function install_elasticsearch() {
   local elasticsearch_sysbackup_file="${elasticsearch_sysconfig_file}.dist"
   echo_message "Install ELASTICSEARCH server"
   command1_output_message=$(yum list installed | grep -w elasticsearch)
-  if [[ ${command1_output_message} =~ ^elasticsearch\..* ]]
+  if [[ "${command1_output_message}" =~ ^elasticsearch\..* ]]
   then
     ((installed_counter++))
   fi
-  if [ ${installed_counter} -eq "1" ]
+  if [ "${installed_counter}" == "1" ]
   then
     log "WARN" "ELASTICSEARCH server: Already installed"
     echo_passed "PASS"
   else
     command1_output_message=$(yum -y install elasticsearch 2>&1 >/dev/null)
-    if [ ${command1_output_message} == "" ] || [[ ${command1_output_message} =~ [Ww]arning.* ]]
+    if [ -z "${command1_output_message}" ] || [[ "${command1_output_message}" =~ [Ww]arning.* ]]
     then
       log "INFO" "ELASTICSEARCH server: Successfully installed"
       command1_output_message=$(test_file ${elasticsearch_backup_file})
       command2_output_message=$(test_file ${elasticsearch_sysbackup_file})
-      if [ ${command1_output_message} == "0" ] && [ ${command2_output_message} == "0" ]
+      if [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "0" ]
       then
         log "WARN" "ELASTICSEARCH server: ${elasticsearch_config_file} already backed-up"
         log "WARN" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} already backed-up"
         echo_passed "PASS"
-      elif [ ${command1_output_message} == "1" ] && [ ${command2_output_message} == "0" ]
+      elif [ "${command1_output_message}" == "1" ] && [ "${command2_output_message}" == "0" ]
       then
         log "ERROR" "ELASTICSEARCH server: ${elasticsearch_config_file} not backed-up"
         log "WARN" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} already backed-up"
         echo_failure "FAILED"
         abort_installation
-      elif [ ${command1_output_message} == "0" ] && [ ${command2_output_message} == "1" ]
+      elif [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "1" ]
       then
         log "WARN" "ELASTICSEARCH server: ${elasticsearch_config_file} already backed-up"
         log "ERROR" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} not backed-up"
@@ -2994,7 +3004,7 @@ function install_elasticsearch() {
       else
         command1_output_message=$(test_file ${elasticsearch_config_file})
         command2_output_message=$(test_file ${elasticsearch_sysconfig_file})
-        if [ ${command1_output_message} == "0" ] && [ ${command2_output_message} == "0" ]
+        if [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "0" ]
         then
           log "INFO" "ELASTICSEARCH server: ${elasticsearch_config_file} successfully found"
           log "INFO" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} successfully found"
@@ -3016,22 +3026,22 @@ function install_elasticsearch() {
           -e "s/#\(ES_DIRECT_SIZE\=\).*/\1${ELASTICSEARCH_RAM_RESERVATION}/" \
           -e "s/#\(ES_JAVA_OPTS\=\).*/\1\"\-Djava.net.preferIPv4Stack\=true\"/" \
           ${elasticsearch_sysconfig_file} 2>&1 >/dev/null)
-          if [ ${command1_output_message} == "" ] && [ ${command2_output_message} == "" ]
+          if [ -z "${command1_output_message}" ] && [-z "${command2_output_message}" ]
           then
             log "INFO" "ELASTICSEARCH server: ${elasticsearch_config_file} successfully modified"
             log "INFO" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} successfully modified"
             echo_success "OK"
             echo_message "Start ELASTICSEARCH service"
             command1_output_message=$(service elasticsearch start 2>&1 >/dev/null)
-            if [ ${command1_output_message} == "" ]
+            if [ -z "${command1_output_message}" ]
             then
               log "INFO" "ELASTICSEARCH server: Successfully started"
               echo_success "OK"
               echo_message "Install ELASTICSEARCH HQ Management plugin"
-              if [ ${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN} -eq 1 ]
+              if [ "${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN}" == "1" ]
               then
                 command1_output_message=$(/usr/share/elasticsearch/bin/plugin -install royrusso/elasticsearch-HQ 2>&1 >/dev/null)
-                if [ ${command1_output_message} == "" ]
+                if [ -z "${command1_output_message}" ]
                 then
                   log "INFO" "ELASTICSEARCH server: HQ Management plugin successfully installed"
                   echo_success "OK"
@@ -3050,14 +3060,14 @@ function install_elasticsearch() {
               echo_failure "FAILED"
               abort_installation
             fi
-          elif [ ${command1_output_message} != "" ] && [ ${command2_output_message} == "" ]
+          elif [ ! -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
           then
             log "ERROR" "ELASTICSEARCH server: ${elasticsearch_config_file} not modified"
             log "DEBUG" ${command1_output_message}
             log "INFO" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} successfully modified"
             echo_failure "FAILED"
             abort_installation
-          elif [ ${command1_output_message} == "" ] && [ ${command2_output_message} != "" ]
+          elif [ -z "${command1_output_message}" ] && [ ! -z "${command2_output_message}" ]
           then
             log "INFO" "ELASTICSEARCH server: ${elasticsearch_config_file} successfully modified"
             log "ERROR" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} not modified"
@@ -3072,13 +3082,13 @@ function install_elasticsearch() {
             echo_failure "FAILED"
             abort_installation
           fi
-        elif [ ${command1_output_message} == "1" ] && [ ${command2_output_message} == "0" ]
+        elif [ "${command1_output_message}" == "1" ] && [ "${command2_output_message}" == "0" ]
         then
           log "ERROR" "ELASTICSEARCH server: ${elasticsearch_config_file} not found"
           log "INFO" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} successfully found"
           echo_failure "FAILED"
           abort_installation
-        elif [ ${command1_output_message} == "0" ] && [ ${command2_output_message} == "1" ]
+        elif [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "1" ]
         then
           log "INFO" "ELASTICSEARCH server: ${elasticsearch_config_file} successfully found"
           log "ERROR" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} not found"
@@ -3092,10 +3102,10 @@ function install_elasticsearch() {
         fi
       fi
       echo_message "Add ELASTICSEARCH service on startup"
-      if [ ${BOOLEAN_ELASTICSEARCH_ONSTARTUP} == 1 ]
+      if [ "${BOOLEAN_ELASTICSEARCH_ONSTARTUP}" == "1" ]
       then
         command1_output_message=$(chkconfig elasticsearch on 2>&1 >/dev/null)
-        if [ ${command1_output_message} == "" ]
+        if [ -z "${command1_output_message}" ]
         then
           log "INFO" "ELASTICSEARCH server: Successfully added on startup"
           echo_success "OK"
@@ -3106,7 +3116,7 @@ function install_elasticsearch() {
         fi
       else
         command1_output_message=$(chkconfig elasticsearch off 2>&1 >/dev/null)
-        if [ ${command1_output_message} == "" ]
+        if [ -z "${command1_output_message}" ]
         then
           log "WARN" "ELASTICSEARCH server: Not added on startup by user"
           echo_passed "PASS"
@@ -3138,33 +3148,33 @@ function install_graylogserver() {
   local graylog_admin_password=`echo -n ${GRAYLOG_ADMIN_PASSWORD} | sha256sum | sed -rn 's/(.*)\s{2}.*/\1/p'`
   echo_message "Install GRAYLOG server"
   command1_output_message=$(yum list installed | grep -w graylog-server)
-  if [[ ${command1_output_message} =~ ^graylog-server\..* ]]
+  if [[ "${command1_output_message}" =~ ^graylog-server\..* ]]
   then
     ((installed_counter++))
   fi
-  if [ ${installed_counter} -eq "1" ]
+  if [ "${installed_counter}" == "1" ]
   then
     log "WARN" "GRAYLOG server: Already installed"
     echo_passed "PASS"
   else
     command1_output_message=$(yum -y install graylog-server 2>&1 >/dev/null)
-    if [ ${command1_output_message} == "" ] || [[ ${command1_output_message} =~ [Ww]arning.* ]]
+    if [ -z "${command1_output_message}" ] || [[ "${command1_output_message}" =~ [Ww]arning.* ]]
     then
       log "INFO" "GRAYLOG server: Successfully installed"
       command1_output_message=$(test_file ${graylogserver_backup_file})
       command2_output_message=$(test_file ${graylogserver_sysbackup_file})
-      if [ ${command1_output_message} == "0" ] && [ ${command2_output_message} == "0" ]
+      if [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "0" ]
       then
         log "WARN" "GRAYLOG server: ${graylogserver_config_file} already backed-up"
         log "WARN" "GRAYLOG server: ${graylogserver_sysconfig_file} already backed-up"
         echo_passed "PASS"
-      elif [ ${command1_output_message} == "1" ] && [ ${command2_output_message} == "0" ]
+      elif [ "${command1_output_message}" == "1" ] && [ "${command2_output_message}" == "0" ]
       then
         log "ERROR" "GRAYLOG server: ${graylogserver_config_file} not backed-up"
         log "WARN" "GRAYLOG server: ${graylogserver_sysconfig_file} already backed-up"
         echo_failure "FAILED"
         abort_installation
-      elif [ ${command1_output_message} == "0" ] && [ ${command2_output_message} == "1" ]
+      elif [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "1" ]
       then
         log "WARN" "GRAYLOG server: ${graylogserver_config_file} already backed-up"
         log "ERROR" "GRAYLOG server: ${graylogserver_sysconfig_file} not backed-up"
@@ -3173,7 +3183,7 @@ function install_graylogserver() {
       else
         command1_output_message=$(test_file ${graylogserver_config_file})
         command2_output_message=$(test_file ${graylogserver_sysconfig_file})
-        if [ ${command1_output_message} == "0" ] && [ ${command2_output_message} == "0" ]
+        if [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "0" ]
         then
           log "INFO" "GRAYLOG server: ${graylogserver_config_file} successfully found"
           log "INFO" "GRAYLOG server: ${graylogserver_sysconfig_file} successfully found"
@@ -3218,19 +3228,19 @@ function install_graylogserver() {
           command2_output_message=$(sed -i.dist \
           -e "s/\(GRAYLOG_SERVER_JAVA_OPTS=\"\).*\(\"\)/\1-Djava.net.preferIPv4Stack=true -Xms${GRAYLOGSERVER_RAM_RESERVATION} -Xmx${GRAYLOGSERVER_RAM_RESERVATION} -XX:NewRatio=1 -XX:PermSize=128m -XX:MaxPermSize=256m -server -XX:+ResizeTLAB -XX:+UseConcMarkSweepGC -XX:+CMSConcurrentMTEnabled -XX:+CMSClassUnloadingEnabled -XX:+UseParNewGC -XX:-OmitStackTraceInFastThrow\2/" \
           ${graylogserver_sysconfig_file} 2>&1 >/dev/null)
-          if [ ${command1_output_message} == "" ] && [ ${command2_output_message} == "" ]
+          if [ -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
           then
             log "INFO" "GRAYLOG server: ${graylogserver_config_file} successfully modified"
             log "INFO" "GRAYLOG server: ${graylogserver_sysconfig_file} successfully modified"
             echo_success "OK"
-          elif [ ${command1_output_message} != "" ] && [ ${command2_output_message} == "" ]
+          elif [ ! -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
           then
             log "ERROR" "GRAYLOG server: ${graylogserver_config_file} not modified"
             log "DEBUG" ${command1_output_message}
             log "INFO" "GRAYLOG server: ${graylogserver_sysconfig_file} successfully modified"
             echo_failure "FAILED"
             abort_installation
-          elif [ ${command1_output_message} == "" ] && [ ${command2_output_message} != "" ]
+          elif [ -z "${command1_output_message}" ] && [ ! -z "${command2_output_message}" ]
           then
             log "INFO" "GRAYLOG server: ${graylogserver_config_file} successfully modified"
             log "ERROR" "GRAYLOG server: ${graylogserver_sysconfig_file} not modified"
@@ -3245,13 +3255,13 @@ function install_graylogserver() {
             echo_failure "FAILED"
             abort_installation
           fi
-        elif [ ${command1_output_message} == "1" ] && [ ${command2_output_message} == "0" ]
+        elif [ "${command1_output_message}" == "1" ] && [ "${command2_output_message}" == "0" ]
         then
           log "ERROR" "GRAYLOG server: ${graylogserver_config_file} not found"
           log "INFO" "GRAYLOG server: ${graylogserver_sysconfig_file} successfully found"
           echo_failure "FAILED"
           abort_installation
-        elif [ ${command1_output_message} == "0" ] && [ ${command2_output_message} == "1" ]
+        elif [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "1" ]
         then
           log "INFO" "GRAYLOG server: ${graylogserver_config_file} successfully found"
           log "ERROR" "GRAYLOG server: ${graylogserver_sysconfig_file} not found"
@@ -3265,10 +3275,10 @@ function install_graylogserver() {
         fi
       fi
       echo_message "Add GRAYLOG server on startup"
-      if [ ${BOOLEAN_GRAYLOGSERVER_ONSTARTUP} == 1 ]
+      if [ "${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}" == "1" ]
       then
         command1_output_message=$(chkconfig graylog-server on 2>&1 >/dev/null)
-        if [ ${command1_output_message} == "" ]
+        if [ -z "${command1_output_message}" ]
         then
           log "INFO" "GRAYLOG server: Successfully added on startup"
           echo_success "OK"
@@ -3279,7 +3289,7 @@ function install_graylogserver() {
         fi
       else
         command1_output_message=$(chkconfig graylog-server off 2>&1 >/dev/null)
-        if [ ${command1_output_message} == "" ]
+        if [ -z "${command1_output_message}" ]
         then
           log "WARN" "GRAYLOG server: Not added on startup by user"
           echo_passed "PASS"
@@ -3310,33 +3320,33 @@ function install_graylogwebgui() {
   local graylog_secret_password=`echo -n ${GRAYLOG_SECRET_PASSWORD} | sha256sum | sed -rn 's/(.*)\s{2}.*/\1/p'`
   echo_message "Install GRAYLOG web interface"
   command1_output_message=$(yum list installed | grep -w graylog-web)
-  if [[ ${command1_output_message} =~ ^graylog-web\..* ]]
+  if [[ "${command1_output_message}" =~ ^graylog-web\..* ]]
   then
     ((installed_counter++))
   fi
-  if [ ${installed_counter} -eq "1" ]
+  if [ "${installed_counter}" == "1" ]
   then
     log "WARN" "GRAYLOG web interface: Already installed"
     echo_passed "PASS"
   else
     command1_output_message=$(yum -y install graylog-web 2>&1 >/dev/null)
-    if [ ${command1_output_message} == "" ] || [[ ${command1_output_message} =~ [Ww]arning.* ]]
+    if [ -z "${command1_output_message}" ] || [[ "${command1_output_message}" =~ [Ww]arning.* ]]
     then
       log "INFO" "GRAYLOG web interface: Successfully installed"
       command1_output_message=$(test_file ${graylogwebgui_backup_file})
       command2_output_message=$(test_file ${graylogwebgui_sysbackup_file})
-      if [ ${command1_output_message} == "0" ] && [ ${command2_output_message} == "0" ]
+      if [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "0" ]
       then
         log "WARN" "GRAYLOG web interface: ${graylogwebgui_config_file} already backed-up"
         log "WARN" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} already backed-up"
         echo_passed "PASS"
-      elif [ ${command1_output_message} == "1" ] && [ ${command2_output_message} == "0" ]
+      elif [ "${command1_output_message}" == "1" ] && [ "${command2_output_message}" == "0" ]
       then
         log "ERROR" "GRAYLOG web interface: ${graylogwebgui_config_file} not backed-up"
         log "WARN" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} already backed-up"
         echo_failure "FAILED"
         abort_installation
-      elif [ ${command1_output_message} == "0" ] && [ ${command2_output_message} == "1" ]
+      elif [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "1" ]
       then
         log "WARN" "GRAYLOG web interface: ${graylogwebgui_config_file} already backed-up"
         log "ERROR" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} not backed-up"
@@ -3345,7 +3355,7 @@ function install_graylogwebgui() {
       else
         command1_output_message=$(test_file ${graylogwebgui_config_file})
         command2_output_message=$(test_file ${graylogwebgui_sysconfig_file})
-        if [ ${command1_output_message} == "0" ] && [ ${command2_output_message} == "0" ]
+        if [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "0" ]
         then
           log "INFO" "GRAYLOG web interface: ${graylogwebgui_config_file} successfully found"
           log "INFO" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} successfully found"
@@ -3358,19 +3368,19 @@ function install_graylogwebgui() {
           -e "s/\(GRAYLOG_WEB_HTTP_ADDRESS=\"\)0.0.0.0\(\"\)/\1localhost\2/" \
           -e "s/\(GRAYLOG_WEB_JAVA_OPTS=\"\)\(\"\)/\1-Djava.net.preferIPv4Stack=true\2/" \
           ${graylogwebgui_sysconfig_file} 2>&1 >/dev/null)
-          if [ ${command1_output_message} == "" ] && [ ${command2_output_message} == "" ]
+          if [ -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
           then
             log "INFO" "GRAYLOG web interface: ${graylogwebgui_config_file} successfully modified"
             log "INFO" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} successfully modified"
             echo_success "OK"
-          elif [ ${command1_output_message} != "" ] && [ ${command2_output_message} == "" ]
+          elif [ ! -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
           then
             log "ERROR" "GRAYLOG web interface: ${graylogwebgui_config_file} not found"
             log "DEBUG" ${command1_output_message}
             log "INFO" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} successfully found"
             echo_failure "FAILED"
             abort_installation
-          elif [ ${command1_output_message} == "" ] && [ ${command2_output_message} != "" ]
+          elif [ -z "${command1_output_message}" ] && [ ! -z "${command2_output_message}" ]
           then
             log "INFO" "GRAYLOG web interface: ${graylogwebgui_config_file} successfully found"
             log "ERROR" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} not found"
@@ -3385,13 +3395,13 @@ function install_graylogwebgui() {
             echo_failure "FAILED"
             abort_installation
           fi
-        elif [ ${command1_output_message} == "1" ] && [ ${command2_output_message} == "0" ]
+        elif [ "${command1_output_message}" == "1" ] && [ "${command2_output_message}" == "0" ]
         then
           log "ERROR" "GRAYLOG web interface: ${graylogwebgui_config_file} not found"
           log "INFO" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} successfully found"
           echo_failure "FAILED"
           abort_installation
-        elif [ ${command1_output_message} == "0" ] && [ ${command2_output_message} == "1" ]
+        elif [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "1" ]
         then
           log "INFO" "GRAYLOG web interface: ${graylogwebgui_config_file} successfully found"
           log "ERROR" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} not found"
@@ -3405,10 +3415,10 @@ function install_graylogwebgui() {
         fi
       fi
       echo_message "Add GRAYLOG web interface on startup"
-      if [ ${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP} == 1 ]
+      if [ "${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}" == "1" ]
       then
         command1_output_message=$(chkconfig graylog-web on 2>&1 >/dev/null)
-        if [ ${command1_output_message} == "" ]
+        if [ -z "${command1_output_message}" ]
         then
           log "INFO" "GRAYLOG web interface: Successfully added on startup"
           echo_success "OK"
@@ -3419,7 +3429,7 @@ function install_graylogwebgui() {
         fi
       else
         command1_output_message=$(chkconfig graylog-web off 2>&1 >/dev/null)
-        if [ ${command1_output_message} == "" ]
+        if [ -z "${command1_output_message}" ]
         then
           log "WARN" "GRAYLOG web interface: Not added on startup by user"
           echo_passed "PASS"
@@ -3450,33 +3460,33 @@ function install_nginx() {
   local nginx_sslbackup_file="${nginx_sslconfig_file}.dist"
   echo_message "Install NGINX web server"
   command1_output_message=$(yum list installed | grep nginx.x)
-  if [[ ${command1_output_message} =~ ^nginx\..* ]]
+  if [[ "${command1_output_message}" =~ ^nginx\..* ]]
   then
     ((installed_counter++))
   fi
-  if [ ${installed_counter} -eq "1" ]
+  if [ "${installed_counter}" == "1" ]
   then
     log "WARN" "NGINX web server: Already installed"
     echo_passed "PASS"
   else
     command1_output_message=$(yum -y install nginx 2>&1 >/dev/null)
-    if [ ${command1_output_message} == "" ] || [[ ${command1_output_message} =~ [Ww]arning.* ]]
+    if [ -z "${command1_output_message}" ] || [[ "${command1_output_message}" =~ [Ww]arning.* ]]
     then
       log "INFO" "NGINX web server: Successfully installed"
       command1_output_message=$(test_file ${nginx_defaultbackup_file})
       command2_output_message=$(test_file ${nginx_sslbackup_file})
-      if [ ${command1_output_message} == "0" ] && [ ${command2_output_message} == "0" ]
+      if [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "0" ]
       then
         log "WARN" "NGINX web server: ${nginx_defaultconfig_file} already backed-up"
         log "WARN" "NGINX web server: ${nginx_sslconfig_file} already backed-up"
         echo_passed "PASS"
-      elif [ ${command1_output_message} == "0" ] && [ ${command2_output_message} == "1" ]
+      elif [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "1" ]
       then
         log "WARN" "NGINX web server: ${nginx_defaultconfig_file} already backed-up"
         log "ERROR" "NGINX web server: ${nginx_sslbackup_file} not found"
         echo_failure "FAILED"
         abort_installation
-      elif [ ${command1_output_message} == "1" ] && [ ${command2_output_message} == "0" ]
+      elif [ "${command1_output_message}" == "1" ] && [ "${command2_output_message}" == "0" ]
       then
         log "ERROR" "NGINX web server: ${nginx_defaultconfig_file} not found"
         log "WARN" "NGINX web server: ${nginx_sslbackup_file} already backed-up"
@@ -3485,13 +3495,13 @@ function install_nginx() {
       else
         command1_output_message=$(test_file ${nginx_defaultconfig_file})
         command2_output_message=$(test_file ${nginx_defaultssl_file})
-        if [ ${command1_output_message} == "0" ] && [ ${command2_output_message} == "0" ]
+        if [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "0" ]
         then
           log "INFO" "NGINX web server: ${nginx_defaultconfig_file} successfully found"
           log "INFO" "NGINX web server: ${nginx_defaultssl_file} successfully found"
           command1_output_message=$(mv ${nginx_defaultconfig_file} ${nginx_defaultbackup_file} 2>&1 >/dev/null)
           command2_output_message=$(mv ${nginx_defaultssl_file} ${nginx_sslconfig_file} 2>&1 >/dev/null)
-          if [ ${command1_output_message} == "" ] && [ ${command2_output_message} == "" ]
+          if [ -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
           then
             log "INFO" "NGINX web server: ${nginx_defaultconfig_file} successfully backed-up"
             log "INFO" "NGINX web server: ${nginx_defaultssl_file} successfully backed-up"
@@ -3511,7 +3521,7 @@ function install_nginx() {
             -e "s/\#\(\}\)/\1/" \
             -e '/\#.*index.*/d' \
             ${nginx_sslconfig_file} 2>&1 >/dev/null)
-            if [ ${command1_output_message} == "" ]
+            if [ -z "${command1_output_message}" ]
             then
               log "INFO" "NGINX web server: ${nginx_defaultssl_file} successfully modified"
               echo_success "OK"
@@ -3521,14 +3531,14 @@ function install_nginx() {
               echo_failure "FAILED"
               abort_installation
             fi
-          elif [ ${command1_output_message} != "" ] && [ ${command2_output_message} == "" ]
+          elif [ ! -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
           then
             log "ERROR" "NGINX web server: ${nginx_defaultconfig_file} not backed-up"
             log "DEBUG" ${command1_output_message}
             log "INFO" "NGINX web server: ${nginx_defaultssl_file} successfully backed-up"
             echo_failure "FAILED"
             abort_installation
-          elif [ ${command1_output_message} == "" ] && [ ${command2_output_message} != "" ]
+          elif [ -z "${command1_output_message}" ] && [ ! -z "${command2_output_message}" ]
           then
             log "INFO" "NGINX web server: ${nginx_defaultconfig_file} successfully backed-up"
             log "ERROR" "NGINX web server: ${nginx_defaultssl_file} not backed-up"
@@ -3543,13 +3553,13 @@ function install_nginx() {
             echo_failure "FAILED"
             abort_installation
           fi
-        elif [ ${command1_output_message} == "1" ] && [ ${command2_output_message} == "0" ]
+        elif [ "${command1_output_message}" == "1" ] && [ "${command2_output_message}" == "0" ]
         then
           log "ERROR" "NGINX web server: ${nginx_defaultconfig_file} not found"
           log "INFO" "NGINX web server: ${nginx_defaultssl_file} successfully found"
           echo_failure "FAILED"
           abort_installation
-        elif [ ${command1_output_message} == "0" ] && [ ${command2_output_message} == "1" ]
+        elif [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "1" ]
         then
           log "INFO" "NGINX web server: ${nginx_defaultconfig_file} successfully found"
           log "ERROR" "NGINX web server: ${nginx_defaultssl_file} not found"
@@ -3563,10 +3573,10 @@ function install_nginx() {
         fi
       fi
       echo_message "Add NGINX service on startup"
-      if [ ${BOOLEAN_NGINX_ONSTARTUP} == 1 ]
+      if [ "${BOOLEAN_NGINX_ONSTARTUP}" == "1" ]
       then
         command1_output_message=$(chkconfig nginx on 2>&1 >/dev/null)
-        if [ ${command1_output_message} == "" ]
+        if [ -z "${command1_output_message}" ]
         then
           log "INFO" "NGINX web server: Successfully added on startup"
           echo_success "OK"
@@ -3577,7 +3587,7 @@ function install_nginx() {
         fi
       else
         command1_output_message=$(chkconfig nginx off 2>&1 >/dev/null)
-        if [ ${command1_output_message} == "" ]
+        if [ -z "${command1_output_message}" ]
         then
           log "WARN" "NGINX web server: Not added on startup by user"
           echo_passed "PASS"
@@ -3604,7 +3614,7 @@ function display_informations() {
   echo -e "# - Login\t: ${SETCOLOR_INFO}${GRAYLOG_ADMIN_USERNAME}${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
   echo -e "# - Password\t: ${SETCOLOR_INFO}${GRAYLOG_ADMIN_PASSWORD}${SETCOLOR_NORMAL}${MOVE_TO_COL1}#\n#${MOVE_TO_COL1}#"
   echo -e "###################################################################"
-  if [ ${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN} -eq 1 ]
+  if [ "${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN}" == "1" ]
   then
     echo -e "\n###################################################################"
     echo -e "#${MOVE_TO_COL1}#\n# To administrate ElasticSearch server${MOVE_TO_COL1}#"
@@ -3628,17 +3638,17 @@ function main {
   local command_output_message=
   log "INFO" "GRAYLOG installation: Begin"
   test_internet
-  if [ ${SCRIPT_MODE} == "i" ]
+  if [ "${SCRIPT_MODE}" == "i" ]
   then
     set_globalvariables
   else
-    if [[ ${INSTALLATION_CFG_FILE} =~ .*\.cfg$ ]]
+    if [[ "${INSTALLATION_CFG_FILE}" =~ .*\.cfg$ ]]
     then
       command_output_message=$(test_file ${INSTALLATION_CFG_FILE})
-      if [ ${command_output_message} == "0" ]
+      if [ "${command_output_message}" == "0" ]
       then
         log "INFO" "Global variables: ${INSTALLATION_CFG_FILE} successfully found"
-        if [ -z ${INSTALLATION_CFG_FILE} ]
+        if [ -z "${INSTALLATION_CFG_FILE}" ]
         then
           log "ERROR" "Global variables: Not loaded"
           abort_installation
@@ -3666,7 +3676,7 @@ function main {
 #  install_networkpackages
 #  configure_bashrc
 #  configure_openssh
-#  if [ ${BOOLEAN_RSA_AUTH} -eq 1 ]
+#  if [ "${BOOLEAN_RSA_AUTH}" == "1" ]
 #  then
 #    configure_rsaauth
 #  else
@@ -3694,7 +3704,7 @@ function main {
 OPTIND=1
 while getopts ":hia:" options
 do
-  case ${options} in
+  case "${options}" in
     i )
       SCRIPT_MODE="i"
       main
