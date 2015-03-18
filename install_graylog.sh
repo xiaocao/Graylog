@@ -6,7 +6,7 @@
 #job title     : Network engineer
 #mail          : mikael.andre.1989@gmail.com
 #created       : 20150219
-#last revision : 20150316
+#last revision : 20150318
 #version       : 1.4
 #platform      : Linux
 #processor     : 64 Bits
@@ -93,6 +93,7 @@ SETCOLOR_INFO="\\033[0;36m"
 SETCOLOR_SUCCESS="\\033[0;32m"
 SETCOLOR_FAILURE="\\033[0;31m"
 SETCOLOR_WARNING="\\033[0;33m"
+SETCOLOR_DISABLE="\\033[0;90m"
 SETCOLOR_NORMAL="\\033[0;39m"
 #==============================================================================
 
@@ -225,6 +226,9 @@ function set_globalvariables() {
   local command_output_message=
   local old_input_value=
   local installation_cfg_tmpfile="${INSTALLATION_LOG_FOLDER}/install_graylog_${INSTALLATION_LOG_TIMESTAMP}.cfg"
+  local ipaddress_regular_expression='(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)'
+  local hostname_regular_expression='^(([a-zA-Z](-?[a-zA-Z0-9])*).)*[a-zA-Z](-?[a-zA-Z0-9])+.[a-zA-Z]{2,}$'
+  local mailaddress_regular_expression='^test@email.fr$'
   if [ "${SCRIPT_MODE}" == "i" ]
   then
     command_output_message=$(test_file ${installation_cfg_tmpfile})
@@ -407,7 +411,7 @@ function set_globalvariables() {
   then
     if [ -z "${NEW_NTP_ADDRESS}" ]
     then
-      while [ -z "${NEW_NTP_ADDRESS}" ] || [[ ! "${NEW_NTP_ADDRESS}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ "${NEW_NTP_ADDRESS}" =~ (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?) ]]
+      while [ -z "${NEW_NTP_ADDRESS}" ] || [[ ! "${NEW_NTP_ADDRESS}" =~ "${hostname_regular_expression}" ]] || [[ "${NEW_NTP_ADDRESS}" =~ "${ipaddress_regular_expression}" ]]
       do
         echo -e "\nType IP address or hostname of NTP server, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_INFO}ntp.test.fr${SETCOLOR_NORMAL}]:"
@@ -418,13 +422,13 @@ function set_globalvariables() {
           NEW_NTP_ADDRESS='ntp.test.fr'
         fi
       done
-    else
+      else
       yes_no_function "Can you confirm you want to modify current NTP server ?" "yes"
       if [ "${?}" == "0" ]
       then
         old_input_value=${NEW_NTP_ADDRESS}
         NEW_NTP_ADDRESS=
-        while [ -z "${NEW_NTP_ADDRESS}" ] || [[ ! "${NEW_NTP_ADDRESS}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ ! "${NEW_NTP_ADDRESS}" =~ (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?) ]]
+        while [ -z "${NEW_NTP_ADDRESS}" ] || [[ ! "${NEW_NTP_ADDRESS}" =~ "${hostname_regular_expression}" ]] || [[ ! "${NEW_NTP_ADDRESS}" =~ "${ipaddress_regular_expression}" ]]
         do
           echo -e "\nType IP address or hostname of NTP server, followed by [ENTER]"
           echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
@@ -891,7 +895,7 @@ function set_globalvariables() {
   echo "SSL_SUBJECT_ORGANIZATIONUNIT='${SSL_SUBJECT_ORGANIZATIONUNIT}'" >> ${installation_cfg_tmpfile}
   if [ -z "${SSL_SUBJECT_EMAIL}" ]
   then
-    while [ -z "${SSL_SUBJECT_EMAIL}" ] || [[ ! "${SSL_SUBJECT_EMAIL}" =~ ^[a-z0-9\,\!\#\$\%\&\'\*\+\/\\\=\?\^_\`\{\|\}\~\-]+(\.[a-z0-9\,\!\#\$\%\&\'\*\+\/\\\=\?\^\_\`\{\|\}\~\-]+)*@[a-z0-9\-]+(\.[a-z0-9\-]+)*\.([a-z]{2,})$ ]]
+    while [ -z "${SSL_SUBJECT_EMAIL}" ] || [[ ! "${SSL_SUBJECT_EMAIL}" =~ "${mailaddress_regular_expression}" ]]
     do
       echo -e "\nType organization unit name of SSL certificate, followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}mail.address@test.fr${SETCOLOR_NORMAL}]:"
@@ -903,12 +907,12 @@ function set_globalvariables() {
       fi
     done
   else
-    yes_no_function "Can you confirm you want to modify current e-mail address of SSL Certificate ?" "yes"
+  yes_no_function "Can you confirm you want to modify current e-mail address of SSL Certificate ?" "yes"
     if [ "${?}" == "0" ]
     then
       old_input_value=${SSL_SUBJECT_EMAIL}
       SSL_SUBJECT_EMAIL=
-      while [ -z "${SSL_SUBJECT_EMAIL}" ] || [[ ! "${SSL_SUBJECT_EMAIL}" =~ ^[a-z0-9\,\!\#\$\%\&\'\*\+\/\\\=\?\^_\`\{\|\}\~\-]+(\.[a-z0-9\,\!\#\$\%\&\'\*\+\/\\\=\?\^\_\`\{\|\}\~\-]+)*@[a-z0-9\-]+(\.[a-z0-9\-]+)*\.([a-z]{2,})$ ]]
+      while [ -z "${SSL_SUBJECT_EMAIL}" ] || [[ ! "${SSL_SUBJECT_EMAIL}" =~ "${mailaddress_regular_expression}" ]]
       do
         echo -e "\nType organization unit name of SSL certificate, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
@@ -1122,7 +1126,7 @@ function set_globalvariables() {
   then
     if [ -z "${SMTP_HOST_NAME}" ]
     then
-      while [ -z "${SMTP_HOST_NAME}" ] || [[ ! "${SMTP_HOST_NAME}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ ! "${SMTP_HOST_NAME}" =~ (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?) ]]
+      while [ -z "${SMTP_HOST_NAME}" ] || [[ ! "${SMTP_HOST_NAME}" =~ "${ipaddress_regular_expression}" ]] || [[ ! "${SMTP_HOST_NAME}" =~ "${hostname_regular_expression}" ]]
       do
         echo -e "\nType FQDN of SMTP server, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_INFO}mail.example.com${SETCOLOR_NORMAL}]:"
@@ -1139,7 +1143,7 @@ function set_globalvariables() {
       then
         old_input_value=${SMTP_HOST_NAME}
         SMTP_HOST_NAME=
-        while [ -z "${SMTP_HOST_NAME}" ] || [[ ! "${SMTP_HOST_NAME}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ ! "${SMTP_HOST_NAME}" =~ (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?) ]]
+        while [ -z "${SMTP_HOST_NAME}" ] || [[ ! "${SMTP_HOST_NAME}" =~ "${ipaddress_regular_expression}" ]] || [[ ! "${SMTP_HOST_NAME}" =~ "${hostname_regular_expression}" ]]
         do
           echo -e "\nType FQDN of SMTP server, followed by [ENTER]"
           echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
@@ -1156,7 +1160,7 @@ function set_globalvariables() {
     fi
     if [ -z "${SMTP_DOMAIN_NAME}" ]
     then
-      while [ -z "${SMTP_DOMAIN_NAME}" ] || [[ ! "${SMTP_DOMAIN_NAME}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
+      while [ -z "${SMTP_DOMAIN_NAME}" ] || [[ ! "${SMTP_DOMAIN_NAME}" =~ "${hostname_regular_expression}" ]]
       do
         echo -e "\nType SMTP domain name, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_INFO}example.com${SETCOLOR_NORMAL}]:"
@@ -1173,7 +1177,7 @@ function set_globalvariables() {
       then
         old_input_value=${SMTP_DOMAIN_NAME}
         SMTP_DOMAIN_NAME=
-        while [ -z "${SMTP_DOMAIN_NAME}" ] || [[ ! "${SMTP_DOMAIN_NAME}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
+        while [ -z "${SMTP_DOMAIN_NAME}" ] || [[ ! "${SMTP_DOMAIN_NAME}" =~ "${hostname_regular_expression}" ]]
         do
           echo -e "\nType SMTP domain name, followed by [ENTER]"
           echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
@@ -1502,22 +1506,25 @@ function set_globalvariables() {
 # Verify all global variables
 function verify_globalvariables() {
   local error_counter=0
+  local ipaddress_regular_expression='(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)'
+  local hostname_regular_expression='^(([a-zA-Z](-?[a-zA-Z0-9])*).)*[a-zA-Z](-?[a-zA-Z0-9])+.[a-zA-Z]{2,}$'
+  local mailaddress_regular_expression='^test@email.fr$'
   echo -e "\n###################################################################"
   echo -e "#${MOVE_TO_COL1}#\n# ${SETCOLOR_WARNING}Check your settings before continue${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
   echo -e "#${MOVE_TO_COL1}#"
   if [ ! -z "${NETWORK_INTERFACE_NAME}" ]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}NETWORK_INTERFACE_NAME${SETCOLOR_NORMAL}.............'${NETWORK_INTERFACE_NAME}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}NETWORK_INTERFACE_NAME${SETCOLOR_NORMAL}..............'${NETWORK_INTERFACE_NAME}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}NETWORK_INTERFACE_NAME${SETCOLOR_NORMAL}.............'${NETWORK_INTERFACE_NAME}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}NETWORK_INTERFACE_NAME${SETCOLOR_NORMAL}..............'${NETWORK_INTERFACE_NAME}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: NETWORK_INTERFACE_NAME not successfully definied by user (value=${NETWORK_INTERFACE_NAME})"
     ((error_counter++))
   fi
   if [[ "${BOOLEAN_RSA_AUTH}" =~ 0|1 ]]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_RSA_AUTH${SETCOLOR_NORMAL}...................'${BOOLEAN_RSA_AUTH}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_RSA_AUTH${SETCOLOR_NORMAL}....................'${BOOLEAN_RSA_AUTH}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_RSA_AUTH${SETCOLOR_NORMAL}...................'${BOOLEAN_RSA_AUTH}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_RSA_AUTH${SETCOLOR_NORMAL}....................'${BOOLEAN_RSA_AUTH}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: BOOLEAN_RSA_AUTH not successfully definied by user (value=${BOOLEAN_RSA_AUTH})"
     ((error_counter++))
   fi
@@ -1525,153 +1532,153 @@ function verify_globalvariables() {
   then
     if [[ "${RSA_PUBLIC_KEY}" =~ ^ssh-rsa.* ]]
     then
-      echo -e "# ${SETCOLOR_SUCCESS}RSA_PUBLIC_KEY${SETCOLOR_NORMAL}.....................'${RSA_PUBLIC_KEY}'${MOVE_TO_COL1}#"
+      echo -e "# ${SETCOLOR_SUCCESS}RSA_PUBLIC_KEY${SETCOLOR_NORMAL}......................'${RSA_PUBLIC_KEY}'${MOVE_TO_COL1}#"
     else
-      echo -e "# ${SETCOLOR_FAILURE}RSA_PUBLIC_KEY${SETCOLOR_NORMAL}.....................'${RSA_PUBLIC_KEY}'${MOVE_TO_COL1}#"
+      echo -e "# ${SETCOLOR_FAILURE}RSA_PUBLIC_KEY${SETCOLOR_NORMAL}......................'${RSA_PUBLIC_KEY}'${MOVE_TO_COL1}#"
       log "ERROR" "Global variables: RSA_PUBLIC_KEY not successfully definied by user (value=${RSA_PUBLIC_KEY})"
       ((error_counter++))
     fi
   else
-    echo -e "# RSA_PUBLIC_KEY.....................'${RSA_PUBLIC_KEY}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_DISABLE}RSA_PUBLIC_KEY${SETCOLOR_NORMAL}......................'${RSA_PUBLIC_KEY}'${MOVE_TO_COL1}#"
   fi
   if [ ! -z "${SERVER_TIME_ZONE}" ]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}SERVER_TIME_ZONE${SETCOLOR_NORMAL}...................'${SERVER_TIME_ZONE}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}SERVER_TIME_ZONE${SETCOLOR_NORMAL}....................'${SERVER_TIME_ZONE}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}SERVER_TIME_ZONE${SETCOLOR_NORMAL}...................'${SERVER_TIME_ZONE}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}SERVER_TIME_ZONE${SETCOLOR_NORMAL}....................'${SERVER_TIME_ZONE}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: SERVER_TIME_ZONE not successfully definied by user (value=${SERVER_TIME_ZONE})"
     ((error_counter++))
   fi
   if [[ "${BOOLEAN_NTP_CONFIGURE}" =~ 0|1 ]]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_NTP_CONFIGURE${SETCOLOR_NORMAL}..............'${BOOLEAN_NTP_CONFIGURE}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_NTP_CONFIGURE${SETCOLOR_NORMAL}...............'${BOOLEAN_NTP_CONFIGURE}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_NTP_CONFIGURE${SETCOLOR_NORMAL}..............'${BOOLEAN_NTP_CONFIGURE}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_NTP_CONFIGURE${SETCOLOR_NORMAL}...............'${BOOLEAN_NTP_CONFIGURE}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: BOOLEAN_NTP_CONFIGURE not successfully definied by user (value=${BOOLEAN_NTP_CONFIGURE})"
     ((error_counter++))
   fi
   if [[ "${BOOLEAN_NTP_CONFIGURE}" == "1" ]]
   then
-    if [ -z "${NEW_NTP_ADDRESS}" ] || [[ "${NEW_NTP_ADDRESS}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ "${NEW_NTP_ADDRESS}" =~ (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?) ]]
+    if [ -z "${NEW_NTP_ADDRESS}" ] || [[ "${NEW_NTP_ADDRESS}" =~ "${hostname_regular_expression}" ]] || [[ "${NEW_NTP_ADDRESS}" =~ "${ipaddress_regular_expression}" ]]
     then
-      echo -e "# ${SETCOLOR_SUCCESS}NEW_NTP_ADDRESS${SETCOLOR_NORMAL}....................'${NEW_NTP_ADDRESS}'${MOVE_TO_COL1}#"
+      echo -e "# ${SETCOLOR_SUCCESS}NEW_NTP_ADDRESS${SETCOLOR_NORMAL}.....................'${NEW_NTP_ADDRESS}'${MOVE_TO_COL1}#"
     else
-      echo -e "# ${SETCOLOR_FAILURE}NEW_NTP_ADDRESS${SETCOLOR_NORMAL}....................'${NEW_NTP_ADDRESS}'${MOVE_TO_COL1}#"
+      echo -e "# ${SETCOLOR_FAILURE}NEW_NTP_ADDRESS${SETCOLOR_NORMAL}.....................'${NEW_NTP_ADDRESS}'${MOVE_TO_COL1}#"
       log "ERROR" "Global variables: NEW_NTP_ADDRESS not successfully definied by user (value=${NEW_NTP_ADDRESS})"
       ((error_counter++))
     fi
   else
-    echo -e "# NEW_NTP_ADDRESS....................'${NEW_NTP_ADDRESS}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_DISABLE}NEW_NTP_ADDRESS${SETCOLOR_NORMAL}.....................'${NEW_NTP_ADDRESS}'${MOVE_TO_COL1}#"
   fi
   if [[ "${BOOLEAN_NTP_ONSTARTUP}" =~ 0|1 ]]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_NTP_ONSTARTUP${SETCOLOR_NORMAL}..............'${BOOLEAN_NTP_ONSTARTUP}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_NTP_ONSTARTUP${SETCOLOR_NORMAL}...............'${BOOLEAN_NTP_ONSTARTUP}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_NTP_ONSTARTUP${SETCOLOR_NORMAL}..............'${BOOLEAN_NTP_ONSTARTUP}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_NTP_ONSTARTUP${SETCOLOR_NORMAL}...............'${BOOLEAN_NTP_ONSTARTUP}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: BOOLEAN_NTP_ONSTARTUP not successfully definied by user (value=${BOOLEAN_NTP_ONSTARTUP})"
     ((error_counter++))
   fi
   if [ ! -z "${MONGO_ADMIN_PASSWORD}" ]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}MONGO_ADMIN_PASSWORD${SETCOLOR_NORMAL}...............'${MONGO_ADMIN_PASSWORD}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}MONGO_ADMIN_PASSWORD${SETCOLOR_NORMAL}................'${MONGO_ADMIN_PASSWORD}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}MONGO_ADMIN_PASSWORD${SETCOLOR_NORMAL}...............'${MONGO_ADMIN_PASSWORD}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}MONGO_ADMIN_PASSWORD${SETCOLOR_NORMAL}................'${MONGO_ADMIN_PASSWORD}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: MONGO_ADMIN_PASSWORD not successfully definied by user (value=${MONGO_ADMIN_PASSWORD})"
     ((error_counter++))
   fi
   if [ ! -z "${MONGO_GRAYLOG_DATABASE}" ]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}MONGO_GRAYLOG_DATABASE${SETCOLOR_NORMAL}.............'${MONGO_GRAYLOG_DATABASE}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}MONGO_GRAYLOG_DATABASE${SETCOLOR_NORMAL}..............'${MONGO_GRAYLOG_DATABASE}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}MONGO_GRAYLOG_DATABASE${SETCOLOR_NORMAL}.............'${MONGO_GRAYLOG_DATABASE}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}MONGO_GRAYLOG_DATABASE${SETCOLOR_NORMAL}..............'${MONGO_GRAYLOG_DATABASE}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: MONGO_GRAYLOG_DATABASE not successfully definied by user (value=${MONGO_GRAYLOG_DATABASE})"
     ((error_counter++))
   fi
   if [ ! -z "${MONGO_GRAYLOG_USER}" ]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}MONGO_GRAYLOG_USER${SETCOLOR_NORMAL}.................'${MONGO_GRAYLOG_USER}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}MONGO_GRAYLOG_USER${SETCOLOR_NORMAL}..................'${MONGO_GRAYLOG_USER}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}MONGO_GRAYLOG_USER${SETCOLOR_NORMAL}.................'${MONGO_GRAYLOG_USER}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}MONGO_GRAYLOG_USER${SETCOLOR_NORMAL}..................'${MONGO_GRAYLOG_USER}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: MONGO_GRAYLOG_USER not successfully definied by user (value=${MONGO_GRAYLOG_USER})"
     ((error_counter++))
   fi
   if [ ! -z "${MONGO_GRAYLOG_PASSWORD}" ]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}MONGO_GRAYLOG_PASSWORD${SETCOLOR_NORMAL}.............'${MONGO_GRAYLOG_PASSWORD}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}MONGO_GRAYLOG_PASSWORD${SETCOLOR_NORMAL}..............'${MONGO_GRAYLOG_PASSWORD}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}MONGO_GRAYLOG_PASSWORD${SETCOLOR_NORMAL}.............'${MONGO_GRAYLOG_PASSWORD}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}MONGO_GRAYLOG_PASSWORD${SETCOLOR_NORMAL}..............'${MONGO_GRAYLOG_PASSWORD}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: MONGO_GRAYLOG_PASSWORD not successfully definied by user (value=${MONGO_GRAYLOG_PASSWORD})"
     ((error_counter++))
   fi
   if [[ "${BOOLEAN_MONGO_ONSTARTUP}" =~ 0|1 ]]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_MONGO_ONSTARTUP${SETCOLOR_NORMAL}............'${BOOLEAN_MONGO_ONSTARTUP}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_MONGO_ONSTARTUP${SETCOLOR_NORMAL}.............'${BOOLEAN_MONGO_ONSTARTUP}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_MONGO_ONSTARTUP${SETCOLOR_NORMAL}............'${BOOLEAN_MONGO_ONSTARTUP}${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_MONGO_ONSTARTUP${SETCOLOR_NORMAL}.............'${BOOLEAN_MONGO_ONSTARTUP}${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: BOOLEAN_MONGO_ONSTARTUP not successfully definied by user (value=${BOOLEAN_MONGO_ONSTARTUP})"
     ((error_counter++))
   fi
   if [[ "${SSL_KEY_SIZE}" =~ 512|1024|2048|4096 ]]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}SSL_KEY_SIZE${SETCOLOR_NORMAL}.......................'${SSL_KEY_SIZE}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}SSL_KEY_SIZE${SETCOLOR_NORMAL}........................'${SSL_KEY_SIZE}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}SSL_KEY_SIZE${SETCOLOR_NORMAL}.......................'${SSL_KEY_SIZE}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}SSL_KEY_SIZE${SETCOLOR_NORMAL}........................'${SSL_KEY_SIZE}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: SSL_KEY_SIZE not successfully definied by user (value=${SSL_KEY_SIZE})"
     ((error_counter++))
   fi
   if [[ "${SSL_KEY_DURATION}" =~ [0-9]{1,5} ]]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}SSL_KEY_DURATION${SETCOLOR_NORMAL}...................'${SSL_KEY_DURATION}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}SSL_KEY_DURATION${SETCOLOR_NORMAL}....................'${SSL_KEY_DURATION}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}SSL_KEY_DURATION${SETCOLOR_NORMAL}...................'${SSL_KEY_DURATION}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}SSL_KEY_DURATION${SETCOLOR_NORMAL}....................'${SSL_KEY_DURATION}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: SSL_KEY_DURATION not successfully definied by user (value=${SSL_KEY_DURATION})"
     ((error_counter++))
   fi
   if [[ "${SSL_SUBJECT_COUNTRY}" =~ [A-Z]{2} ]]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}SSL_SUBJECT_COUNTRY${SETCOLOR_NORMAL}................'${SSL_SUBJECT_COUNTRY}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}SSL_SUBJECT_COUNTRY${SETCOLOR_NORMAL}.................'${SSL_SUBJECT_COUNTRY}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}SSL_SUBJECT_COUNTRY${SETCOLOR_NORMAL}................'${SSL_SUBJECT_COUNTRY}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}SSL_SUBJECT_COUNTRY${SETCOLOR_NORMAL}.................'${SSL_SUBJECT_COUNTRY}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: SSL_SUBJECT_COUNTRY not successfully definied by user (value=${SSL_SUBJECT_COUNTRY})"
     ((error_counter++))
   fi
   if [ ! -z "${SSL_SUBJECT_STATE}" ]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}SSL_SUBJECT_STATE${SETCOLOR_NORMAL}..................'${SSL_SUBJECT_STATE}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}SSL_SUBJECT_STATE${SETCOLOR_NORMAL}...................'${SSL_SUBJECT_STATE}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}SSL_SUBJECT_STATE${SETCOLOR_NORMAL}..................'${SSL_SUBJECT_STATE}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}SSL_SUBJECT_STATE${SETCOLOR_NORMAL}...................'${SSL_SUBJECT_STATE}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: SSL_SUBJECT_STATE not successfully definied by user (value=${SSL_SUBJECT_STATE})"
     ((error_counter++))
   fi
   if [ ! -z "${SSL_SUBJECT_LOCALITY}" ]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}SSL_SUBJECT_LOCALITY${SETCOLOR_NORMAL}...............'${SSL_SUBJECT_LOCALITY}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}SSL_SUBJECT_LOCALITY${SETCOLOR_NORMAL}................'${SSL_SUBJECT_LOCALITY}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}SSL_SUBJECT_LOCALITY${SETCOLOR_NORMAL}...............'${SSL_SUBJECT_LOCALITY}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}SSL_SUBJECT_LOCALITY${SETCOLOR_NORMAL}................'${SSL_SUBJECT_LOCALITY}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: SSL_SUBJECT_LOCALITY not successfully definied by user (value=${SSL_SUBJECT_LOCALITY})"
     ((error_counter++))
   fi
   if [ ! -z "${SSL_SUBJECT_ORGANIZATION}" ]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}SSL_SUBJECT_ORGANIZATION${SETCOLOR_NORMAL}...........'${SSL_SUBJECT_ORGANIZATION}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}SSL_SUBJECT_ORGANIZATION${SETCOLOR_NORMAL}............'${SSL_SUBJECT_ORGANIZATION}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}SSL_SUBJECT_ORGANIZATION${SETCOLOR_NORMAL}...........'${SSL_SUBJECT_ORGANIZATION}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}SSL_SUBJECT_ORGANIZATION${SETCOLOR_NORMAL}............'${SSL_SUBJECT_ORGANIZATION}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: SSL_SUBJECT_ORGANIZATION not successfully definied by user (value=${SSL_SUBJECT_ORGANIZATION})"
     ((error_counter++))
   fi
   if [ ! -z "${SSL_SUBJECT_ORGANIZATIONUNIT}" ]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}SSL_SUBJECT_ORGANIZATIONUNIT${SETCOLOR_NORMAL}.......'${SSL_SUBJECT_ORGANIZATIONUNIT}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}SSL_SUBJECT_ORGANIZATIONUNIT${SETCOLOR_NORMAL}........'${SSL_SUBJECT_ORGANIZATIONUNIT}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}SSL_SUBJECT_ORGANIZATIONUNIT${SETCOLOR_NORMAL}.......'${SSL_SUBJECT_ORGANIZATIONUNIT}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}SSL_SUBJECT_ORGANIZATIONUNIT${SETCOLOR_NORMAL}........'${SSL_SUBJECT_ORGANIZATIONUNIT}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: SSL_SUBJECT_ORGANIZATIONUNIT not successfully definied by user (value=${SSL_SUBJECT_ORGANIZATIONUNIT})"
     ((error_counter++))
   fi
-  if [ ! -z "${SSL_SUBJECT_EMAIL}" ] || [[ "${SSL_SUBJECT_EMAIL}" =~ ^[a-z0-9\,\!\#\$\%\&\'\*\+\/\\\=\?\^_\`\{\|\}\~\-]+(\.[a-z0-9\,\!\#\$\%\&\'\*\+\/\\\=\?\^\_\`\{\|\}\~\-]+)*@[a-z0-9\-]+(\.[a-z0-9\-]+)*\.([a-z]{2,})$ ]]
+  if [ ! -z "${SSL_SUBJECT_EMAIL}" ] || [[ "${SSL_SUBJECT_EMAIL}" =~ "${mailaddress_regular_expression}" ]]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}SSL_SUBJECT_EMAIL${SETCOLOR_NORMAL}..................'${SSL_SUBJECT_EMAIL}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}SSL_SUBJECT_EMAIL${SETCOLOR_NORMAL}...................'${SSL_SUBJECT_EMAIL}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}SSL_SUBJECT_EMAIL${SETCOLOR_NORMAL}..................'${SSL_SUBJECT_EMAIL}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}SSL_SUBJECT_EMAIL${SETCOLOR_NORMAL}...................'${SSL_SUBJECT_EMAIL}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: SSL_SUBJECT_EMAIL not successfully definied by user (value=${SSL_SUBJECT_EMAIL})"
     ((error_counter++))
   fi
@@ -1685,165 +1692,170 @@ function verify_globalvariables() {
   fi
   if [[ "${BOOLEAN_ELASTICSEARCH_ONSTARTUP}" =~ 0|1 ]]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_ELASTICSEARCH_ONSTARTUP${SETCOLOR_NORMAL}....'${BOOLEAN_ELASTICSEARCH_ONSTARTUP}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_ELASTICSEARCH_ONSTARTUP${SETCOLOR_NORMAL}.....'${BOOLEAN_ELASTICSEARCH_ONSTARTUP}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_ELASTICSEARCH_ONSTARTUP${SETCOLOR_NORMAL}....'${BOOLEAN_ELASTICSEARCH_ONSTARTUP}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_ELASTICSEARCH_ONSTARTUP${SETCOLOR_NORMAL}.....'${BOOLEAN_ELASTICSEARCH_ONSTARTUP}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: BOOLEAN_ELASTICSEARCH_ONSTARTUP not successfully definied by user (value=${BOOLEAN_ELASTICSEARCH_ONSTARTUP})"
     ((error_counter++))
   fi
   if [ ! -z "${GRAYLOG_SECRET_PASSWORD}" ]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}GRAYLOG_SECRET_PASSWORD${SETCOLOR_NORMAL}............'${GRAYLOG_SECRET_PASSWORD}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}GRAYLOG_SECRET_PASSWORD${SETCOLOR_NORMAL}.............'${GRAYLOG_SECRET_PASSWORD}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}GRAYLOG_SECRET_PASSWORD${SETCOLOR_NORMAL}............'${GRAYLOG_SECRET_PASSWORD}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}GRAYLOG_SECRET_PASSWORD${SETCOLOR_NORMAL}.............'${GRAYLOG_SECRET_PASSWORD}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: GRAYLOG_SECRET_PASSWORD not successfully definied by user (value=${GRAYLOG_SECRET_PASSWORD})"
     ((error_counter++))
   fi
   if [ ! -z "${GRAYLOG_ADMIN_USERNAME}" ]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}GRAYLOG_ADMIN_USERNAME${SETCOLOR_NORMAL}.............'${GRAYLOG_ADMIN_USERNAME}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}GRAYLOG_ADMIN_USERNAME${SETCOLOR_NORMAL}..............'${GRAYLOG_ADMIN_USERNAME}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}GRAYLOG_ADMIN_USERNAME${SETCOLOR_NORMAL}.............'${GRAYLOG_ADMIN_USERNAME}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}GRAYLOG_ADMIN_USERNAME${SETCOLOR_NORMAL}..............'${GRAYLOG_ADMIN_USERNAME}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: GRAYLOG_ADMIN_USERNAME not successfully definied by user (value=${GRAYLOG_ADMIN_USERNAME})"
     ((error_counter++))
   fi
   if [ ! -z "${GRAYLOG_ADMIN_PASSWORD}" ]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}GRAYLOG_ADMIN_PASSWORD${SETCOLOR_NORMAL}.............'${GRAYLOG_ADMIN_PASSWORD}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}GRAYLOG_ADMIN_PASSWORD${SETCOLOR_NORMAL}..............'${GRAYLOG_ADMIN_PASSWORD}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}GRAYLOG_ADMIN_PASSWORD${SETCOLOR_NORMAL}.............'${GRAYLOG_ADMIN_PASSWORD}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}GRAYLOG_ADMIN_PASSWORD${SETCOLOR_NORMAL}..............'${GRAYLOG_ADMIN_PASSWORD}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: GRAYLOG_ADMIN_PASSWORD not successfully definied by user (value=${GRAYLOG_ADMIN_PASSWORD})"
     ((error_counter++))
   fi
   if [[ "${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}" =~ 0|1 ]]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_GRAYLOGSERVER_ONSTARTUP${SETCOLOR_NORMAL}....'${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_GRAYLOGSERVER_ONSTARTUP${SETCOLOR_NORMAL}.....'${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_GRAYLOGSERVER_ONSTARTUP${SETCOLOR_NORMAL}....'${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_GRAYLOGSERVER_ONSTARTUP${SETCOLOR_NORMAL}.....'${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: BOOLEAN_GRAYLOGSERVER_ONSTARTUP not successfully definied by user (value=${BOOLEAN_GRAYLOGSERVER_ONSTARTUP})"
     ((error_counter++))
   fi
   if [[ "${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}" =~ 0|1 ]]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP${SETCOLOR_NORMAL}....'${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP${SETCOLOR_NORMAL}.....'${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP${SETCOLOR_NORMAL}....'${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP${SETCOLOR_NORMAL}.....'${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP not successfully definied by user (value=${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP})"
     ((error_counter++))
   fi
   if [[ "${BOOLEAN_GRAYLOG_SMTP}" =~ true|false ]]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_GRAYLOG_SMTP${SETCOLOR_NORMAL}...............'${BOOLEAN_GRAYLOG_SMTP}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_GRAYLOG_SMTP${SETCOLOR_NORMAL}................'${BOOLEAN_GRAYLOG_SMTP}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_GRAYLOG_SMTP${SETCOLOR_NORMAL}...............'${BOOLEAN_GRAYLOG_SMTP}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_GRAYLOG_SMTP${SETCOLOR_NORMAL}................'${BOOLEAN_GRAYLOG_SMTP}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: BOOLEAN_GRAYLOG_SMTP not successfully definied by user (value=${BOOLEAN_GRAYLOG_SMTP})"
     ((error_counter++))
   fi
   if [[ "${BOOLEAN_GRAYLOG_SMTP}" =~ true ]]
   then
-    if [[ "${SMTP_HOST_NAME}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ "${SMTP_HOST_NAME}" =~ (25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?) ]]
+    if [[ "${SMTP_HOST_NAME}" =~ "${hostname_regular_expression}" ]] || [[ "${SMTP_HOST_NAME}" =~ "${ipaddress_regular_expression}" ]]
     then
-      echo -e "# ${SETCOLOR_SUCCESS}SMTP_HOST_NAME${SETCOLOR_NORMAL}.....................'${SMTP_HOST_NAME}'${MOVE_TO_COL1}#"
+      echo -e "# ${SETCOLOR_SUCCESS}SMTP_HOST_NAME${SETCOLOR_NORMAL}......................'${SMTP_HOST_NAME}'${MOVE_TO_COL1}#"
     else
-      echo -e "# ${SETCOLOR_FAILURE}SMTP_HOST_NAME${SETCOLOR_NORMAL}.....................'${SMTP_HOST_NAME}'${MOVE_TO_COL1}#"
+      echo -e "# ${SETCOLOR_FAILURE}SMTP_HOST_NAME${SETCOLOR_NORMAL}......................'${SMTP_HOST_NAME}'${MOVE_TO_COL1}#"
       log "ERROR" "Global variables: SMTP_HOST_NAME not successfully definied by user (value=${SMTP_HOST_NAME})"
       ((error_counter++))
     fi
   else
-    echo -e "# SMTP_HOST_NAME.....................'${SMTP_HOST_NAME}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_DISABLE}SMTP_HOST_NAME${SETCOLOR_NORMAL}......................'${SMTP_HOST_NAME}'${MOVE_TO_COL1}#"
   fi
   if [[ "${BOOLEAN_GRAYLOG_SMTP}" =~ true ]]
   then
-    if [[ "${SMTP_DOMAIN_NAME}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
+    if [[ "${SMTP_DOMAIN_NAME}" =~ "${hostname_regular_expression}" ]]
     then
-      echo -e "# ${SETCOLOR_SUCCESS}SMTP_DOMAIN_NAME${SETCOLOR_NORMAL}...................'${SMTP_DOMAIN_NAME}'${MOVE_TO_COL1}#"
+      echo -e "# ${SETCOLOR_SUCCESS}SMTP_DOMAIN_NAME${SETCOLOR_NORMAL}....................'${SMTP_DOMAIN_NAME}'${MOVE_TO_COL1}#"
     else
-      echo -e "# ${SETCOLOR_FAILURE}SMTP_DOMAIN_NAME${SETCOLOR_NORMAL}...................'${SMTP_DOMAIN_NAME}'${MOVE_TO_COL1}#"
+      echo -e "# ${SETCOLOR_FAILURE}SMTP_DOMAIN_NAME${SETCOLOR_NORMAL}....................'${SMTP_DOMAIN_NAME}'${MOVE_TO_COL1}#"
       log "ERROR" "Global variables: SMTP_DOMAIN_NAME not successfully definied by user (value=${SMTP_DOMAIN_NAME})"
       ((error_counter++))
     fi
   else
-    echo -e "# SMTP_DOMAIN_NAME...................'${SMTP_DOMAIN_NAME}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_DISABLE}SMTP_DOMAIN_NAME${SETCOLOR_NORMAL}....................'${SMTP_DOMAIN_NAME}'${MOVE_TO_COL1}#"
   fi
   if [[ "${BOOLEAN_GRAYLOG_SMTP}" =~ true ]]
   then
     if [[ "${SMTP_PORT_NUMBER}" =~ 25|465|587 ]]
     then
-      echo -e "# ${SETCOLOR_SUCCESS}SMTP_PORT_NUMBER${SETCOLOR_NORMAL}...................'${SMTP_PORT_NUMBER}'${MOVE_TO_COL1}#"
+      echo -e "# ${SETCOLOR_SUCCESS}SMTP_PORT_NUMBER${SETCOLOR_NORMAL}....................'${SMTP_PORT_NUMBER}'${MOVE_TO_COL1}#"
     else
-      echo -e "# ${SETCOLOR_FAILURE}SMTP_PORT_NUMBER${SETCOLOR_NORMAL}...................'${SMTP_PORT_NUMBER}'${MOVE_TO_COL1}#"
+      echo -e "# ${SETCOLOR_FAILURE}SMTP_PORT_NUMBER${SETCOLOR_NORMAL}....................'${SMTP_PORT_NUMBER}'${MOVE_TO_COL1}#"
       log "ERROR" "Global variables: SMTP_PORT_NUMBER not successfully definied by user (value=${SMTP_PORT_NUMBER})"
       ((error_counter++))
     fi
   else
-    echo -e "# SMTP_PORT_NUMBER...................'${SMTP_PORT_NUMBER}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_DISABLE}SMTP_PORT_NUMBER${SETCOLOR_NORMAL}....................'${SMTP_PORT_NUMBER}'${MOVE_TO_COL1}#"
   fi
-  if [[ "${BOOLEAN_SMTP_AUTH}" =~ true|false ]]
+  if [[ "${BOOLEAN_GRAYLOG_SMTP}" =~ true ]]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_SMTP_AUTH${SETCOLOR_NORMAL}..................'${BOOLEAN_SMTP_AUTH}'${MOVE_TO_COL1}#"
+    if [[ "${BOOLEAN_SMTP_AUTH}" =~ true|false ]]
+    then
+      echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_SMTP_AUTH${SETCOLOR_NORMAL}...................'${BOOLEAN_SMTP_AUTH}'${MOVE_TO_COL1}#"
+    else
+      echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_SMTP_AUTH${SETCOLOR_NORMAL}...................'${BOOLEAN_SMTP_AUTH}'${MOVE_TO_COL1}#"
+      log "ERROR" "Global variables: BOOLEAN_SMTP_AUTH not successfully definied by user (value=${BOOLEAN_SMTP_AUTH})"
+      ((error_counter++))
+    fi
   else
-    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_SMTP_AUTH${SETCOLOR_NORMAL}..................'${BOOLEAN_SMTP_AUTH}'${MOVE_TO_COL1}#"
-    log "ERROR" "Global variables: BOOLEAN_SMTP_AUTH not successfully definied by user (value=${BOOLEAN_SMTP_AUTH})"
-    ((error_counter++))
+    echo -e "# ${SETCOLOR_DISABLE}BOOLEAN_SMTP_AUTH${SETCOLOR_NORMAL}...................'${BOOLEAN_SMTP_AUTH}'${MOVE_TO_COL1}#"
   fi
   if [[ "${BOOLEAN_GRAYLOG_SMTP}" =~ true ]]
   then
     if [[ "${BOOLEAN_SMTP_TLS}" =~ true|false ]]
     then
-      echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_SMTP_TLS${SETCOLOR_NORMAL}...................'${BOOLEAN_SMTP_TLS}'${MOVE_TO_COL1}#"
+      echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_SMTP_TLS${SETCOLOR_NORMAL}....................'${BOOLEAN_SMTP_TLS}'${MOVE_TO_COL1}#"
     else
-      echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_SMTP_TLS${SETCOLOR_NORMAL}...................'${BOOLEAN_SMTP_TLS}'${MOVE_TO_COL1}#"
+      echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_SMTP_TLS${SETCOLOR_NORMAL}....................'${BOOLEAN_SMTP_TLS}'${MOVE_TO_COL1}#"
       log "ERROR" "Global variables: BOOLEAN_SMTP_TLS not successfully definied by user (value=${BOOLEAN_SMTP_TLS})"
       ((error_counter++))
     fi
   else
-    echo -e "# BOOLEAN_SMTP_TLS...................'${BOOLEAN_SMTP_TLS}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_DISABLE}BOOLEAN_SMTP_TLS${SETCOLOR_NORMAL}....................'${BOOLEAN_SMTP_TLS}'${MOVE_TO_COL1}#"
   fi
   if [[ "${BOOLEAN_GRAYLOG_SMTP}" =~ true ]]
   then
     if [[ "${BOOLEAN_SMTP_SSL}" =~ true|false ]]
     then
-      echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_SMTP_SSL${SETCOLOR_NORMAL}...................'${BOOLEAN_SMTP_SSL}'${MOVE_TO_COL1}#"
+      echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_SMTP_SSL${SETCOLOR_NORMAL}....................'${BOOLEAN_SMTP_SSL}'${MOVE_TO_COL1}#"
     else
-      echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_SMTP_SSL${SETCOLOR_NORMAL}...................'${BOOLEAN_SMTP_SSL}'${MOVE_TO_COL1}#"
+      echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_SMTP_SSL${SETCOLOR_NORMAL}....................'${BOOLEAN_SMTP_SSL}'${MOVE_TO_COL1}#"
       log "ERROR" "Global variables: BOOLEAN_SMTP_SSL not successfully definied by user (value=${BOOLEAN_SMTP_SSL})"
       ((error_counter++))
     fi
   else
-    echo -e "# BOOLEAN_SMTP_SSL...................'${BOOLEAN_SMTP_SSL}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_DISABLE}BOOLEAN_SMTP_SSL${SETCOLOR_NORMAL}....................'${BOOLEAN_SMTP_SSL}'${MOVE_TO_COL1}#"
   fi
   if [[ "${BOOLEAN_SMTP_AUTH}" =~ true ]]
   then
     if [ ! -z "${SMTP_AUTH_USERNAME}" ]
     then
-      echo -e "# ${SETCOLOR_SUCCESS}SMTP_AUTH_USERNAME${SETCOLOR_NORMAL}.................'${SMTP_AUTH_USERNAME}'${MOVE_TO_COL1}#"
+      echo -e "# ${SETCOLOR_SUCCESS}SMTP_AUTH_USERNAME${SETCOLOR_NORMAL}..................'${SMTP_AUTH_USERNAME}'${MOVE_TO_COL1}#"
     else
-      echo -e "# ${SETCOLOR_FAILURE}SMTP_AUTH_USERNAME${SETCOLOR_NORMAL}.................'${SMTP_AUTH_USERNAME}'${MOVE_TO_COL1}#"
+      echo -e "# ${SETCOLOR_FAILURE}SMTP_AUTH_USERNAME${SETCOLOR_NORMAL}..................'${SMTP_AUTH_USERNAME}'${MOVE_TO_COL1}#"
       log "ERROR" "Global variables: SMTP_AUTH_USERNAME not successfully definied by user (value=${SMTP_AUTH_USERNAME})"
       ((error_counter++))
     fi
   else
-    echo -e "# SMTP_AUTH_USERNAME.................'${SMTP_AUTH_USERNAME}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_DISABLE}SMTP_AUTH_USERNAME${SETCOLOR_NORMAL}..................'${SMTP_AUTH_USERNAME}'${MOVE_TO_COL1}#"
   fi
   if [[ "${BOOLEAN_SMTP_AUTH}" =~ true ]]
   then
     if [ ! -z "${SMTP_AUTH_PASSWORD}" ]
     then
-      echo -e "# ${SETCOLOR_SUCCESS}SMTP_AUTH_PASSWORD${SETCOLOR_NORMAL}.................'${SMTP_AUTH_PASSWORD}'${MOVE_TO_COL1}#"
+      echo -e "# ${SETCOLOR_SUCCESS}SMTP_AUTH_PASSWORD${SETCOLOR_NORMAL}..................'${SMTP_AUTH_PASSWORD}'${MOVE_TO_COL1}#"
     else
-      echo -e "# ${SETCOLOR_FAILURE}SMTP_AUTH_PASSWORD${SETCOLOR_NORMAL}.................'${SMTP_AUTH_PASSWORD}'${MOVE_TO_COL1}#"
+      echo -e "# ${SETCOLOR_FAILURE}SMTP_AUTH_PASSWORD${SETCOLOR_NORMAL}..................'${SMTP_AUTH_PASSWORD}'${MOVE_TO_COL1}#"
       log "ERROR" "Global variables: SMTP_AUTH_USERNAME not successfully definied by user (value=${SMTP_AUTH_USERNAME})"
       ((error_counter++))
     fi
   else
-    echo -e "# SMTP_AUTH_PASSWORD.................'${SMTP_AUTH_PASSWORD}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_DISABLE}SMTP_AUTH_PASSWORD${SETCOLOR_NORMAL}..................'${SMTP_AUTH_PASSWORD}'${MOVE_TO_COL1}#"
   fi
   
   if [[ "${BOOLEAN_NGINX_ONSTARTUP}" =~ 0|1 ]]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_NGINX_ONSTARTUP${SETCOLOR_NORMAL}............'${BOOLEAN_NGINX_ONSTARTUP}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_NGINX_ONSTARTUP${SETCOLOR_NORMAL}.............'${BOOLEAN_NGINX_ONSTARTUP}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_NGINX_ONSTARTUP${SETCOLOR_NORMAL}............'${BOOLEAN_NGINX_ONSTARTUP}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_NGINX_ONSTARTUP${SETCOLOR_NORMAL}.............'${BOOLEAN_NGINX_ONSTARTUP}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: BOOLEAN_NGINX_ONSTARTUP not successfully definied by user (value=${BOOLEAN_NGINX_ONSTARTUP})"
     ((error_counter++))
   fi
