@@ -226,9 +226,7 @@ function set_globalvariables() {
   local command_output_message=
   local old_input_value=
   local installation_cfg_tmpfile="${INSTALLATION_LOG_FOLDER}/install_graylog_${INSTALLATION_LOG_TIMESTAMP}.cfg"
-  local ipaddress_regular_expression='(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)'
-  local hostname_regular_expression='^(([a-zA-Z](-?[a-zA-Z0-9])*).)*[a-zA-Z](-?[a-zA-Z0-9])+.[a-zA-Z]{2,}$'
-  local mailaddress_regular_expression='^test@email.fr$'
+  local mailaddress_regular_expression="^[a-z0-9,!#\$%&'\*\+/=\?\^_\`\{\|}~-]+(\.[a-z0-9,!#\$%&'\*\+/=\?\^_\`\{\|}~-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*\.([a-z]{2,})$"
   if [ "${SCRIPT_MODE}" == "i" ]
   then
     command_output_message=$(test_file ${installation_cfg_tmpfile})
@@ -411,7 +409,7 @@ function set_globalvariables() {
   then
     if [ -z "${NEW_NTP_ADDRESS}" ]
     then
-      while [ -z "${NEW_NTP_ADDRESS}" ] || [[ ! "${NEW_NTP_ADDRESS}" =~ "${hostname_regular_expression}" ]] || [[ "${NEW_NTP_ADDRESS}" =~ "${ipaddress_regular_expression}" ]]
+      while [[ ! "${NEW_NTP_ADDRESS}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] && [[ ! "${NEW_NTP_ADDRESS}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
       do
         echo -e "\nType IP address or hostname of NTP server, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_INFO}ntp.test.fr${SETCOLOR_NORMAL}]:"
@@ -428,7 +426,7 @@ function set_globalvariables() {
       then
         old_input_value=${NEW_NTP_ADDRESS}
         NEW_NTP_ADDRESS=
-        while [ -z "${NEW_NTP_ADDRESS}" ] || [[ ! "${NEW_NTP_ADDRESS}" =~ "${hostname_regular_expression}" ]] || [[ ! "${NEW_NTP_ADDRESS}" =~ "${ipaddress_regular_expression}" ]]
+        while [[ ! "${NEW_NTP_ADDRESS}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] && [[ ! "${NEW_NTP_ADDRESS}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
         do
           echo -e "\nType IP address or hostname of NTP server, followed by [ENTER]"
           echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
@@ -650,7 +648,7 @@ function set_globalvariables() {
   echo "BOOLEAN_MONGO_ONSTARTUP='${BOOLEAN_MONGO_ONSTARTUP}'" >> ${installation_cfg_tmpfile}
   if [ -z "${SSL_KEY_SIZE}" ]
   then
-    while [ -z "${SSL_KEY_SIZE}" ] || [[ ! "${SSL_KEY_SIZE}" =~ 512|1024|2048|4096 ]]
+    while [[ ! "${SSL_KEY_SIZE}" =~ 512|1024|2048|4096 ]]
     do
       echo -e "\nType size of SSL private key (possible values : ${SETCOLOR_FAILURE}512${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}1024${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}2048${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}4096${SETCOLOR_NORMAL}), followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}2048${SETCOLOR_NORMAL}]:"
@@ -667,7 +665,7 @@ function set_globalvariables() {
     then
       old_input_value=${SSL_KEY_SIZE}
       SSL_KEY_SIZE=
-      while [ -z "${SSL_KEY_SIZE}" ] || [[ ! "${SSL_KEY_SIZE}" =~ 512|1024|2048|4096 ]]
+      while [[ ! "${SSL_KEY_SIZE}" =~ 512|1024|2048|4096 ]]
       do
         echo -e "\nType size of SSL private key (possible values : ${SETCOLOR_FAILURE}512${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}1024${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}2048${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}4096${SETCOLOR_NORMAL}), followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
@@ -685,7 +683,7 @@ function set_globalvariables() {
   echo "SSL_KEY_SIZE='${SSL_KEY_SIZE}'" >> ${installation_cfg_tmpfile}
   if [ -z "${SSL_KEY_DURATION}" ]
   then
-    while [ -z "${SSL_KEY_DURATION}" ] || [[ ! "${SSL_KEY_DURATION}" =~ [0-9]{1,5} ]]
+    while [[ ! "${SSL_KEY_DURATION}" =~ [0-9]{1,5} ]]
     do
       echo -e "\nType period of validity (in day) of SSL certificate, followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}365${SETCOLOR_NORMAL}]:"
@@ -702,7 +700,7 @@ function set_globalvariables() {
     then
       old_input_value=${SSL_KEY_DURATION}
       SSL_KEY_DURATION=
-      while [ -z "${SSL_KEY_DURATION}" ] || [[ ! "${SSL_KEY_DURATION}" =~ [0-9]{1,5} ]]
+      while [[ ! "${SSL_KEY_DURATION}" =~ [0-9]{1,5} ]]
       do
         echo -e "\nType period of validity (in day) of SSL certificate, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
@@ -720,7 +718,7 @@ function set_globalvariables() {
   echo "SSL_KEY_DURATION='${SSL_KEY_DURATION}'" >> ${installation_cfg_tmpfile}
   if [ -z "${SSL_SUBJECT_COUNTRY}" ]
   then
-    while [ -z "${SSL_SUBJECT_COUNTRY}" ] || [[ ! "${SSL_SUBJECT_COUNTRY}" =~ [A-Z]{2} ]]
+    while [[ ! "${SSL_SUBJECT_COUNTRY}" =~ [A-Z]{2} ]]
     do
       echo -e "\nType country code of SSL certificate, followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}FR${SETCOLOR_NORMAL}]:"
@@ -737,7 +735,7 @@ function set_globalvariables() {
     then
       old_input_value=${SSL_SUBJECT_COUNTRY}
       SSL_SUBJECT_COUNTRY=
-      while [ -z "${SSL_SUBJECT_COUNTRY}" ] || [[ ! "${SSL_SUBJECT_COUNTRY}" =~ [A-Z]{2} ]]
+      while [[ ! "${SSL_SUBJECT_COUNTRY}" =~ [A-Z]{2} ]]
       do
         echo -e "\nType country code of SSL certificate, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
@@ -895,7 +893,7 @@ function set_globalvariables() {
   echo "SSL_SUBJECT_ORGANIZATIONUNIT='${SSL_SUBJECT_ORGANIZATIONUNIT}'" >> ${installation_cfg_tmpfile}
   if [ -z "${SSL_SUBJECT_EMAIL}" ]
   then
-    while [ -z "${SSL_SUBJECT_EMAIL}" ] || [[ ! "${SSL_SUBJECT_EMAIL}" =~ "${mailaddress_regular_expression}" ]]
+    while [[ ! "${SSL_SUBJECT_EMAIL}" =~ ${mailaddress_regular_expression} ]]
     do
       echo -e "\nType organization unit name of SSL certificate, followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}mail.address@test.fr${SETCOLOR_NORMAL}]:"
@@ -912,7 +910,7 @@ function set_globalvariables() {
     then
       old_input_value=${SSL_SUBJECT_EMAIL}
       SSL_SUBJECT_EMAIL=
-      while [ -z "${SSL_SUBJECT_EMAIL}" ] || [[ ! "${SSL_SUBJECT_EMAIL}" =~ "${mailaddress_regular_expression}" ]]
+      while [[ ! "${SSL_SUBJECT_EMAIL}" =~ ${mailaddress_regular_expression} ]]
       do
         echo -e "\nType organization unit name of SSL certificate, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
@@ -1126,7 +1124,7 @@ function set_globalvariables() {
   then
     if [ -z "${SMTP_HOST_NAME}" ]
     then
-      while [ -z "${SMTP_HOST_NAME}" ] || [[ ! "${SMTP_HOST_NAME}" =~ "${ipaddress_regular_expression}" ]] || [[ ! "${SMTP_HOST_NAME}" =~ "${hostname_regular_expression}" ]]
+      while [[ ! "${SMTP_HOST_NAME}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] && [[ ! "${SMTP_HOST_NAME}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
       do
         echo -e "\nType FQDN of SMTP server, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_INFO}mail.example.com${SETCOLOR_NORMAL}]:"
@@ -1143,7 +1141,7 @@ function set_globalvariables() {
       then
         old_input_value=${SMTP_HOST_NAME}
         SMTP_HOST_NAME=
-        while [ -z "${SMTP_HOST_NAME}" ] || [[ ! "${SMTP_HOST_NAME}" =~ "${ipaddress_regular_expression}" ]] || [[ ! "${SMTP_HOST_NAME}" =~ "${hostname_regular_expression}" ]]
+        while [[ ! "${SMTP_HOST_NAME}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] && [[ ! "${SMTP_HOST_NAME}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
         do
           echo -e "\nType FQDN of SMTP server, followed by [ENTER]"
           echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
@@ -1160,7 +1158,7 @@ function set_globalvariables() {
     fi
     if [ -z "${SMTP_DOMAIN_NAME}" ]
     then
-      while [ -z "${SMTP_DOMAIN_NAME}" ] || [[ ! "${SMTP_DOMAIN_NAME}" =~ "${hostname_regular_expression}" ]]
+      while [[ ! "${SMTP_HOST_NAME}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
       do
         echo -e "\nType SMTP domain name, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_INFO}example.com${SETCOLOR_NORMAL}]:"
@@ -1177,7 +1175,7 @@ function set_globalvariables() {
       then
         old_input_value=${SMTP_DOMAIN_NAME}
         SMTP_DOMAIN_NAME=
-        while [ -z "${SMTP_DOMAIN_NAME}" ] || [[ ! "${SMTP_DOMAIN_NAME}" =~ "${hostname_regular_expression}" ]]
+        while [[ ! "${SMTP_HOST_NAME}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
         do
           echo -e "\nType SMTP domain name, followed by [ENTER]"
           echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
@@ -1194,7 +1192,7 @@ function set_globalvariables() {
     fi
     if [ -z "${SMTP_PORT_NUMBER}" ]
     then
-      while [ -z "${SMTP_PORT_NUMBER}" ] || [[ ! "${SMTP_PORT_NUMBER}" =~ 25|465|587 ]]
+      while [[ ! "${SMTP_PORT_NUMBER}" =~ 25|465|587 ]]
       do
         echo -e "\nType SMTP port number (possible values : ${SETCOLOR_FAILURE}25${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}465${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}587${SETCOLOR_NORMAL}), followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_INFO}587${SETCOLOR_NORMAL}]:"
@@ -1211,7 +1209,7 @@ function set_globalvariables() {
       then
         old_input_value=${SMTP_PORT_NUMBER}
         SMTP_PORT_NUMBER=
-        while [ -z "${SMTP_PORT_NUMBER}" ] || [[ ! "${SMTP_PORT_NUMBER}" =~ 25|465|587 ]]
+        while [[ ! "${SMTP_PORT_NUMBER}" =~ 25|465|587 ]]
         do
           echo -e "\nType SMTP port number (possible values : ${SETCOLOR_FAILURE}25${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}465${SETCOLOR_NORMAL}|${SETCOLOR_FAILURE}587${SETCOLOR_NORMAL}), followed by [ENTER]"
           echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
@@ -1506,9 +1504,7 @@ function set_globalvariables() {
 # Verify all global variables
 function verify_globalvariables() {
   local error_counter=0
-  local ipaddress_regular_expression='(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)'
-  local hostname_regular_expression='^(([a-zA-Z](-?[a-zA-Z0-9])*).)*[a-zA-Z](-?[a-zA-Z0-9])+.[a-zA-Z]{2,}$'
-  local mailaddress_regular_expression='^test@email.fr$'
+  local mailaddress_regular_expression="^[a-z0-9,!#\$%&'\*\+/=\?\^_\`\{\|}~-]+(\.[a-z0-9,!#\$%&'\*\+/=\?\^_\`\{\|}~-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*\.([a-z]{2,})$"
   echo -e "\n###################################################################"
   echo -e "#${MOVE_TO_COL1}#\n# ${SETCOLOR_WARNING}Check your settings before continue${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
   echo -e "#${MOVE_TO_COL1}#"
@@ -1559,7 +1555,7 @@ function verify_globalvariables() {
   fi
   if [[ "${BOOLEAN_NTP_CONFIGURE}" == "1" ]]
   then
-    if [ -z "${NEW_NTP_ADDRESS}" ] || [[ "${NEW_NTP_ADDRESS}" =~ "${hostname_regular_expression}" ]] || [[ "${NEW_NTP_ADDRESS}" =~ "${ipaddress_regular_expression}" ]]
+    if [[ "${NEW_NTP_ADDRESS}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] || [[ "${NEW_NTP_ADDRESS}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
     then
       echo -e "# ${SETCOLOR_SUCCESS}NEW_NTP_ADDRESS${SETCOLOR_NORMAL}.....................'${NEW_NTP_ADDRESS}'${MOVE_TO_COL1}#"
     else
@@ -1674,7 +1670,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: SSL_SUBJECT_ORGANIZATIONUNIT not successfully definied by user (value=${SSL_SUBJECT_ORGANIZATIONUNIT})"
     ((error_counter++))
   fi
-  if [ ! -z "${SSL_SUBJECT_EMAIL}" ] || [[ "${SSL_SUBJECT_EMAIL}" =~ "${mailaddress_regular_expression}" ]]
+  if [[ "${SSL_SUBJECT_EMAIL}" =~ ${mailaddress_regular_expression} ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}SSL_SUBJECT_EMAIL${SETCOLOR_NORMAL}...................'${SSL_SUBJECT_EMAIL}'${MOVE_TO_COL1}#"
   else
@@ -1748,7 +1744,7 @@ function verify_globalvariables() {
   fi
   if [[ "${BOOLEAN_GRAYLOG_SMTP}" =~ true ]]
   then
-    if [[ "${SMTP_HOST_NAME}" =~ "${hostname_regular_expression}" ]] || [[ "${SMTP_HOST_NAME}" =~ "${ipaddress_regular_expression}" ]]
+    if [[ "${SMTP_HOST_NAME}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] || [[ "${SMTP_HOST_NAME}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
     then
       echo -e "# ${SETCOLOR_SUCCESS}SMTP_HOST_NAME${SETCOLOR_NORMAL}......................'${SMTP_HOST_NAME}'${MOVE_TO_COL1}#"
     else
@@ -1761,7 +1757,7 @@ function verify_globalvariables() {
   fi
   if [[ "${BOOLEAN_GRAYLOG_SMTP}" =~ true ]]
   then
-    if [[ "${SMTP_DOMAIN_NAME}" =~ "${hostname_regular_expression}" ]]
+    if [[ "${SMTP_DOMAIN_NAME}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
     then
       echo -e "# ${SETCOLOR_SUCCESS}SMTP_DOMAIN_NAME${SETCOLOR_NORMAL}....................'${SMTP_DOMAIN_NAME}'${MOVE_TO_COL1}#"
     else
@@ -3678,7 +3674,7 @@ function main {
       abort_installation
     fi
   fi
-#  get_sysinfo
+  get_sysinfo
 #  generate_sslkeys
 #  configure_yum
 #  initialize_yum
