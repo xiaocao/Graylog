@@ -281,17 +281,17 @@ function set_globalvariables() {
     yes_no_function "Do you want to use RSA authentication on GRAYLOG server ?" "yes"
     if [ "${?}" == "0" ]
     then
-      BOOLEAN_RSA_AUTH=1
+      BOOLEAN_RSA_AUTH="true"
     else
-      BOOLEAN_RSA_AUTH=0
+      BOOLEAN_RSA_AUTH="false"
     fi
   else
-    if [ "${BOOLEAN_RSA_AUTH}" == "1" ]
+    if [[ "${BOOLEAN_RSA_AUTH}" =~ true ]]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not use${SETCOLOR_NORMAL} RSA authentication ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_RSA_AUTH=0
+        BOOLEAN_RSA_AUTH="false"
       else
         BOOLEAN_RSA_AUTH=${BOOLEAN_RSA_AUTH}
       fi
@@ -299,13 +299,13 @@ function set_globalvariables() {
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}use${SETCOLOR_NORMAL} RSA authentication ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_RSA_AUTH=1
+        BOOLEAN_RSA_AUTH="true"
       else
         BOOLEAN_RSA_AUTH=${BOOLEAN_RSA_AUTH}
       fi
     fi
   fi
-  if [ "${BOOLEAN_RSA_AUTH}" == "1" ]
+  if [[ "${BOOLEAN_RSA_AUTH}" =~ true ]]
   then
     if [ -z "${RSA_PUBLIC_KEY}" ]
     then
@@ -316,10 +316,10 @@ function set_globalvariables() {
         read RSA_PUBLIC_KEY
       done
     else
+      old_input_value=${RSA_PUBLIC_KEY}
       yes_no_function "Can you confirm you want to modify current RSA public key" "yes"
       if [ "${?}" == "0" ]
       then
-        old_input_value=${RSA_PUBLIC_KEY}
         RSA_PUBLIC_KEY=
         while [ -z "${RSA_PUBLIC_KEY}" ] || [[ ! "${RSA_PUBLIC_KEY}" =~ ^ssh-rsa.* ]]
         do
@@ -355,10 +355,10 @@ function set_globalvariables() {
       fi
     done
   else
+    old_input_value=${SERVER_TIME_ZONE}
     yes_no_function "Can you confirm you want to modify current time zone ?" "yes"
     if [ "${?}" == "0" ]
     then
-      old_input_value=${SERVER_TIME_ZONE}
       SERVER_TIME_ZONE=
       while [ -z "${SERVER_TIME_ZONE}" ]
       do
@@ -381,17 +381,17 @@ function set_globalvariables() {
     yes_no_function "Do you want to configure NTP service ?" "yes"
     if [ "${?}" == "0" ]
     then
-      BOOLEAN_NTP_CONFIGURE=1
+      BOOLEAN_NTP_CONFIGURE="true"
     else
-      BOOLEAN_NTP_CONFIGURE=0
+      BOOLEAN_NTP_CONFIGURE="false"
     fi
   else
-    if [ "${BOOLEAN_NTP_CONFIGURE}" == "1" ]
+    if [[ "${BOOLEAN_NTP_CONFIGURE}" =~ true ]]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not configure${SETCOLOR_NORMAL} NTP service ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_NTP_CONFIGURE=0
+        BOOLEAN_NTP_CONFIGURE="false"
       else
         BOOLEAN_NTP_CONFIGURE=${BOOLEAN_NTP_CONFIGURE}
       fi
@@ -399,13 +399,13 @@ function set_globalvariables() {
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}configure${SETCOLOR_NORMAL} NTP service ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_NTP_CONFIGURE=1
+        BOOLEAN_NTP_CONFIGURE="true"
       else
         BOOLEAN_NTP_CONFIGURE=${BOOLEAN_NTP_CONFIGURE}
       fi
     fi
   fi
-  if [ "${BOOLEAN_NTP_CONFIGURE}" == "1" ]
+  if [[ "${BOOLEAN_NTP_CONFIGURE}" =~ true ]]
   then
     if [ -z "${NEW_NTP_ADDRESS}" ]
     then
@@ -420,11 +420,11 @@ function set_globalvariables() {
           NEW_NTP_ADDRESS='ntp.test.fr'
         fi
       done
-      else
+    else
+      old_input_value=${NEW_NTP_ADDRESS}
       yes_no_function "Can you confirm you want to modify current NTP server ?" "yes"
       if [ "${?}" == "0" ]
       then
-        old_input_value=${NEW_NTP_ADDRESS}
         NEW_NTP_ADDRESS=
         while [[ ! "${NEW_NTP_ADDRESS}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] && [[ ! "${NEW_NTP_ADDRESS}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
         do
@@ -451,17 +451,17 @@ function set_globalvariables() {
     yes_no_function "Do you want to add NTP service on startup ?" "yes"
     if [ "${?}" == "0" ]
     then
-      BOOLEAN_NTP_ONSTARTUP=1
+      BOOLEAN_NTP_ONSTARTUP="true"
     else
-      BOOLEAN_NTP_ONSTARTUP=0
+      BOOLEAN_NTP_ONSTARTUP="false"
     fi
   else
-    if [ "${BOOLEAN_NTP_ONSTARTUP}" == "1" ]
+    if [[ "${BOOLEAN_NTP_ONSTARTUP}" =~ true ]]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} NTP service on startup ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_NTP_ONSTARTUP=0
+        BOOLEAN_NTP_ONSTARTUP="false"
       else
         BOOLEAN_NTP_ONSTARTUP=${BOOLEAN_NTP_ONSTARTUP}
       fi
@@ -469,7 +469,7 @@ function set_globalvariables() {
       yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} NTP service on startup ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_NTP_ONSTARTUP=1
+        BOOLEAN_NTP_ONSTARTUP="true"
       else
         BOOLEAN_NTP_ONSTARTUP=${BOOLEAN_NTP_ONSTARTUP}
       fi
@@ -490,10 +490,10 @@ function set_globalvariables() {
       fi
     done
   else
+    old_input_value=${MONGO_ADMIN_PASSWORD}
     yes_no_function "Can you confirm you want to modify current password of Mongo administrator ?" "yes"
     if [ "${?}" == "0" ]
     then
-      old_input_value=${MONGO_ADMIN_PASSWORD}
       MONGO_ADMIN_PASSWORD=
       while [ -z "${MONGO_ADMIN_PASSWORD}" ]
       do
@@ -525,10 +525,10 @@ function set_globalvariables() {
       fi
     done
   else
+    old_input_value=${MONGO_GRAYLOG_DATABASE}
     yes_no_function "Can you confirm you want to modify current name of Graylog Mongo database ?" "yes"
     if [ "${?}" == "0" ]
     then
-      old_input_value=${MONGO_GRAYLOG_DATABASE}
       MONGO_GRAYLOG_DATABASE=
       while [ -z "${MONGO_GRAYLOG_DATABASE}" ]
       do
@@ -560,10 +560,10 @@ function set_globalvariables() {
       fi
     done
   else
+    old_input_value=${MONGO_GRAYLOG_USER}
     yes_no_function "Can you confirm you want to modify current login of Mongo Graylog user ?" "yes"
     if [ "${?}" == "0" ]
     then
-      old_input_value=${MONGO_GRAYLOG_USER}
       MONGO_GRAYLOG_USER=
       while [ -z "${MONGO_GRAYLOG_USER}" ]
       do
@@ -595,10 +595,10 @@ function set_globalvariables() {
       fi
     done
   else
+    old_input_value=${MONGO_GRAYLOG_PASSWORD}
     yes_no_function "Can you confirm you want to modify current password of Mongo Graylog user ?" "yes"
     if [ "${?}" == "0" ]
     then
-      old_input_value=${MONGO_GRAYLOG_PASSWORD}
       MONGO_GRAYLOG_PASSWORD=
       while [ -z "${MONGO_GRAYLOG_PASSWORD}" ]
       do
@@ -621,17 +621,17 @@ function set_globalvariables() {
     yes_no_function "Do you want to add Mongo database server on startup ?" "yes"
     if [ "${?}" == "0" ]
     then
-      BOOLEAN_MONGO_ONSTARTUP=1
+      BOOLEAN_MONGO_ONSTARTUP="true"
     else
-      BOOLEAN_MONGO_ONSTARTUP=0
+      BOOLEAN_MONGO_ONSTARTUP="false"
     fi
   else
-    if [ "${BOOLEAN_MONGO_ONSTARTUP}" == "1" ]
+    if [[ "${BOOLEAN_MONGO_ONSTARTUP}" =~ true ]]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} Mongo database server on startup ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_MONGO_ONSTARTUP=0
+        BOOLEAN_MONGO_ONSTARTUP="false"
       else
         BOOLEAN_MONGO_ONSTARTUP=${BOOLEAN_MONGO_ONSTARTUP}
       fi
@@ -639,7 +639,7 @@ function set_globalvariables() {
       yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} Mongo database server on startup ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_MONGO_ONSTARTUP=1
+        BOOLEAN_MONGO_ONSTARTUP="true"
       else
         BOOLEAN_MONGO_ONSTARTUP=${BOOLEAN_MONGO_ONSTARTUP}
       fi
@@ -660,10 +660,10 @@ function set_globalvariables() {
       fi
     done
   else
+    old_input_value=${SSL_KEY_SIZE}
     yes_no_function "Can you confirm you want to modify current size of SSL private key ?" "yes"
     if [ "${?}" == "0" ]
     then
-      old_input_value=${SSL_KEY_SIZE}
       SSL_KEY_SIZE=
       while [[ ! "${SSL_KEY_SIZE}" =~ 512|1024|2048|4096 ]]
       do
@@ -695,10 +695,10 @@ function set_globalvariables() {
       fi
     done
   else
+    old_input_value=${SSL_KEY_DURATION}
     yes_no_function "Can you confirm you want to modify current period of validity of SSL Certificate ?" "yes"
     if [ "${?}" == "0" ]
     then
-      old_input_value=${SSL_KEY_DURATION}
       SSL_KEY_DURATION=
       while [[ ! "${SSL_KEY_DURATION}" =~ [0-9]{1,5} ]]
       do
@@ -718,7 +718,7 @@ function set_globalvariables() {
   echo "SSL_KEY_DURATION='${SSL_KEY_DURATION}'" >> ${installation_cfg_tmpfile}
   if [ -z "${SSL_SUBJECT_COUNTRY}" ]
   then
-    while [[ ! "${SSL_SUBJECT_COUNTRY}" =~ [A-Z]{2} ]]
+    while [[ ! "${SSL_SUBJECT_COUNTRY}" =~ [A-Z]{2,3} ]]
     do
       echo -e "\nType country code of SSL certificate, followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}FR${SETCOLOR_NORMAL}]:"
@@ -730,12 +730,12 @@ function set_globalvariables() {
       fi
     done
   else
+    old_input_value=${SSL_SUBJECT_COUNTRY}
     yes_no_function "Can you confirm you want to modify current country code of SSL Certificate ?" "yes"
     if [ "${?}" == "0" ]
     then
-      old_input_value=${SSL_SUBJECT_COUNTRY}
       SSL_SUBJECT_COUNTRY=
-      while [[ ! "${SSL_SUBJECT_COUNTRY}" =~ [A-Z]{2} ]]
+      while [[ ! "${SSL_SUBJECT_COUNTRY}" =~ [A-Z]{2,3} ]]
       do
         echo -e "\nType country code of SSL certificate, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
@@ -765,10 +765,10 @@ function set_globalvariables() {
       fi
     done
   else
+    old_input_value=${SSL_SUBJECT_STATE}
     yes_no_function "Can you confirm you want to modify current state of SSL Certificate ?" "yes"
     if [ "${?}" == "0" ]
     then
-      old_input_value=${SSL_SUBJECT_STATE}
       SSL_SUBJECT_STATE=
       while [ -z "${SSL_SUBJECT_STATE}" ]
       do
@@ -800,10 +800,10 @@ function set_globalvariables() {
       fi
     done
   else
+    old_input_value=${SSL_SUBJECT_LOCALITY}
     yes_no_function "Can you confirm you want to modify current locality of SSL Certificate ?" "yes"
     if [ "${?}" == "0" ]
     then
-      old_input_value=${SSL_SUBJECT_LOCALITY}
       SSL_SUBJECT_LOCALITY=
       while [ -z "${SSL_SUBJECT_LOCALITY}" ]
       do
@@ -835,10 +835,10 @@ function set_globalvariables() {
       fi
     done
   else
+    old_input_value=${SSL_SUBJECT_ORGANIZATION}
     yes_no_function "Can you confirm you want to modify current organization name of SSL Certificate ?" "yes"
     if [ "${?}" == "0" ]
     then
-      old_input_value=${SSL_SUBJECT_ORGANIZATION}
       SSL_SUBJECT_ORGANIZATION=
       while [ -z "${SSL_SUBJECT_ORGANIZATION}" ]
       do
@@ -870,10 +870,10 @@ function set_globalvariables() {
       fi
     done
   else
+    old_input_value=${SSL_SUBJECT_ORGANIZATIONUNIT}
     yes_no_function "Can you confirm you want to modify current organization unit name of SSL Certificate ?" "yes"
     if [ "${?}" == "0" ]
     then
-      old_input_value=${SSL_SUBJECT_ORGANIZATIONUNIT}
       SSL_SUBJECT_ORGANIZATIONUNIT=
       while [ -z "${SSL_SUBJECT_ORGANIZATIONUNIT}" ]
       do
@@ -905,10 +905,10 @@ function set_globalvariables() {
       fi
     done
   else
-  yes_no_function "Can you confirm you want to modify current e-mail address of SSL Certificate ?" "yes"
+    old_input_value=${SSL_SUBJECT_EMAIL}
+    yes_no_function "Can you confirm you want to modify current e-mail address of SSL Certificate ?" "yes"
     if [ "${?}" == "0" ]
     then
-      old_input_value=${SSL_SUBJECT_EMAIL}
       SSL_SUBJECT_EMAIL=
       while [[ ! "${SSL_SUBJECT_EMAIL}" =~ ${mailaddress_regular_expression} ]]
       do
@@ -931,17 +931,17 @@ function set_globalvariables() {
     yes_no_function "Do you want to install HQ plugin to manage ElasticSearch ?" "yes"
     if [ "${?}" == "0" ]
     then
-      BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=1
+      BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN="true"
     else
-      BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=0
+      BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN="false"
     fi
   else
-    if [ "${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN}" == "1" ]
+    if [[ "${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN}" =~ true ]]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not install${SETCOLOR_NORMAL} ElasticSearch HQ plugin ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=0
+        BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN="false"
       else
         BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN}
       fi
@@ -949,7 +949,7 @@ function set_globalvariables() {
       yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}install${SETCOLOR_NORMAL} ElasticSearch HQ plugin ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=1
+        BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN="true"
       else
         BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN}
       fi
@@ -961,17 +961,17 @@ function set_globalvariables() {
     yes_no_function "Do you want to add ElasticSearch server on startup ?" "yes"
     if [ "${?}" == "0" ]
     then
-      BOOLEAN_ELASTICSEARCH_ONSTARTUP=1
+      BOOLEAN_ELASTICSEARCH_ONSTARTUP="true"
     else
-      BOOLEAN_ELASTICSEARCH_ONSTARTUP=0
+      BOOLEAN_ELASTICSEARCH_ONSTARTUP="false"
     fi
   else
-    if [ "${BOOLEAN_ELASTICSEARCH_ONSTARTUP}" == "1" ]
+    if [[ "${BOOLEAN_ELASTICSEARCH_ONSTARTUP}" =~ true ]]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} ElasticSearch server on startup ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_ELASTICSEARCH_ONSTARTUP=0
+        BOOLEAN_ELASTICSEARCH_ONSTARTUP="false"
       else
         BOOLEAN_ELASTICSEARCH_ONSTARTUP=${BOOLEAN_ELASTICSEARCH_ONSTARTUP}
       fi
@@ -979,7 +979,7 @@ function set_globalvariables() {
       yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} ElasticSearch server on startup ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_ELASTICSEARCH_ONSTARTUP=1
+        BOOLEAN_ELASTICSEARCH_ONSTARTUP="true"
       else
         BOOLEAN_ELASTICSEARCH_ONSTARTUP=${BOOLEAN_ELASTICSEARCH_ONSTARTUP}
       fi
@@ -1000,10 +1000,10 @@ function set_globalvariables() {
       fi
     done
   else
+    old_input_value=${GRAYLOG_SECRET_PASSWORD}
     yes_no_function "Can you confirm you want to modify current secret password of Graylog application ?" "yes"
     if [ "${?}" == "0" ]
     then
-      old_input_value=${GRAYLOG_SECRET_PASSWORD}
       GRAYLOG_SECRET_PASSWORD=
       while [ -z "${GRAYLOG_SECRET_PASSWORD}" ]
       do
@@ -1035,10 +1035,10 @@ function set_globalvariables() {
       fi
     done
   else
+    old_input_value=${GRAYLOG_ADMIN_USERNAME}
     yes_no_function "Can you confirm you want to modify current login of Graylog administrator ?" "yes"
     if [ "${?}" == "0" ]
     then
-      old_input_value=${GRAYLOG_ADMIN_USERNAME}
       GRAYLOG_ADMIN_USERNAME=
       while [ -z "${GRAYLOG_ADMIN_USERNAME}" ]
       do
@@ -1070,10 +1070,10 @@ function set_globalvariables() {
       fi
     done
   else
+    old_input_value=${GRAYLOG_ADMIN_PASSWORD}
     yes_no_function "Can you confirm you want to modify current password of Graylog administrator ?" "yes"
     if [ "${?}" == "0" ]
     then
-      old_input_value=${GRAYLOG_ADMIN_PASSWORD}
       GRAYLOG_ADMIN_PASSWORD=
       while [ -z "${GRAYLOG_ADMIN_PASSWORD}" ]
       do
@@ -1136,10 +1136,10 @@ function set_globalvariables() {
         fi
       done
     else
+      old_input_value=${SMTP_HOST_NAME}
       yes_no_function "Can you confirm you want to modify current FQDN of SMTP server ?" "yes"
       if [ "${?}" == "0" ]
       then
-        old_input_value=${SMTP_HOST_NAME}
         SMTP_HOST_NAME=
         while [[ ! "${SMTP_HOST_NAME}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] && [[ ! "${SMTP_HOST_NAME}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
         do
@@ -1158,7 +1158,7 @@ function set_globalvariables() {
     fi
     if [ -z "${SMTP_DOMAIN_NAME}" ]
     then
-      while [[ ! "${SMTP_HOST_NAME}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
+      while [[ ! "${SMTP_DOMAIN_NAME}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
       do
         echo -e "\nType SMTP domain name, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_INFO}example.com${SETCOLOR_NORMAL}]:"
@@ -1170,12 +1170,12 @@ function set_globalvariables() {
         fi
       done
     else
+      old_input_value=${SMTP_DOMAIN_NAME}
       yes_no_function "Can you confirm you want to modify current SMTP domain name ?" "yes"
       if [ "${?}" == "0" ]
       then
-        old_input_value=${SMTP_DOMAIN_NAME}
         SMTP_DOMAIN_NAME=
-        while [[ ! "${SMTP_HOST_NAME}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
+        while [[ ! "${SMTP_DOMAIN_NAME}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
         do
           echo -e "\nType SMTP domain name, followed by [ENTER]"
           echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
@@ -1204,10 +1204,10 @@ function set_globalvariables() {
         fi
       done
     else
+      old_input_value=${SMTP_PORT_NUMBER}
       yes_no_function "Can you confirm you want to modify current SMTP port number ?" "yes"
       if [ "${?}" == "0" ]
       then
-        old_input_value=${SMTP_PORT_NUMBER}
         SMTP_PORT_NUMBER=
         while [[ ! "${SMTP_PORT_NUMBER}" =~ 25|465|587 ]]
         do
@@ -1327,10 +1327,10 @@ function set_globalvariables() {
           fi
         done
       else
+        old_input_value=${SMTP_AUTH_USERNAME}
         yes_no_function "Can you confirm you want to modify current username of SMTP authentication ?" "yes"
         if [ "${?}" == "0" ]
         then
-          old_input_value=${SMTP_AUTH_USERNAME}
           SMTP_AUTH_USERNAME=
           while [ -z "${SMTP_AUTH_USERNAME}" ]
           do
@@ -1361,10 +1361,10 @@ function set_globalvariables() {
           fi
         done
       else
+        old_input_value=${SMTP_AUTH_PASSWORD}
         yes_no_function "Can you confirm you want to modify current password of SMTP authentication ?" "yes"
         if [ "${?}" == "0" ]
         then
-          old_input_value=${SMTP_AUTH_PASSWORD}
           SMTP_AUTH_PASSWORD=
           while [ -z "${SMTP_AUTH_PASSWORD}" ]
           do
@@ -1413,17 +1413,17 @@ function set_globalvariables() {
     yes_no_function "Do you want to add Graylog server on startup ?" "yes"
     if [ "${?}" == "0" ]
     then
-      BOOLEAN_GRAYLOGSERVER_ONSTARTUP=1
+      BOOLEAN_GRAYLOGSERVER_ONSTARTUP="true"
     else
-      BOOLEAN_GRAYLOGSERVER_ONSTARTUP=0
+      BOOLEAN_GRAYLOGSERVER_ONSTARTUP="false"
     fi
   else
-    if [ "${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}" == "1" ]
+    if [[ "${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}" =~ true ]]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} Graylog server on startup ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_GRAYLOGSERVER_ONSTARTUP=0
+        BOOLEAN_GRAYLOGSERVER_ONSTARTUP="false"
       else
         BOOLEAN_GRAYLOGSERVER_ONSTARTUP=${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}
       fi
@@ -1431,7 +1431,7 @@ function set_globalvariables() {
       yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} Graylog server on startup ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_GRAYLOGSERVER_ONSTARTUP=1
+        BOOLEAN_GRAYLOGSERVER_ONSTARTUP="true"
       else
         BOOLEAN_GRAYLOGSERVER_ONSTARTUP=${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}
       fi
@@ -1443,17 +1443,17 @@ function set_globalvariables() {
     yes_no_function "Do you want to add Graylog web interface on startup ?" "yes"
     if [ "${?}" == "0" ]
     then
-      BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=1
+      BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP="true"
     else
-      BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=0
+      BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP="false"
     fi
   else
-    if [ "${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}" == "1" ]
+    if [[ "${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}" =~ true ]]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} Graylog web interface on startup ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=0
+        BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP="false"
       else
         BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}
       fi
@@ -1461,7 +1461,7 @@ function set_globalvariables() {
       yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} Graylog web interface on startup ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=1
+        BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP="true"
       else
         BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP=${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}
       fi
@@ -1473,17 +1473,17 @@ function set_globalvariables() {
     yes_no_function "Do you want to add Nginx web server on startup ?" "yes"
     if [ "${?}" == "0" ]
     then
-      BOOLEAN_NGINX_ONSTARTUP=1
+      BOOLEAN_NGINX_ONSTARTUP="true"
     else
-      BOOLEAN_NGINX_ONSTARTUP=0
+      BOOLEAN_NGINX_ONSTARTUP="false"
     fi
   else
-    if [ "${BOOLEAN_NGINX_ONSTARTUP}" == "1" ]
+    if [[ "${BOOLEAN_NGINX_ONSTARTUP}" =~ true ]]
     then
       yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} Nginx web server on startup ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_NGINX_ONSTARTUP=0
+        BOOLEAN_NGINX_ONSTARTUP="false"
       else
         BOOLEAN_NGINX_ONSTARTUP=${BOOLEAN_NGINX_ONSTARTUP}
       fi
@@ -1491,7 +1491,7 @@ function set_globalvariables() {
       yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} Nginx web server on startup ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_NGINX_ONSTARTUP=1
+        BOOLEAN_NGINX_ONSTARTUP="true"
       else
         BOOLEAN_NGINX_ONSTARTUP=${BOOLEAN_NGINX_ONSTARTUP}
       fi
@@ -1516,7 +1516,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: NETWORK_INTERFACE_NAME not successfully definied by user (value=${NETWORK_INTERFACE_NAME})"
     ((error_counter++))
   fi
-  if [[ "${BOOLEAN_RSA_AUTH}" =~ 0|1 ]]
+  if [[ "${BOOLEAN_RSA_AUTH}" =~ true|false ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_RSA_AUTH${SETCOLOR_NORMAL}....................'${BOOLEAN_RSA_AUTH}'${MOVE_TO_COL1}#"
   else
@@ -1524,7 +1524,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: BOOLEAN_RSA_AUTH not successfully definied by user (value=${BOOLEAN_RSA_AUTH})"
     ((error_counter++))
   fi
-  if [[ "${BOOLEAN_RSA_AUTH}" == "1" ]]
+  if [[ "${BOOLEAN_RSA_AUTH}" =~ true ]]
   then
     if [[ "${RSA_PUBLIC_KEY}" =~ ^ssh-rsa.* ]]
     then
@@ -1545,7 +1545,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: SERVER_TIME_ZONE not successfully definied by user (value=${SERVER_TIME_ZONE})"
     ((error_counter++))
   fi
-  if [[ "${BOOLEAN_NTP_CONFIGURE}" =~ 0|1 ]]
+  if [[ "${BOOLEAN_NTP_CONFIGURE}" =~ true|false ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_NTP_CONFIGURE${SETCOLOR_NORMAL}...............'${BOOLEAN_NTP_CONFIGURE}'${MOVE_TO_COL1}#"
   else
@@ -1553,7 +1553,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: BOOLEAN_NTP_CONFIGURE not successfully definied by user (value=${BOOLEAN_NTP_CONFIGURE})"
     ((error_counter++))
   fi
-  if [[ "${BOOLEAN_NTP_CONFIGURE}" == "1" ]]
+  if [[ "${BOOLEAN_NTP_CONFIGURE}" =~ true ]]
   then
     if [[ "${NEW_NTP_ADDRESS}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] || [[ "${NEW_NTP_ADDRESS}" =~ ^(([a-zA-Z](-?[a-zA-Z0-9])*)\.)*[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]]
     then
@@ -1566,7 +1566,7 @@ function verify_globalvariables() {
   else
     echo -e "# ${SETCOLOR_DISABLE}NEW_NTP_ADDRESS${SETCOLOR_NORMAL}.....................'${NEW_NTP_ADDRESS}'${MOVE_TO_COL1}#"
   fi
-  if [[ "${BOOLEAN_NTP_ONSTARTUP}" =~ 0|1 ]]
+  if [[ "${BOOLEAN_NTP_ONSTARTUP}" =~ true|false ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_NTP_ONSTARTUP${SETCOLOR_NORMAL}...............'${BOOLEAN_NTP_ONSTARTUP}'${MOVE_TO_COL1}#"
   else
@@ -1606,7 +1606,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: MONGO_GRAYLOG_PASSWORD not successfully definied by user (value=${MONGO_GRAYLOG_PASSWORD})"
     ((error_counter++))
   fi
-  if [[ "${BOOLEAN_MONGO_ONSTARTUP}" =~ 0|1 ]]
+  if [[ "${BOOLEAN_MONGO_ONSTARTUP}" =~ true|false ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_MONGO_ONSTARTUP${SETCOLOR_NORMAL}.............'${BOOLEAN_MONGO_ONSTARTUP}'${MOVE_TO_COL1}#"
   else
@@ -1630,7 +1630,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: SSL_KEY_DURATION not successfully definied by user (value=${SSL_KEY_DURATION})"
     ((error_counter++))
   fi
-  if [[ "${SSL_SUBJECT_COUNTRY}" =~ [A-Z]{2} ]]
+  if [[ "${SSL_SUBJECT_COUNTRY}" =~ [A-Z]{2,3} ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}SSL_SUBJECT_COUNTRY${SETCOLOR_NORMAL}.................'${SSL_SUBJECT_COUNTRY}'${MOVE_TO_COL1}#"
   else
@@ -1678,7 +1678,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: SSL_SUBJECT_EMAIL not successfully definied by user (value=${SSL_SUBJECT_EMAIL})"
     ((error_counter++))
   fi
-  if [[ "${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN}" =~ 0|1 ]]
+  if [[ "${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN}" =~ true|false ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN${SETCOLOR_NORMAL}.'${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN}'${MOVE_TO_COL1}#"
   else
@@ -1686,7 +1686,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN not successfully definied by user (value=${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN})"
     ((error_counter++))
   fi
-  if [[ "${BOOLEAN_ELASTICSEARCH_ONSTARTUP}" =~ 0|1 ]]
+  if [[ "${BOOLEAN_ELASTICSEARCH_ONSTARTUP}" =~ true|false ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_ELASTICSEARCH_ONSTARTUP${SETCOLOR_NORMAL}.....'${BOOLEAN_ELASTICSEARCH_ONSTARTUP}'${MOVE_TO_COL1}#"
   else
@@ -1718,7 +1718,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: GRAYLOG_ADMIN_PASSWORD not successfully definied by user (value=${GRAYLOG_ADMIN_PASSWORD})"
     ((error_counter++))
   fi
-  if [[ "${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}" =~ 0|1 ]]
+  if [[ "${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}" =~ true|false ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_GRAYLOGSERVER_ONSTARTUP${SETCOLOR_NORMAL}.....'${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}'${MOVE_TO_COL1}#"
   else
@@ -1726,7 +1726,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: BOOLEAN_GRAYLOGSERVER_ONSTARTUP not successfully definied by user (value=${BOOLEAN_GRAYLOGSERVER_ONSTARTUP})"
     ((error_counter++))
   fi
-  if [[ "${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}" =~ 0|1 ]]
+  if [[ "${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}" =~ true|false ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP${SETCOLOR_NORMAL}.....'${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}'${MOVE_TO_COL1}#"
   else
@@ -1847,7 +1847,7 @@ function verify_globalvariables() {
     echo -e "# ${SETCOLOR_DISABLE}SMTP_AUTH_PASSWORD${SETCOLOR_NORMAL}..................'${SMTP_AUTH_PASSWORD}'${MOVE_TO_COL1}#"
   fi
   
-  if [[ "${BOOLEAN_NGINX_ONSTARTUP}" =~ 0|1 ]]
+  if [[ "${BOOLEAN_NGINX_ONSTARTUP}" =~ true|false ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_NGINX_ONSTARTUP${SETCOLOR_NORMAL}.............'${BOOLEAN_NGINX_ONSTARTUP}'${MOVE_TO_COL1}#"
   else
@@ -2311,7 +2311,7 @@ function install_ntp() {
         log "WARN" "NTP service: Already configured"
         echo_passed "PASS"
       else
-        if [ "${BOOLEAN_NTP_CONFIGURE}" == "1" ]
+        if [[ "${BOOLEAN_NTP_CONFIGURE}" =~ true ]]
         then
           command_output_message=$(sed -i.dist \
           -e "s/\(# Please consider.*\)/\1\nserver ${NEW_NTP_ADDRESS}/" \
@@ -2345,7 +2345,7 @@ function install_ntp() {
         abort_installation
       fi
       echo_message "Add NTP service on startup"
-      if [ "${BOOLEAN_NTP_ONSTARTUP}" == "1" ]
+      if [[ "${BOOLEAN_NTP_ONSTARTUP}" =~ true ]]
       then
         command_output_message=$(chkconfig ntpd on 2>&1 >/dev/null)
         if [ -z "${command_output_message}" ]
@@ -2899,7 +2899,7 @@ EOF
           abort_installation
         fi
         echo_message "Add MONGO database server on startup"
-        if [ "${BOOLEAN_MONGO_ONSTARTUP}" == "1" ]
+        if [[ "${BOOLEAN_MONGO_ONSTARTUP}" =~ true ]]
         then
           command_output_message=$(chkconfig mongod on 2>&1 >/dev/null)
           if [ -z "${command_output_message}" ]
@@ -3046,7 +3046,7 @@ function install_elasticsearch() {
               log "INFO" "ELASTICSEARCH server: Successfully started"
               echo_success "OK"
               echo_message "Install ELASTICSEARCH HQ Management plugin"
-              if [ "${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN}" == "1" ]
+              if [[ "${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN}" =~ true ]]
               then
                 command1_output_message=$(/usr/share/elasticsearch/bin/plugin -install royrusso/elasticsearch-HQ 2>&1 >/dev/null)
                 if [ -z "${command1_output_message}" ]
@@ -3110,7 +3110,7 @@ function install_elasticsearch() {
         fi
       fi
       echo_message "Add ELASTICSEARCH service on startup"
-      if [ "${BOOLEAN_ELASTICSEARCH_ONSTARTUP}" == "1" ]
+      if [[ "${BOOLEAN_ELASTICSEARCH_ONSTARTUP}" =~ true ]]
       then
         command1_output_message=$(chkconfig elasticsearch on 2>&1 >/dev/null)
         if [ -z "${command1_output_message}" ]
@@ -3283,7 +3283,7 @@ function install_graylogserver() {
         fi
       fi
       echo_message "Add GRAYLOG server on startup"
-      if [ "${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}" == "1" ]
+      if [[ "${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}" =~ true ]]
       then
         command1_output_message=$(chkconfig graylog-server on 2>&1 >/dev/null)
         if [ -z "${command1_output_message}" ]
@@ -3423,7 +3423,7 @@ function install_graylogwebgui() {
         fi
       fi
       echo_message "Add GRAYLOG web interface on startup"
-      if [ "${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}" == "1" ]
+      if [[ "${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}" =~ true ]]
       then
         command1_output_message=$(chkconfig graylog-web on 2>&1 >/dev/null)
         if [ -z "${command1_output_message}" ]
@@ -3581,7 +3581,7 @@ function install_nginx() {
         fi
       fi
       echo_message "Add NGINX service on startup"
-      if [ "${BOOLEAN_NGINX_ONSTARTUP}" == "1" ]
+      if [[ "${BOOLEAN_NGINX_ONSTARTUP}" =~ true ]]
       then
         command1_output_message=$(chkconfig nginx on 2>&1 >/dev/null)
         if [ -z "${command1_output_message}" ]
@@ -3622,7 +3622,7 @@ function display_informations() {
   echo -e "# - Login\t: ${SETCOLOR_INFO}${GRAYLOG_ADMIN_USERNAME}${SETCOLOR_NORMAL}${MOVE_TO_COL1}#"
   echo -e "# - Password\t: ${SETCOLOR_INFO}${GRAYLOG_ADMIN_PASSWORD}${SETCOLOR_NORMAL}${MOVE_TO_COL1}#\n#${MOVE_TO_COL1}#"
   echo -e "###################################################################"
-  if [ "${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN}" == "1" ]
+  if [[ "${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN}" =~ true ]]
   then
     echo -e "\n###################################################################"
     echo -e "#${MOVE_TO_COL1}#\n# To administrate ElasticSearch server${MOVE_TO_COL1}#"
@@ -3675,33 +3675,33 @@ function main {
     fi
   fi
   get_sysinfo
-#  generate_sslkeys
-#  configure_yum
-#  initialize_yum
-#  upgrade_os
-#  install_ntp
-#  install_lsbpackages
-#  install_networkpackages
-#  configure_bashrc
-#  configure_openssh
-#  if [ "${BOOLEAN_RSA_AUTH}" == "1" ]
-#  then
-#    configure_rsaauth
-#  else
-#    echo_message "Configure RSA authentication"
-#    log "WARN" "RSA authentication: operation cancelled by user"
-#    echo_passed "PASS"
-#  fi
-#  configure_postfix
-#  configure_hostsfile
-#  configure_selinux
-#  install_mongodb
-#  install_java
-#  install_elasticsearch
-#  install_graylogserver
-#  install_graylogwebgui
-#  install_nginx
-#  display_informations
+  generate_sslkeys
+  configure_yum
+  initialize_yum
+  upgrade_os
+  install_ntp
+  install_lsbpackages
+  install_networkpackages
+  configure_bashrc
+  configure_openssh
+  if [[ "${BOOLEAN_RSA_AUTH}" =~ true ]]
+  then
+    configure_rsaauth
+  else
+    echo_message "Configure RSA authentication"
+    log "WARN" "RSA authentication: operation cancelled by user"
+    echo_passed "PASS"
+  fi
+  configure_postfix
+  configure_hostsfile
+  configure_selinux
+  install_mongodb
+  install_java
+  install_elasticsearch
+  install_graylogserver
+  install_graylogwebgui
+  install_nginx
+  display_informations
   log "INFO" "GRAYLOG installation: Successfully completed"
 }
 #==============================================================================
