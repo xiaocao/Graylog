@@ -192,6 +192,21 @@ function test_directory() {
   fi
   echo ${is_exist}
 }
+# Return 0 if search pattern is present in specified file or 1 if not
+function find_pattern() {
+  local input_file=${1}
+  local input_pattern=${1}
+  local find_command=
+  local is_present=
+  find_command=$(find ${input_file} -type f -print | xargs grep "${input_pattern}")
+  if [ -z "${find_command}" ]
+  then
+    is_present=1
+  else
+    is_present=0
+  fi
+  echo ${is_present}
+}
 # Test DNS configuration and send 4 icmp packets
 function test_internet() {
   local icmp_packets_sent=4
@@ -1857,53 +1872,65 @@ function verify_globalvariables() {
   fi
   echo -e "#${MOVE_TO_COL1}#"
   echo -e "###################################################################"
-  if [ "${error_counter}" == "0" ]
+  if [[ ${SCRIPT_MODE} =~ i|a ]]
   then
-    log "INFO" "Global variables: Successfully definied by user"
-    yes_no_function "All variables seem to be good.\nDo you want to continue installation process ?" "yes"
-    if [ "${?}" == "0" ]
+    if [ "${error_counter}" == "0" ]
     then
-      log "INFO" "Global variables: Confirmed by user"
-      log "INFO" "Global variables: NETWORK_INTERFACE_NAME successfully definied by user (value=${NETWORK_INTERFACE_NAME})"
-      log "INFO" "Global variables: SERVER_TIME_ZONE successfully definied by user (value=${SERVER_TIME_ZONE})"
-      log "INFO" "Global variables: BOOLEAN_NTP_ONSTARTUP successfully definied by user (value=${BOOLEAN_NTP_ONSTARTUP})"
-      log "INFO" "Global variables: BOOLEAN_NTP_CONFIGURE successfully definied by user (value=${BOOLEAN_NTP_CONFIGURE})"
-      log "INFO" "Global variables: NEW_NTP_ADDRESS successfully definied by user (value=${NEW_NTP_ADDRESS})"
-      log "INFO" "Global variables: BOOLEAN_RSA_AUTH successfully definied by user (value=${BOOLEAN_RSA_AUTH})"
-      log "INFO" "Global variables: RSA_PUBLIC_KEY successfully definied by user (value=${RSA_PUBLIC_KEY})"
-      log "INFO" "Global variables: MONGO_ADMIN_PASSWORD successfully definied by user (value=${MONGO_ADMIN_PASSWORD})"
-      log "INFO" "Global variables: MONGO_GRAYLOG_DATABASE successfully definied by user (value=${MONGO_GRAYLOG_DATABASE})"
-      log "INFO" "Global variables: MONGO_GRAYLOG_USER successfully definied by user (value=${MONGO_GRAYLOG_USER})"
-      log "INFO" "Global variables: MONGO_GRAYLOG_PASSWORD successfully definied by user (value=${MONGO_GRAYLOG_PASSWORD})"
-      log "INFO" "Global variables: BOOLEAN_MONGO_ONSTARTUP successfully definied by user (value=${BOOLEAN_MONGO_ONSTARTUP})"
-      log "INFO" "Global variables: SSL_KEY_SIZE successfully definied by user (value=${SSL_KEY_SIZE})"
-      log "INFO" "Global variables: SSL_KEY_DURATION successfully definied by user (value=${SSL_KEY_DURATION})"
-      log "INFO" "Global variables: SSL_SUBJECT_COUNTRY successfully definied by user (value=${SSL_SUBJECT_COUNTRY})"
-      log "INFO" "Global variables: SSL_SUBJECT_STATE successfully definied by user (value=${SSL_SUBJECT_STATE})"
-      log "INFO" "Global variables: SSL_SUBJECT_LOCALITY successfully definied by user (value=${SSL_SUBJECT_LOCALITY})"
-      log "INFO" "Global variables: SSL_SUBJECT_ORGANIZATION successfully definied by user (value=${SSL_SUBJECT_ORGANIZATION})"
-      log "INFO" "Global variables: SSL_SUBJECT_ORGANIZATIONUNIT successfully definied by user (value=${SSL_SUBJECT_ORGANIZATIONUNIT})"
-      log "INFO" "Global variables: SSL_SUBJECT_EMAIL successfully definied by user (value=${SSL_SUBJECT_EMAIL})"
-      log "INFO" "Global variables: BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN successfully definied by user (value=${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN})"
-      log "INFO" "Global variables: BOOLEAN_ELASTICSEARCH_ONSTARTUP successfully definied by user (value=${BOOLEAN_ELASTICSEARCH_ONSTARTUP})"
-      log "INFO" "Global variables: GRAYLOG_SECRET_PASSWORD successfully definied by user (value=${GRAYLOG_SECRET_PASSWORD})"
-      log "INFO" "Global variables: GRAYLOG_ADMIN_USERNAME successfully definied by user (value=${GRAYLOG_ADMIN_USERNAME})"
-      log "INFO" "Global variables: GRAYLOG_ADMIN_PASSWORD successfully definied by user (value=${GRAYLOG_ADMIN_PASSWORD})"
-      log "INFO" "Global variables: BOOLEAN_GRAYLOG_SMTP successfully definied by user (value=${BOOLEAN_GRAYLOG_SMTP})"
-      log "INFO" "Global variables: SMTP_HOST_NAME successfully definied by user (value=${SMTP_HOST_NAME})"
-      log "INFO" "Global variables: SMTP_DOMAIN_NAME successfully definied by user (value=${SMTP_DOMAIN_NAME})"
-      log "INFO" "Global variables: SMTP_PORT_NUMBER successfully definied by user (value=${SMTP_PORT_NUMBER})"
-      log "INFO" "Global variables: BOOLEAN_SMTP_AUTH successfully definied by user (value=${BOOLEAN_SMTP_AUTH})"
-      log "INFO" "Global variables: BOOLEAN_SMTP_TLS successfully definied by user (value=${BOOLEAN_SMTP_TLS})"
-      log "INFO" "Global variables: BOOLEAN_SMTP_SSL successfully definied by user (value=${BOOLEAN_SMTP_SSL})"
-      log "INFO" "Global variables: SMTP_AUTH_USERNAME successfully definied by user (value=${SMTP_AUTH_USERNAME})"
-      log "INFO" "Global variables: SMTP_AUTH_PASSWORD successfully definied by user (value=${SMTP_AUTH_PASSWORD})"
-      log "INFO" "Global variables: BOOLEAN_GRAYLOGSERVER_ONSTARTUP successfully definied by user (value=${BOOLEAN_GRAYLOGSERVER_ONSTARTUP})"
-      log "INFO" "Global variables: BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP successfully definied by user (value=${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP})"
-      log "INFO" "Global variables: BOOLEAN_NGINX_ONSTARTUP successfully definied by user (value=${BOOLEAN_NGINX_ONSTARTUP})"
+      log "INFO" "Global variables: Successfully definied by user"
+      yes_no_function "All variables seem to be good.\nDo you want to continue installation process ?" "yes"
+      if [ "${?}" == "0" ]
+      then
+        log "INFO" "Global variables: Confirmed by user"
+        log "INFO" "Global variables: NETWORK_INTERFACE_NAME successfully definied by user (value=${NETWORK_INTERFACE_NAME})"
+        log "INFO" "Global variables: SERVER_TIME_ZONE successfully definied by user (value=${SERVER_TIME_ZONE})"
+        log "INFO" "Global variables: BOOLEAN_NTP_ONSTARTUP successfully definied by user (value=${BOOLEAN_NTP_ONSTARTUP})"
+        log "INFO" "Global variables: BOOLEAN_NTP_CONFIGURE successfully definied by user (value=${BOOLEAN_NTP_CONFIGURE})"
+        log "INFO" "Global variables: NEW_NTP_ADDRESS successfully definied by user (value=${NEW_NTP_ADDRESS})"
+        log "INFO" "Global variables: BOOLEAN_RSA_AUTH successfully definied by user (value=${BOOLEAN_RSA_AUTH})"
+        log "INFO" "Global variables: RSA_PUBLIC_KEY successfully definied by user (value=${RSA_PUBLIC_KEY})"
+        log "INFO" "Global variables: MONGO_ADMIN_PASSWORD successfully definied by user (value=${MONGO_ADMIN_PASSWORD})"
+        log "INFO" "Global variables: MONGO_GRAYLOG_DATABASE successfully definied by user (value=${MONGO_GRAYLOG_DATABASE})"
+        log "INFO" "Global variables: MONGO_GRAYLOG_USER successfully definied by user (value=${MONGO_GRAYLOG_USER})"
+        log "INFO" "Global variables: MONGO_GRAYLOG_PASSWORD successfully definied by user (value=${MONGO_GRAYLOG_PASSWORD})"
+        log "INFO" "Global variables: BOOLEAN_MONGO_ONSTARTUP successfully definied by user (value=${BOOLEAN_MONGO_ONSTARTUP})"
+        log "INFO" "Global variables: SSL_KEY_SIZE successfully definied by user (value=${SSL_KEY_SIZE})"
+        log "INFO" "Global variables: SSL_KEY_DURATION successfully definied by user (value=${SSL_KEY_DURATION})"
+        log "INFO" "Global variables: SSL_SUBJECT_COUNTRY successfully definied by user (value=${SSL_SUBJECT_COUNTRY})"
+        log "INFO" "Global variables: SSL_SUBJECT_STATE successfully definied by user (value=${SSL_SUBJECT_STATE})"
+        log "INFO" "Global variables: SSL_SUBJECT_LOCALITY successfully definied by user (value=${SSL_SUBJECT_LOCALITY})"
+        log "INFO" "Global variables: SSL_SUBJECT_ORGANIZATION successfully definied by user (value=${SSL_SUBJECT_ORGANIZATION})"
+        log "INFO" "Global variables: SSL_SUBJECT_ORGANIZATIONUNIT successfully definied by user (value=${SSL_SUBJECT_ORGANIZATIONUNIT})"
+        log "INFO" "Global variables: SSL_SUBJECT_EMAIL successfully definied by user (value=${SSL_SUBJECT_EMAIL})"
+        log "INFO" "Global variables: BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN successfully definied by user (value=${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN})"
+        log "INFO" "Global variables: BOOLEAN_ELASTICSEARCH_ONSTARTUP successfully definied by user (value=${BOOLEAN_ELASTICSEARCH_ONSTARTUP})"
+        log "INFO" "Global variables: GRAYLOG_SECRET_PASSWORD successfully definied by user (value=${GRAYLOG_SECRET_PASSWORD})"
+        log "INFO" "Global variables: GRAYLOG_ADMIN_USERNAME successfully definied by user (value=${GRAYLOG_ADMIN_USERNAME})"
+        log "INFO" "Global variables: GRAYLOG_ADMIN_PASSWORD successfully definied by user (value=${GRAYLOG_ADMIN_PASSWORD})"
+        log "INFO" "Global variables: BOOLEAN_GRAYLOG_SMTP successfully definied by user (value=${BOOLEAN_GRAYLOG_SMTP})"
+        log "INFO" "Global variables: SMTP_HOST_NAME successfully definied by user (value=${SMTP_HOST_NAME})"
+        log "INFO" "Global variables: SMTP_DOMAIN_NAME successfully definied by user (value=${SMTP_DOMAIN_NAME})"
+        log "INFO" "Global variables: SMTP_PORT_NUMBER successfully definied by user (value=${SMTP_PORT_NUMBER})"
+        log "INFO" "Global variables: BOOLEAN_SMTP_AUTH successfully definied by user (value=${BOOLEAN_SMTP_AUTH})"
+        log "INFO" "Global variables: BOOLEAN_SMTP_TLS successfully definied by user (value=${BOOLEAN_SMTP_TLS})"
+        log "INFO" "Global variables: BOOLEAN_SMTP_SSL successfully definied by user (value=${BOOLEAN_SMTP_SSL})"
+        log "INFO" "Global variables: SMTP_AUTH_USERNAME successfully definied by user (value=${SMTP_AUTH_USERNAME})"
+        log "INFO" "Global variables: SMTP_AUTH_PASSWORD successfully definied by user (value=${SMTP_AUTH_PASSWORD})"
+        log "INFO" "Global variables: BOOLEAN_GRAYLOGSERVER_ONSTARTUP successfully definied by user (value=${BOOLEAN_GRAYLOGSERVER_ONSTARTUP})"
+        log "INFO" "Global variables: BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP successfully definied by user (value=${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP})"
+        log "INFO" "Global variables: BOOLEAN_NGINX_ONSTARTUP successfully definied by user (value=${BOOLEAN_NGINX_ONSTARTUP})"
+      else
+        log "WARN" "Global variables: Not confirmed by user"
+        yes_no_function "Do you want to define them again ?" "yes"
+        if [ "${?}" == "0" ]
+        then
+          set_globalvariables
+        else
+          log "WARN" "GRAYLOG installation: Ended by user"
+          exit 0
+        fi
+      fi
     else
-      log "WARN" "Global variables: Not confirmed by user"
-      yes_no_function "Do you want to define them again ?" "yes"
+      yes_no_function "One or more variables do not seem to be good.\nDo you want to correct them ?" "yes"
       if [ "${?}" == "0" ]
       then
         set_globalvariables
@@ -1911,15 +1938,6 @@ function verify_globalvariables() {
         log "WARN" "GRAYLOG installation: Ended by user"
         exit 0
       fi
-    fi
-  else
-    yes_no_function "One or more variables do not seem to be good.\nDo you want to correct them ?" "yes"
-    if [ "${?}" == "0" ]
-    then
-      set_globalvariables
-    else
-      log "WARN" "GRAYLOG installation: Ended by user"
-      exit 0
     fi
   fi
 }
@@ -2208,7 +2226,7 @@ EOF
   if [ "${error_counter}" == "0" ] && [ "${warning_counter}" == "0" ]
   then
     echo_success "OK"
-  elif [ "${error_counter}" == "0" ] && [ "${warning_counter}" =! "0" ]
+  elif [ "${error_counter}" == "0" ] && [ "${warning_counter}" != "0" ]
   then
     echo_warning "WARN"
   else
@@ -2594,16 +2612,23 @@ function configure_rsaauth() {
       log "INFO" "RSA authentication: ${openssh_authorizedkeys_file} successfully found"
       if [ -s "${openssh_authorizedkeys_file}" ]
       then
-        log "INFO" "RSA authentication: ${openssh_authorizedkeys_file} not empty"
-        command_output_message=$(echo ${RSA_PUBLIC_KEY} >> ${openssh_authorizedkeys_file})
-        if [ -z "${command_output_message}" ]
+        log "WARN" "RSA authentication: ${openssh_authorizedkeys_file} not empty"
+        command_output_message=$(find_pattern ${openssh_authorizedkeys_file} ${RSA_PUBLIC_KEY})
+        if [ "${command_output_message}" == "0" ]
         then
-          log "INFO" "RSA authentication: Public key successfully inserted"
-          echo_success "OK"
+          command_output_message=$(echo ${RSA_PUBLIC_KEY} >> ${openssh_authorizedkeys_file})
+          if [ -z "${command_output_message}" ]
+          then
+            log "INFO" "RSA authentication: Public key successfully inserted"
+            echo_success "OK"
+          else
+            log "ERROR" "RSA authentication: Public key not inserted"
+            log "DEBUG" ${command_output_message}
+            echo_failure "FAILED"
+          fi
         else
-          log "ERROR" "RSA authentication: Public key not inserted"
-          log "DEBUG" ${command_output_message}
-          echo_failure "FAILED"
+          log "WARN" "RSA authentication: Public key already inserted"
+          echo_warning "WARN"
         fi
       else
         log "INFO" "RSA authentication: ${openssh_authorizedkeys_file} empty"
@@ -2831,17 +2856,17 @@ function install_mongodb() {
 use ${mongodb_admin_database}
 db.createUser(
  {
-  user: ${MONGO_ADMIN_USER},
-  pwd: ${MONGO_ADMIN_PASSWORD},
-  roles: [ { role: "root", db: ${mongodb_admin_database} } ]
+  user: "${MONGO_ADMIN_USER}",
+  pwd: "${MONGO_ADMIN_PASSWORD}",
+  roles: [ { role: "root", db: "${mongodb_admin_database}" } ]
  }
 )
-use ${MONGO_GRAYLOG_DATABASE}
+use "${MONGO_GRAYLOG_DATABASE}"
 db.createUser(
  {
-  user: ${MONGO_GRAYLOG_USER},
-  pwd: ${MONGO_GRAYLOG_PASSWORD},
-  roles: [ { role: "readWrite", db: ${MONGO_GRAYLOG_DATABASE} } ]
+  user: "${MONGO_GRAYLOG_USER}",
+  pwd: "${MONGO_GRAYLOG_PASSWORD}",
+  roles: [ { role: "readWrite", db: "${MONGO_GRAYLOG_DATABASE}" } ]
  }
 )
 quit()
@@ -3034,7 +3059,7 @@ function install_elasticsearch() {
           -e "s/#\(ES_DIRECT_SIZE\=\).*/\1${ELASTICSEARCH_RAM_RESERVATION}/" \
           -e "s/#\(ES_JAVA_OPTS\=\).*/\1\"\-Djava.net.preferIPv4Stack\=true\"/" \
           ${elasticsearch_sysconfig_file} 2>&1 >/dev/null)
-          if [ -z "${command1_output_message}" ] && [-z "${command2_output_message}" ]
+          if [ -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
           then
             log "INFO" "ELASTICSEARCH server: ${elasticsearch_config_file} successfully modified"
             log "INFO" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} successfully modified"
@@ -3515,13 +3540,13 @@ function install_nginx() {
             log "INFO" "NGINX web server: ${nginx_defaultssl_file} successfully backed-up"
             command1_output_message=$(sed -i.dist \
             -e "s/\#\(server .*\)/\1/" \
-            -e "s/\#.*\(listen\).*\(443.*;\)/\t\1\t\t\t${SERVER_HOST_NAME}:\2/" \
-            -e "s/\#.*\(server_name\).*\(;\)/\t\1\t\t${SERVER_HOST_NAME}\2/" \
-            -e "s|\#.*\(ssl_certificate \).*\(;\)|\t\1\t${PUBLIC_KEY_FILE}\2|" \
-            -e "s|\#.*\(ssl_certificate_key\).*\(;\)|\t\1\t${PRIVATE_KEY_FILE}\2|" \
-            -e "s/\#.*\(ssl_session_cache\).*\(shared:SSL:1m;\)/\t\1\t\2/" \
-            -e "s/\#.*\(ssl_session_timeout\).*\(5m;\)/\t\1\t\2/" \
-            -e "s/\#.*\(ssl_ciphers\).*\(HIGH:\!aNULL:\!MD5;\)/\t\1\t\t\2/" \
+            -e "s/\#.*\(listen\).*\(443.*;\)/\t\1\t\t\t\t${SERVER_HOST_NAME}:\2/" \
+            -e "s/\#.*\(server_name\).*\(;\)/\t\1\t\t\t${SERVER_HOST_NAME}\2/" \
+            -e "s|\#.*\(ssl_certificate \).*\(;\)|\t\1\t\t${PUBLIC_KEY_FILE}\2|" \
+            -e "s|\#.*\(ssl_certificate_key\).*\(;\)|\t\1\t\t${PRIVATE_KEY_FILE}\2|" \
+            -e "s/\#.*\(ssl_session_cache\).*\(shared:SSL:1m;\)/\t\1\t\t\2/" \
+            -e "s/\#.*\(ssl_session_timeout\).*\(5m;\)/\t\1\t\t\2/" \
+            -e "s/\#.*\(ssl_ciphers\).*\(HIGH:\!aNULL:\!MD5;\)/\t\1\t\t\t\2/" \
             -e "s/\#.*\(ssl_prefer_server_ciphers\).*\(on;\)/\t\1\t\2/" \
             -e "s/\#.*\(location \/ {\)/\t\1/" \
             -e "s/\# .*\(\}\)/\t\1/" \
@@ -3634,9 +3659,12 @@ function display_informations() {
 # Display help to use this installation program
 function display_help() {
   local program=${0}
-  echo -e "Usage: ${program} -i|a <file>"
+  echo -e "Usage: ${program} -i|t|s|v|a <file>"
   echo -e "  -i\tInstall Graylog Components in interactive mode"
   echo -e "  -a\tInstall Graylog components in auto mode"
+  echo -e "  -t\tOnly verify Internet connection"
+  echo -e "  -v\tOnly verify variables from specified input file"
+  echo -e "  -s\tOnly verify system informations"
   echo -e "  -h\tDisplay this help"
   echo -e "\nExample:\n   ${program} -a /root/graylog_variables.cfg"
   exit 1
@@ -3644,12 +3672,16 @@ function display_help() {
 # Main loop
 function main {
   local command_output_message=
-  log "INFO" "GRAYLOG installation: Begin"
-  test_internet
-  if [ "${SCRIPT_MODE}" == "i" ]
+  if [[ "${SCRIPT_MODE}" =~ i|t|a ]]
+  then
+    test_internet
+  fi
+  if [[ "${SCRIPT_MODE}" =~ i ]]
   then
     set_globalvariables
-  else
+  fi
+  if [[ "${SCRIPT_MODE}" =~ a|v ]]
+  then
     if [[ "${INSTALLATION_CFG_FILE}" =~ .*\.cfg$ ]]
     then
       command_output_message=$(test_file ${INSTALLATION_CFG_FILE})
@@ -3674,35 +3706,40 @@ function main {
       abort_installation
     fi
   fi
-  get_sysinfo
-  generate_sslkeys
-  configure_yum
-  initialize_yum
-  upgrade_os
-  install_ntp
-  install_lsbpackages
-  install_networkpackages
-  configure_bashrc
-  configure_openssh
-  if [[ "${BOOLEAN_RSA_AUTH}" =~ true ]]
+  if [[ "${SCRIPT_MODE}" =~ i|a|s ]]
   then
-    configure_rsaauth
-  else
-    echo_message "Configure RSA authentication"
-    log "WARN" "RSA authentication: operation cancelled by user"
-    echo_passed "PASS"
+    get_sysinfo
   fi
-  configure_postfix
-  configure_hostsfile
-  configure_selinux
-  install_mongodb
-  install_java
-  install_elasticsearch
-  install_graylogserver
-  install_graylogwebgui
-  install_nginx
-  display_informations
-  log "INFO" "GRAYLOG installation: Successfully completed"
+  if [[ "${SCRIPT_MODE}" =~ i|a ]]
+  then
+    generate_sslkeys
+    configure_yum
+    initialize_yum
+    upgrade_os
+    install_ntp
+    install_lsbpackages
+    install_networkpackages
+    configure_bashrc
+    configure_openssh
+    if [[ "${BOOLEAN_RSA_AUTH}" =~ true ]]
+    then
+      configure_rsaauth
+    else
+      echo_message "Configure RSA authentication"
+      log "WARN" "RSA authentication: operation cancelled by user"
+      echo_passed "PASS"
+    fi
+    configure_postfix
+    configure_hostsfile
+    configure_selinux
+    install_mongodb
+    install_java
+    install_elasticsearch
+    install_graylogserver
+    install_graylogwebgui
+    install_nginx
+    display_informations
+  fi
 }
 #==============================================================================
 
@@ -3710,32 +3747,61 @@ function main {
 # Program
 #==============================================================================
 OPTIND=1
-while getopts ":hia:" options
-do
-  case "${options}" in
-    i )
-      SCRIPT_MODE="i"
-      main
-      ;;
-    a )
-      SCRIPT_MODE="a"
-      INSTALLATION_CFG_FILE=${OPTARG}
-      main
-      ;;
-    : )
-      display_help
-      exit 1
-      ;;
-    \?|h)
-      display_help
-      exit 0
-      ;;
-    * )
-      display_help
-      exit 1
-      ;;
-  esac
-done
-shift "$((OPTIND-1))"
+if [ "${#}" == "0" ]
+then
+  display_help
+  exit 1
+else
+  while getopts ":hstv:ia:" options
+  do
+    case "${options}" in
+      i )
+        SCRIPT_MODE="i"
+        main
+        ;;
+      a )
+        SCRIPT_MODE="a"
+        INSTALLATION_CFG_FILE=${OPTARG}
+        main
+        ;;
+      v )
+        case ${OPTARG} in
+          i )
+            SCRIPT_MODE="v"
+            INSTALLATION_CFG_FILE=${OPTARG}
+            main
+            echo "Check log file : ${INSTALLATION_LOG_FILE}"
+          ;;
+          t )
+            SCRIPT_MODE="t"
+            main
+            echo "Check log file : ${INSTALLATION_LOG_FILE}"
+            ;;
+          s )
+            SCRIPT_MODE="s"
+            main
+            echo "Check log file : ${INSTALLATION_LOG_FILE}"
+            ;;
+          * )
+            display_help
+            exit 1
+            ;;
+        esac
+      : )
+        display_help
+        exit 1
+        ;;
+      \?|h)
+        display_help
+        exit 0
+        ;;
+      * )
+        display_help
+        exit 1
+        ;;
+    esac
+  done
+  shift "$((OPTIND-1))"
+fi
 exit 0
 #==============================================================================
