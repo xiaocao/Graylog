@@ -6,13 +6,14 @@
 #job title     : Network engineer
 #mail          : mikael.andre.1989@gmail.com
 #created       : 20150219
-#last revision : 20150318
+#last revision : 20150402
 #version       : 1.4
 #platform      : Linux
 #processor     : 64 Bits
 #os            : CentOS
 #os version    : 6.5 or 6.6
-#usage         : sh install_graylog.sh -i|-a <VARIABLES FILE>
+#usage         : sh install_graylog.sh -i | -a <file.cfg> | -v (options)
+#                options are --cfg <file.cfg> | --cnx | --sys
 #notes         : Copy and paste in Vi to use this script
 #==============================================================================
 
@@ -157,7 +158,7 @@ function yes_no_function() {
 # Abort function and inform user to read log file for more informations on bad ending
 function abort_installation() {
   log "ERROR" "GRAYLOG installation: Abort"
-  echo_message "Check log file" ${INSTALLATION_LOG_FILE}
+  echo_message "Check log file : ${INSTALLATION_LOG_FILE}"
   echo_info "INFO"
   if [ ! -z "${INSTALLATION_CFG_FILE}" ]
   then
@@ -225,6 +226,11 @@ function test_internet() {
     then
       log "INFO" "Internet connection: ICMP packets received=${icmp_packets_received}"
       echo_success "OK"
+      if [[ ${SCRIPT_MODE} =~ v_cnx ]]
+      then
+        echo_message "Check log file : ${INSTALLATION_LOG_FILE}"
+        echo_info "INFO"
+      fi
     else
       log "ERROR" "Internet connection: ICMP packets received=${icmp_packets_received}"
       echo_failure "FAILED"
@@ -1625,7 +1631,7 @@ function verify_globalvariables() {
   then
     echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_MONGO_ONSTARTUP${SETCOLOR_NORMAL}.............'${BOOLEAN_MONGO_ONSTARTUP}'${MOVE_TO_COL1}#"
   else
-    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_MONGO_ONSTARTUP${SETCOLOR_NORMAL}.............'${BOOLEAN_MONGO_ONSTARTUP}${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_MONGO_ONSTARTUP${SETCOLOR_NORMAL}.............'${BOOLEAN_MONGO_ONSTARTUP}'${MOVE_TO_COL1}#"
     log "ERROR" "Global variables: BOOLEAN_MONGO_ONSTARTUP not successfully definied by user (value=${BOOLEAN_MONGO_ONSTARTUP})"
     ((error_counter++))
   fi
@@ -1939,6 +1945,9 @@ function verify_globalvariables() {
         exit 0
       fi
     fi
+  else
+    echo_message "Check log file : ${INSTALLATION_LOG_FILE}"
+    echo_info "INFO"
   fi
 }
 # Get system informations like OS name, OS version, etc...
@@ -2011,6 +2020,11 @@ function get_sysinfo() {
   if [ "${error_counter}" == "0" ]
   then
     echo_success "OK"
+    if [[ ${SCRIPT_MODE} =~ v_sys ]]
+    then
+      echo_message "Check log file : ${INSTALLATION_LOG_FILE}"
+      echo_info "INFO"
+    fi
   else
     echo_failure "FAILED"
     abort_installation
@@ -3659,20 +3673,19 @@ function display_informations() {
 # Display help to use this installation program
 function display_help() {
   local program=${0}
-  echo -e "Usage: ${program} -i|t|s|v|a <file>"
-  echo -e "  -i\tInstall Graylog Components in interactive mode"
-  echo -e "  -a\tInstall Graylog components in auto mode"
-  echo -e "  -t\tOnly verify Internet connection"
-  echo -e "  -v\tOnly verify variables from specified input file"
-  echo -e "  -s\tOnly verify system informations"
-  echo -e "  -h\tDisplay this help"
+  echo -e "Usage: ${program} -i | a <file.cfg> | -v [--cfg <file.cfg> | --cnx | --sys]"
+  echo -e "  -i                  Install Graylog Components with interactive questions"
+  echo -e "  -a <file.cfg>       Install Graylog components with variables specified in <file.cfg>"
+  echo -e "  -v --cfg <file.cfg> Verify variables specified in <file.cfg>"
+  echo -e "  -v --cnx            Verify Internet connectivity"
+  echo -e "  -v --sys            Verify OS informations"
+  echo -e "  -h                  Display this help"
   echo -e "\nExample:\n   ${program} -a /root/graylog_variables.cfg"
-  exit 1
 }
 # Main loop
 function main {
   local command_output_message=
-  if [[ "${SCRIPT_MODE}" =~ i|t|a ]]
+  if [[ "${SCRIPT_MODE}" =~ i|a|v_cnx ]]
   then
     test_internet
   fi
@@ -3680,7 +3693,7 @@ function main {
   then
     set_globalvariables
   fi
-  if [[ "${SCRIPT_MODE}" =~ a|v ]]
+  if [[ "${SCRIPT_MODE}" =~ a|v_cfg ]]
   then
     if [[ "${INSTALLATION_CFG_FILE}" =~ .*\.cfg$ ]]
     then
@@ -3706,7 +3719,7 @@ function main {
       abort_installation
     fi
   fi
-  if [[ "${SCRIPT_MODE}" =~ i|a|s ]]
+  if [[ "${SCRIPT_MODE}" =~ i|a|v_sys ]]
   then
     get_sysinfo
   fi
@@ -3752,7 +3765,7 @@ then
   display_help
   exit 1
 else
-  while getopts ":hstv:ia:" options
+  while getopts ":ia:v:" options
   do
     case "${options}" in
       i )
@@ -3766,32 +3779,34 @@ else
         ;;
       v )
         case ${OPTARG} in
-          i )
-            SCRIPT_MODE="v"
-            INSTALLATION_CFG_FILE=${OPTARG}
+          --cfg )
+            SCRIPT_MODE="v_cfg"
+            INSTALLATION_CFG_FILE=${3}
             main
-            echo "Check log file : ${INSTALLATION_LOG_FILE}"
-          ;;
-          t )
-            SCRIPT_MODE="t"
-            main
-            echo "Check log file : ${INSTALLATION_LOG_FILE}"
             ;;
-          s )
-            SCRIPT_MODE="s"
+          --cnx )
+            SCRIPT_MODE="v_cnx"
             main
-            echo "Check log file : ${INSTALLATION_LOG_FILE}"
+            ;;
+          --sys )
+            SCRIPT_MODE="v_sys"
+            main
             ;;
           * )
             display_help
             exit 1
             ;;
+          \?|h )
+            display_help
+            exit 0
+            ;;
         esac
+        ;;
       : )
         display_help
         exit 1
         ;;
-      \?|h)
+      \?|h )
         display_help
         exit 0
         ;;
