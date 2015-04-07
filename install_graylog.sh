@@ -6,7 +6,7 @@
 #job title     : Network engineer
 #mail          : mikael.andre.1989@gmail.com
 #created       : 20150219
-#last revision : 20150402
+#last revision : 20150407
 #version       : 1.4
 #platform      : Linux
 #processor     : 64 Bits
@@ -45,7 +45,8 @@ BOOLEAN_RSA_AUTH=
 RSA_PUBLIC_KEY=
 # MONGO VARIABLES
 BOOLEAN_MONGO_ONSTARTUP=
-MONGO_ADMIN_USER="admin"
+MONGODB_ADMIN_DATABASE='admin'
+MONGO_ADMIN_USER='admin'
 MONGO_ADMIN_PASSWORD=
 MONGO_GRAYLOG_DATABASE=
 MONGO_GRAYLOG_USER=
@@ -164,7 +165,7 @@ function abort_installation() {
   then
     if [[ "${INSTALLATION_CFG_FILE}" =~ .*\.cfg$ ]]
     then
-      log "INFO" "GRAYLOG installation: Retry with ${0} -f ${INSTALLATION_CFG_FILE}"
+      log "INFO" "GRAYLOG installation: After debugging, launch again installation process with ${0} -a ${INSTALLATION_CFG_FILE}"
     fi
   fi
   exit 1
@@ -2131,8 +2132,8 @@ function configure_yum() {
   command_output_message=$(test_file ${epel_repo_file})
   if [ "${command_output_message}" == "0" ]
   then
-    log "WARN" "YUM repositories: EPEL repository already installed"
     ((warning_counter++))
+    log "WARN" "YUM repositories: EPEL repository already installed"
   else
     rpm --import ${epel_key_url}
     command_output_message=$(rpm -U ${epel_rpm_url} 2>&1 >/dev/null)
@@ -2140,16 +2141,16 @@ function configure_yum() {
     then
       log "INFO" "YUM repositories: EPEL repository successfully installed"
     else
+      ((error_counter++))
       log "ERROR" "YUM repositories: EPEL repository not installed"
       log "DEBUG" ${command_output_message}
-      ((error_counter++))
     fi
   fi
   command_output_message=$(test_file ${nginx_repo_file})
   if [ "${command_output_message}" == "0" ]
   then
-    log "WARN" "YUM repositories: NGINX repository already installed"
     ((warning_counter++))
+    log "WARN" "YUM repositories: NGINX repository already installed"
   else
     rpm --import ${nginx_key_url}
     command_output_message=$(rpm -U ${nginx_rpm_url} 2>&1 >/dev/null)
@@ -2163,21 +2164,21 @@ function configure_yum() {
       then
         log "INFO" "YUM repositories: NGINX repository successfully configured"
       else
+        ((error_counter++))
         log "ERROR" "YUM repositories: NGINX repository not configured"
         log "DEBUG" ${command_output_message}
-        ((error_counter++))
       fi
     else
+      ((error_counter++))
       log "ERROR" "YUM repositories: NGINX repository not installed"
       log "DEBUG" ${command_output_message}
-      ((error_counter++))
     fi
   fi
   command_output_message=$(test_file ${mongodb_repo_file})
   if [ "${command_output_message}" == "0" ]
   then
-    log "WARN" "YUM repositories: MONGO repository already installed"
     ((warning_counter++))
+    log "WARN" "YUM repositories: MONGO repository already installed"
   else
     command_output_message=$(cat << EOF > ${mongodb_repo_file}
 [mongodb]
@@ -2191,16 +2192,16 @@ EOF
     then
       log "INFO" "YUM repositories: MONGO repository successfully installed"
     else
+      ((error_counter++))
       log "ERROR" "YUM repositories: MONGO repository not installed"
       log "DEBUG" ${command_output_message}
-      ((error_counter++))
     fi
   fi
   command_output_message=$(test_file ${elasticsearch_repo_file})
   if [ "${command_output_message}" == "0" ]
   then
-    log "WARN" "YUM repositories: ELASTICSEARCH repository already installed"
     ((warning_counter++))
+    log "WARN" "YUM repositories: ELASTICSEARCH repository already installed"
   else
     rpm --import ${elasticsearch_key_url}
     command_output_message=$(cat << EOF > /etc/yum.repos.d/elasticsearch.repo
@@ -2216,25 +2217,25 @@ EOF
     then
       log "INFO" "YUM repositories: ELASTICSEARCH repository successfully installed"
     else
+      ((error_counter++))
       log "ERROR" "YUM repositories: ELASTICSEARCH repository not installed"
       log "DEBUG" ${command_output_message}
-      ((error_counter++))
     fi
   fi
   command_output_message=$(test_file ${graylog_repo_file})
   if [ "${command_output_message}" == "0" ]
   then
-    log "WARN" "YUM repositories: GRAYLOG repository already installed"
     ((warning_counter++))
+    log "WARN" "YUM repositories: GRAYLOG repository already installed"
   else
     command_output_message=$(rpm -U ${graylog_rpm_url} 2>&1 >/dev/null)
     if [ -z "${command_output_message}" ]
     then
       log "INFO" "YUM repositories: GRAYLOG repository successfully installed"
     else
+      ((error_counter++))
       log "ERROR" "YUM repositories: GRAYLOG repository not installed"
       log "DEBUG" ${command_output_message}
-      ((error_counter++))
     fi
   fi
   if [ "${error_counter}" == "0" ] && [ "${warning_counter}" == "0" ]
@@ -2258,18 +2259,18 @@ function initialize_yum() {
   then
     log "INFO" "YUM repositories: Successfully cleaned"
   else
+    ((error_counter++))
     log "ERROR" "YUM repositories: Not cleaned"
     log "DEBUG" ${command_output_message}
-    ((error_counter++))
   fi
   command_output_message=$(yum makecache 2>&1 >/dev/null)
   if [ -z "${command_output_message}" ] || [ "${command_output_message}" =~ [Ww]arning.* ]
   then
     log "INFO" "YUM cache: Successfully created"
   else
+    ((error_counter++))
     log "ERROR" "YUM cache: Not created"
     log "DEBUG" ${command_output_message}
-    ((error_counter++))
   fi
   if [ "${error_counter}" == "0" ]
   then
@@ -2317,6 +2318,7 @@ function upgrade_os() {
 # Install NTP service to maintain system at the time
 function install_ntp() {
   local installed_counter=0
+  local configured_counter=0
   local command_output_message=
   local ntp_config_file="/etc/ntp.conf"
   local ntp_backup_file="${ntp_config_file}.dist"
@@ -2325,87 +2327,84 @@ function install_ntp() {
   if [[ "${command_output_message}" =~ ^ntp\..* ]]
   then
     ((installed_counter++))
+    log "WARN" "NTP service: RPM package already installed"
   fi
-  if [ "${installed_counter}" == "1" ]
+  command_output_message=$(test_file ${ntp_backup_file})
+  if [ "${command_output_message}" == "0" ]
   then
-    log "WARN" "NTP service: Already installed"
+    ((configured_counter++))
+    log "INFO" "NTP service: ${ntp_backup_file} successfully found"
+  fi
+  if [ "${installed_counter}" == "1" ] && [ "${configured_counter}" == "1" ]
+  then
+    log "WARN" "NTP service: Already installed and configured"
     echo_passed "PASS"
   else
-    command_output_message=$(yum -y install ntp 2>&1 >/dev/null)
+    if [ "${installed_counter}" == "0" ]
+    then
+      command_output_message=$(yum -y install ntp 2>&1 >/dev/null)
+    fi
     if [ -z "${command_output_message}" ] || [[ "${command_output_message}" =~ [Ww]arning.* ]]
     then
       log "INFO" "NTP service: Successfully installed"
       echo_success "OK"
-      echo_message "Configure NTP service"
-      command_output_message=$(test_file ${ntp_backup_file})
-      if [ "${command_output_message}" == "0" ]
-      then
-        log "WARN" "NTP service: Already configured"
-        echo_passed "PASS"
-      else
-        if [[ "${BOOLEAN_NTP_CONFIGURE}" =~ true ]]
-        then
-          command_output_message=$(sed -i.dist \
-          -e "s/\(# Please consider.*\)/\1\nserver ${NEW_NTP_ADDRESS}/" \
-          -e "s/\(server\s[0-9]\..*\)/#\1/" \
-          ${ntp_config_file} 2>&1 >/dev/null)
-          if [ -z "${command_output_message}" ]
-          then
-            log "INFO" "NTP service: Successfully configured"
-            echo_success "OK"
-          else
-            log "ERROR" "NTP service: Not configured"
-            log "DEBUG" ${command_output_message}
-            echo_failure "FAILED"
-            abort_installation
-          fi
-        else
-          log "WARN" "NTP service: Configuration cancelled by user"
-          echo_passed "PASS"
-        fi
-      fi
-      echo_message "Start NTP service"
-      command_output_message=$(service ntpd start on 2>&1 >/dev/null)
-      if [ -z "${command_output_message}" ]
-      then
-        log "INFO" "NTP service: Successfully started"
-        echo_success "OK"
-      else
-        log "ERROR" "NTP service: Not started"
-        log "DEBUG" ${command_output_message}
-        echo_failure "FAILED"
-        abort_installation
-      fi
-      echo_message "Add NTP service on startup"
-      if [[ "${BOOLEAN_NTP_ONSTARTUP}" =~ true ]]
-      then
-        command_output_message=$(chkconfig ntpd on 2>&1 >/dev/null)
-        if [ -z "${command_output_message}" ]
-        then
-          log "INFO" "NTP service: Successfully added on startup"
-          echo_success "OK"
-        else
-          log "ERROR" "NTP service: Not added on startup"
-          log "DEBUG" ${command_output_message}
-          echo_failure "FAILED"
-        fi
-      else
-        command1_output_message=$(chkconfig ntpd off 2>&1 >/dev/null)
-        if [ -z "${command1_output_message}" ]
-        then
-          log "WARN" "NTP service: Not added on startup by user"
-          echo_passed "PASS"
-        else
-          log "ERROR" "NTP service: Not disabled on startup"
-          log "DEBUG" ${command1_output_message}
-          echo_failure "FAILED"
-        fi
-      fi
     else
       log "INFO" "NTP service: Not installed"
       log "DEBUG" ${command_output_message}
       echo_failure "FAILED"
       abort_installation
+    fi
+    echo_message "Configure NTP service"
+    if [ "${configured_counter}" == "1" ]
+    then
+      log "WARN" "NTP service: Already configured"
+      echo_passed "PASS"
+    else
+      if [[ "${BOOLEAN_NTP_CONFIGURE}" =~ true ]]
+      then
+        command_output_message=$(sed -i.dist \
+        -e "s/\(# Please consider.*\)/\1\nserver ${NEW_NTP_ADDRESS}/" \
+        -e "s/\(server\s[0-9]\..*\)/#\1/" \
+        ${ntp_config_file} 2>&1 >/dev/null)
+        if [ -z "${command_output_message}" ]
+        then
+          log "INFO" "NTP service: Successfully configured"
+          echo_success "OK"
+        else
+          log "ERROR" "NTP service: Not configured"
+          log "DEBUG" ${command_output_message}
+          echo_failure "FAILED"
+          abort_installation
+        fi
+      else
+        log "WARN" "NTP service: Configuration cancelled by user"
+        echo_passed "PASS"
+      fi
+    fi
+    echo_message "Add NTP service on startup"
+    if [[ "${BOOLEAN_NTP_ONSTARTUP}" =~ true ]]
+    then
+      command_output_message=$(chkconfig ntpd on 2>&1 >/dev/null)
+      if [ -z "${command_output_message}" ]
+      then
+        log "INFO" "NTP service: Successfully added on startup"
+        echo_success "OK"
+      else
+        log "ERROR" "NTP service: Not added on startup"
+        log "DEBUG" ${command_output_message}
+        echo_failure "FAILED"
+      fi
+    else
+      command1_output_message=$(chkconfig ntpd off 2>&1 >/dev/null)
+      if [ -z "${command1_output_message}" ]
+      then
+        log "WARN" "NTP service: Not added on startup by user"
+        echo_passed "PASS"
+      else
+        log "ERROR" "NTP service: Not disabled on startup"
+        log "DEBUG" ${command1_output_message}
+        echo_failure "FAILED"
+      fi
     fi
   fi
 }
@@ -2418,21 +2417,25 @@ function install_lsbpackages() {
   if [[ "${command_output_message}" =~ ^redhat-lsb-core\..* ]]
   then
     ((installed_counter++))
+    log "WARN" "LSB packages: redhat-lsb-core already installed"
   fi
   command_output_message=$(yum list installed | grep -w mlocate)
   if [[ "${command_output_message}" =~ ^mlocate\..* ]]
   then
     ((installed_counter++))
+    log "WARN" "LSB packages: mlocate already installed"
   fi
   command_output_message=$(yum list installed | grep -w bash-completion)
   if [[ "${command_output_message}" =~ ^bash-completion\..* ]]
   then
     ((installed_counter++))
+    log "WARN" "LSB packages: bash-completion already installed"
   fi
   command_output_message=$(yum list installed | grep -w vim-enhanced)
   if [[ "${command_output_message}" =~ ^vim-enhanced\..* ]]
   then
     ((installed_counter++))
+    log "WARN" "LSB packages: vim-enhanced already installed"
   fi
   if [ "${installed_counter}" == "4" ]
   then
@@ -2461,41 +2464,47 @@ function install_networkpackages() {
   if [[ "${command_output_message}" =~ ^wget\..* ]]
   then
     ((installed_counter++))
+    log "WARN" "Network packages: wget already installed"
   fi
   command_output_message=$(yum list installed | grep -w tcpdump)
   if [[ "${command_output_message}" =~ ^tcpdump\..* ]]
   then
     ((installed_counter++))
+    log "WARN" "Network packages: tcpdump already installed"
   fi
   command_output_message=$(yum list installed | grep -w traceroute)
   if [[ "${command_output_message}" =~ ^traceroute\..* ]]
   then
     ((installed_counter++))
+    log "WARN" "Network packages: traceroute already installed"
   fi
   command_output_message=$(yum list installed | grep -w bind-utils)
   if [[ "${command_output_message}" =~ ^bind-utils\..* ]]
   then
     ((installed_counter++))
+    log "WARN" "Network packages: bind-utils already installed"
   fi
   command_output_message=$(yum list installed | grep -w telnet)
   if [[ "${command_output_message}" =~ ^telnet\..* ]]
   then
     ((installed_counter++))
+    log "WARN" "Network packages: telnet already installed"
   fi
   command_output_message=$(yum list installed | grep -w openssh-clients)
   if [[ "${command_output_message}" =~ ^openssh-clients\..* ]]
   then
     ((installed_counter++))
+    log "WARN" "Network packages: openssh-clients already installed"
   fi
   command_output_message=$(yum list installed | grep -w system-config-firewall-tui)
   if [[ "${command_output_message}" =~ ^system-config-firewall-tui\..* ]]
   then
     ((installed_counter++))
+    log "WARN" "Network packages: system-config-firewall-tui already installed"
   fi
-  
   if [ "${installed_counter}" == "7" ]
   then
-    log "INFO" "Network packages: Already installed"
+    log "WARN" "Network packages: Already installed"
     echo_passed "PASS"
   else
     command_output_message=$(yum -y install wget tcpdump traceroute bind-utils telnet openssh-clients system-config-firewall 2>&1 >/dev/null)
@@ -2520,6 +2529,7 @@ function configure_bashrc() {
   command_output_message=$(test_file ${bashrc_backup_file})
   if [ "${command_output_message}" == "0" ]
   then
+    log "INFO" "Bourne-Again shell: ${bashrc_backup_file} successfully found"
     log "WARN" "Bourne-Again shell: Already configured"
     echo_passed "PASS"
   else
@@ -2580,6 +2590,7 @@ function configure_openssh() {
   command_output_message=$(test_file ${opensshd_backup_file})
   if [ "${command_output_message}" == "0" ]
   then
+    log "INFO" "SSH service: ${opensshd_backup_file} successfully found"
     log "WARN" "SSH service: Already configured"
     echo_passed "PASS"
   else
@@ -2592,17 +2603,6 @@ function configure_openssh() {
 #      ssh-keygen -b 2048 -t rsa -f ${openssh_hostrsakey_file}
       log "INFO" "SSH service: Successfully configured"
       echo_success "OK"
-      echo_message "Restart SSH service"
-      command_output_message=$(service sshd restart 2>&1 >/dev/null)
-      if [ -z "${command_output_message}" ]
-      then
-        log "INFO" "SSH service: Successfully restarted"
-        echo_success "OK"
-      else
-        log "ERROR" "SSH service: Not restarted"
-        log "DEBUG" ${command_output_message}
-        echo_failure "FAILED"
-      fi
     else
       log "ERROR" "SSH service: Not configured"
       log "DEBUG" ${command_output_message}
@@ -2714,6 +2714,7 @@ function configure_postfix() {
   command_output_message=$(test_file ${postfix_backup_file})
   if [ "${command_output_message}" == "0" ]
   then
+    log "INFO" "POSTFIX service: ${postfix_backup_file} successfully found"
     log "WARN" "POSTFIX service: Already configured"
     echo_passed "PASS"
   else
@@ -2724,17 +2725,6 @@ function configure_postfix() {
     then
       log "INFO" "POSTFIX service: Successfully configured"
       echo_success "OK"
-      echo_message "Restart POSTFIX service"
-      command_output_message=$(service postfix restart 2>&1 >/dev/null)
-      if [ -z "${command_output_message}" ]
-      then
-        log "INFO" "POSTFIX service: Successfully restarted"
-        echo_success "OK"
-      else
-        log "ERROR" "POSTFIX service: Not restarted"
-        log "DEBUG" ${command_output_message}
-        echo_failure "FAILED"
-      fi
     else
       log "ERROR" "POSTFIX service: Not configured"
       log "DEBUG" ${command_output_message}
@@ -2751,6 +2741,7 @@ function configure_hostsfile() {
   command_output_message=$(test_file ${hosts_backup_file})
   if [ "${command_output_message}" == "0" ]
   then
+    log "INFO" "HOSTS file: ${hosts_backup_file} successfully found"
     log "WARN" "HOSTS file: Already configured"
     echo_passed "PASS"
   else
@@ -2780,6 +2771,7 @@ function configure_selinux() {
   command_output_message=$(test_file ${selinux_backup_file})
   if [ "${command_output_message}" == "0" ]
   then
+    log "INFO" "SELINUX module: ${selinux_backup_file} successfully found"
     log "WARN" "SELINUX module: Already configured"
     echo_passed "PASS"
   else
@@ -2801,178 +2793,166 @@ function configure_selinux() {
 # Install and configure Mongo database server
 function install_mongodb() {
   local installed_counter=0
+  local configured_counter=0
+  local success_counter=0
+  local success_word_occurrence=
   local command_output_message=
   local success_word_definition="Successfully"
-  local success_word_occurrence=
   local mongodb_init_file="/etc/init.d/mongod"
+  local mongodb_initbackup_file="${mongodb_init_file}.dist"
   local mongodb_config_file="/etc/mongod.conf"
   local mongodb_backup_file="${mongodb_config_file}.dist"
-  local mongodb_admin_database="admin"
   echo_message "Install MONGO database server"
   command_output_message=$(yum list installed | grep mongodb-org.x)
   if [[ "${command_output_message}" =~ ^mongodb-org\..* ]]
   then
     ((installed_counter++))
+    log "WARN" "MONGO database server: mongodb-org already installed"
   fi
   command_output_message=$(yum list installed | grep -w mongodb-org-mongos)
   if [[ "${command_output_message}" =~ ^mongodb-org-mongos\..* ]]
   then
     ((installed_counter++))
+    log "WARN" "MONGO database server: mongodb-org-mongos already installed"
   fi
   command_output_message=$(yum list installed | grep -w mongodb-org-server)
   if [[ "${command_output_message}" =~ ^mongodb-org-server\..* ]]
   then
     ((installed_counter++))
+    log "WARN" "MONGO database server: mongodb-org-server already installed"
   fi
   command_output_message=$(yum list installed | grep -w mongodb-org-shell)
   if [[ "${command_output_message}" =~ ^mongodb-org-shell\..* ]]
   then
     ((installed_counter++))
+    log "WARN" "MONGO database server: mongodb-org-shell already installed"
   fi
   command_output_message=$(yum list installed | grep -w mongodb-org-tools)
   if [[ "${command_output_message}" =~ ^mongodb-org-tools\..* ]]
   then
     ((installed_counter++))
+    log "WARN" "MONGO database server: mongodb-org-tools already installed"
   fi
-  if [ "${installed_counter}" == "5" ]
+  command_output_message=$(test_file ${mongodb_initbackup_file})
+  if [ "${command_output_message}" == "0" ]
   then
-    log "INFO" "MONGO database server: Already installed"
+    ((configured_counter++))
+    log "INFO" "MONGO database server: ${mongodb_initbackup_file} successfully found"
+  fi
+  command_output_message=$(test_file ${mongodb_backup_file})
+  if [ "${command_output_message}" == "0" ]
+  then
+    ((configured_counter++))
+    log "INFO" "MONGO database server: ${mongodb_backup_file} successfully found"
+  fi
+  if [ "${installed_counter}" == "5" ] && [ "${configured_counter}" == "2" ]
+  then
+    log "WARN" "MONGO database server: Already installed and configured"
     echo_passed "PASS"
   else
-    command_output_message=$(yum -y install mongodb-org 2>&1 >/dev/null)
+    if [ "${installed_counter}" != "5" ]
+    then
+      command_output_message=$(yum -y install mongodb-org 2>&1 >/dev/null)
+    fi
     if [ -z "${command_output_message}" ] || [[ "${command_output_message}" =~ [Ww]arning.* ]]
     then
       log "INFO" "MONGO database server: Successfully installed"
-      command_output_message=$(test_file ${mongodb_init_file})
-      if [ "${command_output_message}" == "0" ]
-      then
-        log "INFO" "MONGO database server: ${mongodb_init_file} successfully found"
-        command_output_message=$(sed -i \
-        -e "s/\(.*daemon\)\(.*--user \"\$MONGO_USER\" \"\$NUMACTL \$mongod \$OPTIONS >\/dev\/null 2>&1\"\)/\1 --check \$mongod\2/" \
-        ${mongodb_init_file} 2>&1 >/dev/null)
-        if [ -z "${command_output_message}" ]
-        then
-          log "INFO" "MONGO database server: ${mongodb_init_file} successfully modified"
-        else
-          log "ERROR" "MONGO database server: ${mongodb_init_file} not modified"
-          log "DEBUG" ${command_output_message}
-        fi
-        command_output_message=$(service mongod start 2>&1 >/dev/null)
-        if [ -z "${command_output_message}" ]
-        then
-          log "INFO" "MONGO database server: Successfully started"
-          command_output_message=$(test_file ${mongodb_backup_file})
-          if [ "${command_output_message}" == "0" ]
-          then
-            log "WARN" "MONGO database server: ${mongodb_config_file} already backed-up"
-          else
-            command_output_message=$(mongo <<EOF
-use ${mongodb_admin_database}
-db.createUser(
- {
-  user: "${MONGO_ADMIN_USER}",
-  pwd: "${MONGO_ADMIN_PASSWORD}",
-  roles: [ { role: "root", db: "${mongodb_admin_database}" } ]
- }
-)
-use "${MONGO_GRAYLOG_DATABASE}"
-db.createUser(
- {
-  user: "${MONGO_GRAYLOG_USER}",
-  pwd: "${MONGO_GRAYLOG_PASSWORD}",
-  roles: [ { role: "readWrite", db: "${MONGO_GRAYLOG_DATABASE}" } ]
- }
-)
-quit()
-EOF
-2>&1 >/dev/null)
-            success_word_occurrence=$(( (`cat <<<${command_output_message} | wc -c` - `sed "s/${success_word_definition}//g" <<<${command_output_message} | wc -c`) / ${#success_word_definition} ))
-            if [ "${success_word_occurrence}" == "2" ]
-            then
-              log "INFO" "MONGO database server: Successfully set password (${MONGO_ADMIN_PASSWORD}) for user ${MONGO_ADMIN_USER}"
-              log "INFO" "MONGO database server: Successfully set role 'root' to user ${MONGO_ADMIN_USER} on database ${mongodb_admin_database}"
-              log "INFO" "MONGO database server: Successfully create database ${MONGO_GRAYLOG_DATABASE}"
-              log "INFO" "MONGO database server: Successfully create user ${MONGO_GRAYLOG_USER}"
-              log "INFO" "MONGO database server: Successfully set password (${MONGO_GRAYLOG_PASSWORD}) for user ${MONGO_GRAYLOG_USER}"
-              log "INFO" "MONGO database server: Successfully set role 'readWrite' to user ${MONGO_GRAYLOG_USER} on database ${MONGO_GRAYLOG_DATABASE}"
-              log "INFO" "MONGO database server: CLI configuration successfully completed"
-              command_output_message=$(sed -i.dist \
-              -e "s/#\(port=27017\)/\1/" \
-              -e "s/#\(auth=true\)/\1/" \
-              -e "s/#\(quota=true\)/\1/" \
-              -e "s/#\(httpinterface=\)true/\1false/" \
-              ${mongodb_config_file} 2>&1 >/dev/null)
-              if [ -z "${command_output_message}" ]
-              then
-                log "INFO" "MONGO database server: Successfully configured"
-                echo_success "OK"
-                echo_message "Restart MONGO database server"
-                command_output_message=$(service mongod restart 2>&1 >/dev/null)
-                if [ -z "${command_output_message}" ]
-                then
-                  log "INFO" "MONGO database server: Successfully restarted"
-                  echo_success "OK"
-                else
-                  log "ERROR" "MONGO database server: Not restarted"
-                  log "DEBUG" ${command_output_message}
-                  echo_failure "FAILED"
-                  abort_installation
-                fi
-              else
-                log "ERROR" "MONGO database server: Not configured"
-                log "DEBUG" ${command_output_message}
-                echo_failure "FAILED"
-                abort_installation
-              fi
-            else
-              log "ERROR" "MONGO database server: CLI configuration not completed"
-              log "DEBUG" ${command_output_message}
-              echo_failure "FAILED"
-              abort_installation
-            fi
-          fi
-        else
-          log "ERROR" "MONGO database server: Not started"
-          log "DEBUG" ${command_output_message}
-          echo_failure "FAILED"
-          abort_installation
-        fi
-        echo_message "Add MONGO database server on startup"
-        if [[ "${BOOLEAN_MONGO_ONSTARTUP}" =~ true ]]
-        then
-          command_output_message=$(chkconfig mongod on 2>&1 >/dev/null)
-          if [ -z "${command_output_message}" ]
-          then
-            log "INFO" "MONGO database server: Successfully added on startup"
-            echo_success "OK"
-          else
-            log "ERROR" "MONGO database server: Not added on startup"
-            log "DEBUG" ${command_output_message}
-            echo_failure "FAILED"
-          fi
-        else
-          command_output_message=$(chkconfig mongod off 2>&1 >/dev/null)
-          if [ -z "${command_output_message}" ]
-          then
-            log "WARN" "MONGO database server: Not added on startup by user"
-            echo_passed "PASS"
-          else
-            log "ERROR" "MONGO database server: Not disabled on startup"
-            log "DEBUG" ${command_output_message}
-            echo_failure "FAILED"
-          fi
-        fi
-      else
-        log "ERROR" "MONGO database server: ${mongodb_init_file} not found"
-        log "DEBUG" ${command_output_message}
-        echo_failure "FAILED"
-        abort_installation
-      fi
     else
       log "ERROR" "MONGO database server: Not installed"
       log "DEBUG" ${command_output_message}
       echo_failure "FAILED"
       abort_installation
+    fi
+    command_output_message=$(sed -i.dist \
+    -e "s/\(.*daemon\)\(.*--user \"\$MONGO_USER\" \"\$NUMACTL \$mongod \$OPTIONS >\/dev\/null 2>&1\"\)/\1 --check \$mongod\2/" \
+    ${mongodb_init_file} 2>&1 >/dev/null)
+    if [ -z "${command_output_message}" ]
+    then
+      log "INFO" "MONGO database server: ${mongodb_init_file} successfully modified"
+    else
+      log "ERROR" "MONGO database server: ${mongodb_init_file} not modified"
+      log "DEBUG" ${command_output_message}
+      echo_failure "FAILED"
+      abort_installation
+    fi
+    command_output_message=$(service mongod start 2>&1 >/dev/null)
+    if [ -z "${command_output_message}" ]
+    then
+      log "INFO" "MONGO database server: Successfully started"
+    else
+      log "ERROR" "MONGO database server: Not started"
+      log "DEBUG" ${command_output_message}
+      echo_failure "FAILED"
+      abort_installation
+    fi
+    command_output_message=$(mongo --eval "db.getSiblingDB('${MONGODB_ADMIN_DATABASE}').createUser({user: '${MONGO_ADMIN_USER}', pwd: '${MONGO_ADMIN_PASSWORD}', roles: [ { role: 'root', db: '${MONGODB_ADMIN_DATABASE}' } ]})")
+    success_word_occurrence=$(( (`cat <<<${command_output_message} | wc -c` - `sed "s/${success_word_definition}//g" <<<${command_output_message} | wc -c`) / ${#success_word_definition} ))
+    if [ "${success_word_occurrence}" == "1" ]
+    then
+      log "INFO" "MONGO database server: Successfully set password (${MONGO_ADMIN_PASSWORD}) for user ${MONGO_ADMIN_USER}"
+      log "INFO" "MONGO database server: Successfully set role 'root' to user ${MONGO_ADMIN_USER} on database ${MONGODB_ADMIN_DATABASE}"
+      log "INFO" "MONGO database server: CLI configuration successfully completed"
+    else
+      log "ERROR" "MONGO database server: CLI configuration not completed"
+      log "DEBUG" ${command_output_message}
+      echo_failure "FAILED"
+      abort_installation
+    fi
+    command_output_message=$(mongo --eval "db.getSiblingDB('${MONGO_GRAYLOG_DATABASE}').createUser({user: '${MONGO_GRAYLOG_USER}',  pwd: '${MONGO_GRAYLOG_PASSWORD}',  roles: [ { role: 'readWrite', db: '${MONGO_GRAYLOG_DATABASE}' } ]})")
+    success_word_occurrence=$(( (`cat <<<${command_output_message} | wc -c` - `sed "s/${success_word_definition}//g" <<<${command_output_message} | wc -c`) / ${#success_word_definition} ))
+    if [ "${success_word_occurrence}" == "1" ]
+    then
+      log "INFO" "MONGO database server: Successfully create database ${MONGO_GRAYLOG_DATABASE}"
+      log "INFO" "MONGO database server: Successfully create user ${MONGO_GRAYLOG_USER}"
+      log "INFO" "MONGO database server: Successfully set password (${MONGO_GRAYLOG_PASSWORD}) for user ${MONGO_GRAYLOG_USER}"
+      log "INFO" "MONGO database server: Successfully set role 'readWrite' to user ${MONGO_GRAYLOG_USER} on database ${MONGO_GRAYLOG_DATABASE}"
+      log "INFO" "MONGO database server: CLI configuration successfully completed"
+    else
+      log "ERROR" "MONGO database server: CLI configuration not completed"
+      log "DEBUG" ${command_output_message}
+      echo_failure "FAILED"
+      abort_installation
+    fi
+    command_output_message=$(sed -i.dist \
+    -e "s/#\(port=27017\)/\1/" \
+    -e "s/#\(auth=true\)/\1/" \
+    -e "s/#\(quota=true\)/\1/" \
+    -e "s/#\(httpinterface=\)true/\1false/" \
+    ${mongodb_config_file} 2>&1 >/dev/null)
+    if [ -z "${command_output_message}" ]
+    then
+      log "INFO" "MONGO database server: Successfully configured"
+      echo_success "OK"
+    else
+      log "ERROR" "MONGO database server: Not configured"
+      log "DEBUG" ${command_output_message}
+      echo_failure "FAILED"
+      abort_installation
+    fi
+    echo_message "Add MONGO database server on startup"
+    if [[ "${BOOLEAN_MONGO_ONSTARTUP}" =~ true ]]
+    then
+      command_output_message=$(chkconfig mongod on 2>&1 >/dev/null)
+      if [ -z "${command_output_message}" ]
+      then
+        log "INFO" "MONGO database server: Successfully added on startup"
+        echo_success "OK"
+      else
+        log "ERROR" "MONGO database server: Not added on startup"
+        log "DEBUG" ${command_output_message}
+        echo_failure "FAILED"
+      fi
+    else
+      command_output_message=$(chkconfig mongod off 2>&1 >/dev/null)
+      if [ -z "${command_output_message}" ]
+      then
+        log "WARN" "MONGO database server: Not added on startup by user"
+        echo_passed "PASS"
+      else
+        log "ERROR" "MONGO database server: Not disabled on startup"
+        log "DEBUG" ${command_output_message}
+        echo_failure "FAILED"
+      fi
     fi
   fi
 }
@@ -2985,6 +2965,7 @@ function install_java() {
   if [[ "${command_output_message}" =~ ^java.* ]]
   then
     ((installed_counter++))
+    log "WARN" "Java Runtime Environment: RPM package already installed"
   fi
   if [ "${installed_counter}" == "1" ]
   then
@@ -3007,6 +2988,7 @@ function install_java() {
 # Install and configure ElasticSearch server
 function install_elasticsearch() {
   local installed_counter=0
+  local configured_counter=0
   local command1_output_message=
   local command2_output_message=
   local elasticsearch_config_folder="/etc/elasticsearch"
@@ -3019,171 +3001,143 @@ function install_elasticsearch() {
   if [[ "${command1_output_message}" =~ ^elasticsearch\..* ]]
   then
     ((installed_counter++))
+    log "WARN" "ELASTICSEARCH server: RPM package already installed"
   fi
-  if [ "${installed_counter}" == "1" ]
+  command_output_message=$(test_file ${elasticsearch_backup_file})
+  if [ "${command_output_message}" == "0" ]
   then
-    log "WARN" "ELASTICSEARCH server: Already installed"
+    ((configured_counter++))
+    log "INFO" "ELASTICSEARCH server: ${elasticsearch_backup_file} successfully found"
+  fi
+  command_output_message=$(test_file ${elasticsearch_sysbackup_file})
+  if [ "${command_output_message}" == "0" ]
+  then
+    ((configured_counter++))
+    log "INFO" "ELASTICSEARCH server: ${elasticsearch_sysbackup_file} successfully found"
+  fi
+  if [ "${installed_counter}" == "1" ] && [ "${configured_counter}" == "2" ]
+  then
+    log "WARN" "ELASTICSEARCH server: Already installed and configured"
     echo_passed "PASS"
   else
-    command1_output_message=$(yum -y install elasticsearch 2>&1 >/dev/null)
+    if [ "${installed_counter}" == "0" ]
+    then
+      command1_output_message=$(yum -y install elasticsearch 2>&1 >/dev/null)
+    fi
     if [ -z "${command1_output_message}" ] || [[ "${command1_output_message}" =~ [Ww]arning.* ]]
     then
       log "INFO" "ELASTICSEARCH server: Successfully installed"
-      command1_output_message=$(test_file ${elasticsearch_backup_file})
-      command2_output_message=$(test_file ${elasticsearch_sysbackup_file})
-      if [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "0" ]
-      then
-        log "WARN" "ELASTICSEARCH server: ${elasticsearch_config_file} already backed-up"
-        log "WARN" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} already backed-up"
-        echo_passed "PASS"
-      elif [ "${command1_output_message}" == "1" ] && [ "${command2_output_message}" == "0" ]
-      then
-        log "ERROR" "ELASTICSEARCH server: ${elasticsearch_config_file} not backed-up"
-        log "WARN" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} already backed-up"
-        echo_failure "FAILED"
-        abort_installation
-      elif [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "1" ]
-      then
-        log "WARN" "ELASTICSEARCH server: ${elasticsearch_config_file} already backed-up"
-        log "ERROR" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} not backed-up"
-        echo_failure "FAILED"
-        abort_installation
-      else
-        command1_output_message=$(test_file ${elasticsearch_config_file})
-        command2_output_message=$(test_file ${elasticsearch_sysconfig_file})
-        if [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "0" ]
-        then
-          log "INFO" "ELASTICSEARCH server: ${elasticsearch_config_file} successfully found"
-          log "INFO" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} successfully found"
-          command1_output_message=$(sed -i.dist \
-          -e "s/#\(cluster.name: \).*/\1log-cluster/" \
-          -e "s/#\(node.name: \).*/\1${SERVER_SHORT_NAME}-elasticsearch/" \
-          -e "0,/#\(node.master: true\)/s//\1/" \
-          -e "0,/#\(node.data: true\)/s//\1/" \
-          -e "s/#\(network.host: \).*/\1${SERVER_IP_ADDRESS}/" \
-          -e "s/#\(transport.tcp.port: 9300\)/\1/" \
-          -e "s/#\(http.port: 9200\)/\1/" \
-          -e "s/#\(http.enabled: \)false/\1true/" \
-          -e "s/#\(discovery.zen.ping.multicast.enabled: false\)/\1/" \
-          -e "s/#\(discovery.zen.ping.unicast.hosts: \).*/\1\[\"${SERVER_HOST_NAME}\"\]/" \
-          -e "s/\(\#http.jsonp.enable: true\)/\1\nscript.disable_dynamic: true/" \
-          ${elasticsearch_config_file} 2>&1 >/dev/null)
-          command2_output_message=$(sed -i.dist \
-          -e "s/#\(ES_HEAP_SIZE\=\).*/\1${ELASTICSEARCH_RAM_RESERVATION}/" \
-          -e "s/#\(ES_DIRECT_SIZE\=\).*/\1${ELASTICSEARCH_RAM_RESERVATION}/" \
-          -e "s/#\(ES_JAVA_OPTS\=\).*/\1\"\-Djava.net.preferIPv4Stack\=true\"/" \
-          ${elasticsearch_sysconfig_file} 2>&1 >/dev/null)
-          if [ -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
-          then
-            log "INFO" "ELASTICSEARCH server: ${elasticsearch_config_file} successfully modified"
-            log "INFO" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} successfully modified"
-            echo_success "OK"
-            echo_message "Start ELASTICSEARCH service"
-            command1_output_message=$(service elasticsearch start 2>&1 >/dev/null)
-            if [ -z "${command1_output_message}" ]
-            then
-              log "INFO" "ELASTICSEARCH server: Successfully started"
-              echo_success "OK"
-              echo_message "Install ELASTICSEARCH HQ Management plugin"
-              if [[ "${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN}" =~ true ]]
-              then
-                command1_output_message=$(/usr/share/elasticsearch/bin/plugin -install royrusso/elasticsearch-HQ 2>&1 >/dev/null)
-                if [ -z "${command1_output_message}" ]
-                then
-                  log "INFO" "ELASTICSEARCH server: HQ Management plugin successfully installed"
-                  echo_success "OK"
-                else
-                  log "ERROR" "ELASTICSEARCH server: HQ Management plugin not installed"
-                  log "DEBUG" ${command1_output_message}
-                  echo_failure "FAILED"
-                fi
-              else
-                log "WARN" "ELASTICSEARCH server: HQ Management plugin installation cancelled by user"
-                echo_passed "PASS"
-              fi
-            else
-              log "ERROR" "ELASTICSEARCH server: Not started"
-              log "DEBUG" ${command1_output_message}
-              echo_failure "FAILED"
-              abort_installation
-            fi
-          elif [ ! -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
-          then
-            log "ERROR" "ELASTICSEARCH server: ${elasticsearch_config_file} not modified"
-            log "DEBUG" ${command1_output_message}
-            log "INFO" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} successfully modified"
-            echo_failure "FAILED"
-            abort_installation
-          elif [ -z "${command1_output_message}" ] && [ ! -z "${command2_output_message}" ]
-          then
-            log "INFO" "ELASTICSEARCH server: ${elasticsearch_config_file} successfully modified"
-            log "ERROR" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} not modified"
-            log "DEBUG" ${command2_output_message}
-            echo_failure "FAILED"
-            abort_installation
-          else
-            log "ERROR" "ELASTICSEARCH server: ${elasticsearch_config_file} not modified"
-            log "DEBUG" ${command1_output_message}
-            log "ERROR" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} not modified"
-            log "DEBUG" ${command2_output_message}
-            echo_failure "FAILED"
-            abort_installation
-          fi
-        elif [ "${command1_output_message}" == "1" ] && [ "${command2_output_message}" == "0" ]
-        then
-          log "ERROR" "ELASTICSEARCH server: ${elasticsearch_config_file} not found"
-          log "INFO" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} successfully found"
-          echo_failure "FAILED"
-          abort_installation
-        elif [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "1" ]
-        then
-          log "INFO" "ELASTICSEARCH server: ${elasticsearch_config_file} successfully found"
-          log "ERROR" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} not found"
-          echo_failure "FAILED"
-          abort_installation
-        else
-          log "ERROR" "ELASTICSEARCH server: ${elasticsearch_config_file} not found"
-          log "ERROR" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} not found"
-          echo_failure "FAILED"
-          abort_installation
-        fi
-      fi
-      echo_message "Add ELASTICSEARCH service on startup"
-      if [[ "${BOOLEAN_ELASTICSEARCH_ONSTARTUP}" =~ true ]]
-      then
-        command1_output_message=$(chkconfig elasticsearch on 2>&1 >/dev/null)
-        if [ -z "${command1_output_message}" ]
-        then
-          log "INFO" "ELASTICSEARCH server: Successfully added on startup"
-          echo_success "OK"
-        else
-          log "ERROR" "ELASTICSEARCH server: Not added on startup"
-          log "DEBUG" ${command1_output_message}
-          echo_failure "FAILED"
-        fi
-      else
-        command1_output_message=$(chkconfig elasticsearch off 2>&1 >/dev/null)
-        if [ -z "${command1_output_message}" ]
-        then
-          log "WARN" "ELASTICSEARCH server: Not added on startup by user"
-          echo_passed "PASS"
-        else
-          log "ERROR" "ELASTICSEARCH server: Not disabled on startup"
-          log "DEBUG" ${command1_output_message}
-          echo_failure "FAILED"
-        fi
-      fi
     else
       log "ERROR" "ELASTICSEARCH server: Not installed"
       log "DEBUG" ${command1_output_message}
       echo_failure "FAILED"
       abort_installation
     fi
+    command1_output_message=$(sed -i.dist \
+    -e "s/#\(cluster.name: \).*/\1log-cluster/" \
+    -e "s/#\(node.name: \).*/\1${SERVER_SHORT_NAME}-elasticsearch/" \
+    -e "0,/#\(node.master: true\)/s//\1/" \
+    -e "0,/#\(node.data: true\)/s//\1/" \
+    -e "s/#\(network.host: \).*/\1${SERVER_IP_ADDRESS}/" \
+    -e "s/#\(transport.tcp.port: 9300\)/\1/" \
+    -e "s/#\(http.port: 9200\)/\1/" \
+    -e "s/#\(http.enabled: \)false/\1true/" \
+    -e "s/#\(discovery.zen.ping.multicast.enabled: false\)/\1/" \
+    -e "s/#\(discovery.zen.ping.unicast.hosts: \).*/\1\[\"${SERVER_HOST_NAME}\"\]/" \
+    -e "s/\(\#http.jsonp.enable: true\)/\1\nscript.disable_dynamic: true/" \
+    ${elasticsearch_config_file} 2>&1 >/dev/null)
+    command2_output_message=$(sed -i.dist \
+    -e "s/#\(ES_HEAP_SIZE\=\).*/\1${ELASTICSEARCH_RAM_RESERVATION}/" \
+    -e "s/#\(ES_DIRECT_SIZE\=\).*/\1${ELASTICSEARCH_RAM_RESERVATION}/" \
+    -e "s/#\(ES_JAVA_OPTS\=\).*/\1\"\-Djava.net.preferIPv4Stack\=true\"/" \
+    ${elasticsearch_sysconfig_file} 2>&1 >/dev/null)
+    if [ -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
+    then
+      log "INFO" "ELASTICSEARCH server: ${elasticsearch_config_file} successfully modified"
+      log "INFO" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} successfully modified"
+      echo_success "OK"
+    elif [ ! -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
+    then
+      log "ERROR" "ELASTICSEARCH server: ${elasticsearch_config_file} not modified"
+      log "DEBUG" ${command1_output_message}
+      log "INFO" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} successfully modified"
+      echo_failure "FAILED"
+      abort_installation
+    elif [ -z "${command1_output_message}" ] && [ ! -z "${command2_output_message}" ]
+    then
+      log "INFO" "ELASTICSEARCH server: ${elasticsearch_config_file} successfully modified"
+      log "ERROR" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} not modified"
+      log "DEBUG" ${command2_output_message}
+      echo_failure "FAILED"
+      abort_installation
+    else
+      log "ERROR" "ELASTICSEARCH server: ${elasticsearch_config_file} not modified"
+      log "DEBUG" ${command1_output_message}
+      log "ERROR" "ELASTICSEARCH server: ${elasticsearch_sysconfig_file} not modified"
+      log "DEBUG" ${command2_output_message}
+      echo_failure "FAILED"
+      abort_installation
+    fi
+    echo_message "Start ELASTICSEARCH service"
+    command1_output_message=$(service elasticsearch start 2>&1 >/dev/null)
+    if [ -z "${command1_output_message}" ]
+    then
+      log "INFO" "ELASTICSEARCH server: Successfully started"
+      echo_success "OK"
+    else
+      log "ERROR" "ELASTICSEARCH server: Not started"
+      log "DEBUG" ${command1_output_message}
+      echo_failure "FAILED"
+      abort_installation
+    fi
+    echo_message "Install ELASTICSEARCH HQ Management plugin"
+    if [[ "${BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN}" =~ true ]]
+    then
+      command1_output_message=$(/usr/share/elasticsearch/bin/plugin -install royrusso/elasticsearch-HQ 2>&1 >/dev/null)
+      if [ -z "${command1_output_message}" ]
+      then
+        log "INFO" "ELASTICSEARCH server: HQ Management plugin successfully installed"
+        echo_success "OK"
+      else
+        log "ERROR" "ELASTICSEARCH server: HQ Management plugin not installed"
+        log "DEBUG" ${command1_output_message}
+        echo_failure "FAILED"
+      fi
+    else
+        log "WARN" "ELASTICSEARCH server: HQ Management plugin installation cancelled by user"
+        echo_passed "PASS"
+    fi
+    echo_message "Add ELASTICSEARCH service on startup"
+    if [[ "${BOOLEAN_ELASTICSEARCH_ONSTARTUP}" =~ true ]]
+    then
+      command1_output_message=$(chkconfig elasticsearch on 2>&1 >/dev/null)
+      if [ -z "${command1_output_message}" ]
+      then
+        log "INFO" "ELASTICSEARCH server: Successfully added on startup"
+        echo_success "OK"
+      else
+        log "ERROR" "ELASTICSEARCH server: Not added on startup"
+        log "DEBUG" ${command1_output_message}
+        echo_failure "FAILED"
+      fi
+    else
+      command1_output_message=$(chkconfig elasticsearch off 2>&1 >/dev/null)
+      if [ -z "${command1_output_message}" ]
+      then
+        log "WARN" "ELASTICSEARCH server: Not added on startup by user"
+        echo_passed "PASS"
+      else
+        log "ERROR" "ELASTICSEARCH server: Not disabled on startup"
+        log "DEBUG" ${command1_output_message}
+        echo_failure "FAILED"
+      fi
+    fi
   fi
 }
 # Install and configure server component of Graylog application
 function install_graylogserver() {
   local installed_counter=0
+  local configured_counter=0
   local command1_output_message=
   local command2_output_message=
   local graylogserver_config_folder="/etc/graylog/server"
@@ -3198,165 +3152,137 @@ function install_graylogserver() {
   if [[ "${command1_output_message}" =~ ^graylog-server\..* ]]
   then
     ((installed_counter++))
+    log "WARN" "GRAYLOG server: RPM package already installed"
   fi
-  if [ "${installed_counter}" == "1" ]
+  command_output_message=$(test_file ${graylogserver_backup_file})
+  if [ "${command_output_message}" == "0" ]
   then
-    log "WARN" "GRAYLOG server: Already installed"
+    ((configured_counter++))
+    log "INFO" "GRAYLOG server: ${graylogserver_backup_file} successfully found"
+  fi
+  command_output_message=$(test_file ${graylogserver_sysbackup_file})
+  if [ "${command_output_message}" == "0" ]
+  then
+    ((configured_counter++))
+    log "INFO" "GRAYLOG server: ${graylogserver_sysbackup_file} successfully found"
+  fi
+  if [ "${installed_counter}" == "1" ] && [ "${configured_counter}" == "2" ]
+  then
+    log "WARN" "GRAYLOG server: Already installed and configured"
     echo_passed "PASS"
   else
-    command1_output_message=$(yum -y install graylog-server 2>&1 >/dev/null)
+    if [ "${installed_counter}" == "0" ]
+    then
+      command1_output_message=$(yum -y install graylog-server 2>&1 >/dev/null)
+    fi
     if [ -z "${command1_output_message}" ] || [[ "${command1_output_message}" =~ [Ww]arning.* ]]
     then
       log "INFO" "GRAYLOG server: Successfully installed"
-      command1_output_message=$(test_file ${graylogserver_backup_file})
-      command2_output_message=$(test_file ${graylogserver_sysbackup_file})
-      if [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "0" ]
-      then
-        log "WARN" "GRAYLOG server: ${graylogserver_config_file} already backed-up"
-        log "WARN" "GRAYLOG server: ${graylogserver_sysconfig_file} already backed-up"
-        echo_passed "PASS"
-      elif [ "${command1_output_message}" == "1" ] && [ "${command2_output_message}" == "0" ]
-      then
-        log "ERROR" "GRAYLOG server: ${graylogserver_config_file} not backed-up"
-        log "WARN" "GRAYLOG server: ${graylogserver_sysconfig_file} already backed-up"
-        echo_failure "FAILED"
-        abort_installation
-      elif [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "1" ]
-      then
-        log "WARN" "GRAYLOG server: ${graylogserver_config_file} already backed-up"
-        log "ERROR" "GRAYLOG server: ${graylogserver_sysconfig_file} not backed-up"
-        echo_failure "FAILED"
-        abort_installation
-      else
-        command1_output_message=$(test_file ${graylogserver_config_file})
-        command2_output_message=$(test_file ${graylogserver_sysconfig_file})
-        if [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "0" ]
-        then
-          log "INFO" "GRAYLOG server: ${graylogserver_config_file} successfully found"
-          log "INFO" "GRAYLOG server: ${graylogserver_sysconfig_file} successfully found"
-          command1_output_message=$(sed -i.dist \
-          -e "s/\(password_secret =\)/\1 ${graylog_secret_password}/" \
-          -e "s/#\(root_username =\).*/\1 ${GRAYLOG_ADMIN_USERNAME}/" \
-          -e "s/\(root_password_sha2 =\)/\1 ${graylog_admin_password}/" \
-          -e "s/#\(root_email = \"\)\(\"\)/\1${SERVER_SHORT_NAME}\@${SMTP_DOMAIN_NAME}\2/" \
-          -e "s|#\(root_timezone = \).*|\1${SERVER_TIME_ZONE}|" \
-          -e "s|\(rest_listen_uri = \).*|\1https://${SERVER_HOST_NAME}:12900/|" \
-          -e "s|#\(rest_transport_uri = \).*|\1https://${SERVER_HOST_NAME}:12900/|" \
-          -e "s/#\(rest_enable_tls = true\)/\1/" \
-          -e "s|#\(rest_tls_cert_file = \).*|\1${PUBLIC_KEY_FILE}|" \
-          -e "s|#\(rest_tls_key_file = \).*|\1${PRIVATE_KEY_FILE}|" \
-          -e "s/#\(elasticsearch_cluster_name = \).*/\1log-cluster/" \
-          -e "s/#\(elasticsearch_node_name = \).*/\1${SERVER_SHORT_NAME}-graylog/" \
-          -e "s/#\(elasticsearch_http_enabled = false\)/\1/" \
-          -e "s/#\(elasticsearch_discovery_zen_ping_multicast_enabled = false\)/\1/" \
-          -e "s/#\(elasticsearch_discovery_zen_ping_unicast_hosts = \).*/\1${SERVER_HOST_NAME}:9300/" \
-          -e "s/#\(elasticsearch_node_master = false\)/\1/" \
-          -e "s/#\(elasticsearch_node_data = false\)/\1/" \
-          -e "s/#\(elasticsearch_transport_tcp_port = 9350\)/\1/" \
-          -e "s/#\(elasticsearch_http_enabled = false\)/\1/" \
-          -e "s/#\(elasticsearch_network_host = \).*/\1${SERVER_IP_ADDRESS}/" \
-          -e "s/\(mongodb_useauth = \).*/\1true/" \
-          -e "s/#\(mongodb_user = \).*/\1${MONGO_GRAYLOG_USER}/" \
-          -e "s/#\(mongodb_password = \).*/\1${MONGO_GRAYLOG_PASSWORD}/" \
-          -e "s/\(mongodb_host = \).*/\1localhost/" \
-          -e "s/\(mongodb_database = \).*/\1${MONGO_GRAYLOG_DATABASE}/" \
-          -e "s/#\(transport_email_enabled = \).*/\1${BOOLEAN_GRAYLOG_SMTP}/" \
-          -e "s/#\(transport_email_hostname = \).*/\1${SMTP_HOST_NAME}/" \
-          -e "s/#\(transport_email_port = \).*/\1${SMTP_PORT_NUMBER}/" \
-          -e "s/#\(transport_email_use_auth = \).*/\1${BOOLEAN_SMTP_AUTH}/" \
-          -e "s/#\(transport_email_use_tls = \).*/\1${BOOLEAN_SMTP_TLS}/" \
-          -e "s/#\(transport_email_use_ssl = \).*/\1${BOOLEAN_SMTP_SSL}/" \
-          -e "s/#\(transport_email_auth_username = \).*/\1${SMTP_AUTH_USERNAME}/" \
-          -e "s/#\(transport_email_auth_password = \).*/\1${SMTP_AUTH_PASSWORD}/" \
-          -e "s/#\(transport_email_subject_prefix = .*\)/\1/" \
-          -e "s/#\(transport_email_from_email = \).*/\1${SERVER_SHORT_NAME}\@${SMTP_DOMAIN_NAME}/" \
-          -e "s|#\(transport_email_web_interface_url = \).*|\1https://${SERVER_HOST_NAME}|" \
-          ${graylogserver_config_file} 2>&1 >/dev/null)
-          command2_output_message=$(sed -i.dist \
-          -e "s/\(GRAYLOG_SERVER_JAVA_OPTS=\"\).*\(\"\)/\1-Djava.net.preferIPv4Stack=true -Xms${GRAYLOGSERVER_RAM_RESERVATION} -Xmx${GRAYLOGSERVER_RAM_RESERVATION} -XX:NewRatio=1 -XX:PermSize=128m -XX:MaxPermSize=256m -server -XX:+ResizeTLAB -XX:+UseConcMarkSweepGC -XX:+CMSConcurrentMTEnabled -XX:+CMSClassUnloadingEnabled -XX:+UseParNewGC -XX:-OmitStackTraceInFastThrow\2/" \
-          ${graylogserver_sysconfig_file} 2>&1 >/dev/null)
-          if [ -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
-          then
-            log "INFO" "GRAYLOG server: ${graylogserver_config_file} successfully modified"
-            log "INFO" "GRAYLOG server: ${graylogserver_sysconfig_file} successfully modified"
-            echo_success "OK"
-          elif [ ! -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
-          then
-            log "ERROR" "GRAYLOG server: ${graylogserver_config_file} not modified"
-            log "DEBUG" ${command1_output_message}
-            log "INFO" "GRAYLOG server: ${graylogserver_sysconfig_file} successfully modified"
-            echo_failure "FAILED"
-            abort_installation
-          elif [ -z "${command1_output_message}" ] && [ ! -z "${command2_output_message}" ]
-          then
-            log "INFO" "GRAYLOG server: ${graylogserver_config_file} successfully modified"
-            log "ERROR" "GRAYLOG server: ${graylogserver_sysconfig_file} not modified"
-            log "DEBUG" ${command2_output_message}
-            echo_failure "FAILED"
-            abort_installation
-          else
-            log "ERROR" "GRAYLOG server: ${graylogserver_config_file} not modified"
-            log "DEBUG" ${command1_output_message}
-            log "ERROR" "GRAYLOG server: ${graylogserver_sysconfig_file} not modified"
-            log "DEBUG" ${command2_output_message}
-            echo_failure "FAILED"
-            abort_installation
-          fi
-        elif [ "${command1_output_message}" == "1" ] && [ "${command2_output_message}" == "0" ]
-        then
-          log "ERROR" "GRAYLOG server: ${graylogserver_config_file} not found"
-          log "INFO" "GRAYLOG server: ${graylogserver_sysconfig_file} successfully found"
-          echo_failure "FAILED"
-          abort_installation
-        elif [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "1" ]
-        then
-          log "INFO" "GRAYLOG server: ${graylogserver_config_file} successfully found"
-          log "ERROR" "GRAYLOG server: ${graylogserver_sysconfig_file} not found"
-          echo_failure "FAILED"
-          abort_installation
-        else
-          log "ERROR" "GRAYLOG server: ${graylogserver_config_file} not found"
-          log "ERROR" "GRAYLOG server: ${graylogserver_sysconfig_file} not found"
-          echo_failure "FAILED"
-          abort_installation
-        fi
-      fi
-      echo_message "Add GRAYLOG server on startup"
-      if [[ "${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}" =~ true ]]
-      then
-        command1_output_message=$(chkconfig graylog-server on 2>&1 >/dev/null)
-        if [ -z "${command1_output_message}" ]
-        then
-          log "INFO" "GRAYLOG server: Successfully added on startup"
-          echo_success "OK"
-        else
-          log "ERROR" "GRAYLOG server: Not added on startup"
-          log "DEBUG" ${command1_output_message}
-          echo_failure "FAILED"
-        fi
-      else
-        command1_output_message=$(chkconfig graylog-server off 2>&1 >/dev/null)
-        if [ -z "${command1_output_message}" ]
-        then
-          log "WARN" "GRAYLOG server: Not added on startup by user"
-          echo_passed "PASS"
-        else
-          log "ERROR" "GRAYLOG server: Not disabled on startup"
-          log "DEBUG" ${command1_output_message}
-          echo_failure "FAILED"
-        fi
-      fi
     else
       log "ERROR" "GRAYLOG server: Not installed"
       log "DEBUG" ${command1_output_message}
       echo_failure "FAILED"
       abort_installation
     fi
+    command1_output_message=$(sed -i.dist \
+    -e "s/\(password_secret =\)/\1 ${graylog_secret_password}/" \
+    -e "s/#\(root_username =\).*/\1 ${GRAYLOG_ADMIN_USERNAME}/" \
+    -e "s/\(root_password_sha2 =\)/\1 ${graylog_admin_password}/" \
+    -e "s/#\(root_email = \"\)\(\"\)/\1${SERVER_SHORT_NAME}\@${SMTP_DOMAIN_NAME}\2/" \
+    -e "s|#\(root_timezone = \).*|\1${SERVER_TIME_ZONE}|" \
+    -e "s|\(rest_listen_uri = \).*|\1https://${SERVER_HOST_NAME}:12900/|" \
+    -e "s|#\(rest_transport_uri = \).*|\1https://${SERVER_HOST_NAME}:12900/|" \
+    -e "s/#\(rest_enable_tls = true\)/\1/" \
+    -e "s|#\(rest_tls_cert_file = \).*|\1${PUBLIC_KEY_FILE}|" \
+    -e "s|#\(rest_tls_key_file = \).*|\1${PRIVATE_KEY_FILE}|" \
+    -e "s/#\(elasticsearch_cluster_name = \).*/\1log-cluster/" \
+    -e "s/#\(elasticsearch_node_name = \).*/\1${SERVER_SHORT_NAME}-graylog/" \
+    -e "s/#\(elasticsearch_http_enabled = false\)/\1/" \
+    -e "s/#\(elasticsearch_discovery_zen_ping_multicast_enabled = false\)/\1/" \
+    -e "s/#\(elasticsearch_discovery_zen_ping_unicast_hosts = \).*/\1${SERVER_HOST_NAME}:9300/" \
+    -e "s/#\(elasticsearch_node_master = false\)/\1/" \
+    -e "s/#\(elasticsearch_node_data = false\)/\1/" \
+    -e "s/#\(elasticsearch_transport_tcp_port = 9350\)/\1/" \
+    -e "s/#\(elasticsearch_http_enabled = false\)/\1/" \
+    -e "s/#\(elasticsearch_network_host = \).*/\1${SERVER_IP_ADDRESS}/" \
+    -e "s/\(mongodb_useauth = \).*/\1true/" \
+    -e "s/#\(mongodb_user = \).*/\1${MONGO_GRAYLOG_USER}/" \
+    -e "s/#\(mongodb_password = \).*/\1${MONGO_GRAYLOG_PASSWORD}/" \
+    -e "s/\(mongodb_host = \).*/\1localhost/" \
+    -e "s/\(mongodb_database = \).*/\1${MONGO_GRAYLOG_DATABASE}/" \
+    -e "s/#\(transport_email_enabled = \).*/\1${BOOLEAN_GRAYLOG_SMTP}/" \
+    -e "s/#\(transport_email_hostname = \).*/\1${SMTP_HOST_NAME}/" \
+    -e "s/#\(transport_email_port = \).*/\1${SMTP_PORT_NUMBER}/" \
+    -e "s/#\(transport_email_use_auth = \).*/\1${BOOLEAN_SMTP_AUTH}/" \
+    -e "s/#\(transport_email_use_tls = \).*/\1${BOOLEAN_SMTP_TLS}/" \
+    -e "s/#\(transport_email_use_ssl = \).*/\1${BOOLEAN_SMTP_SSL}/" \
+    -e "s/#\(transport_email_auth_username = \).*/\1${SMTP_AUTH_USERNAME}/" \
+    -e "s/#\(transport_email_auth_password = \).*/\1${SMTP_AUTH_PASSWORD}/" \
+    -e "s/#\(transport_email_subject_prefix = .*\)/\1/" \
+    -e "s/#\(transport_email_from_email = \).*/\1${SERVER_SHORT_NAME}\@${SMTP_DOMAIN_NAME}/" \
+    -e "s|#\(transport_email_web_interface_url = \).*|\1https://${SERVER_HOST_NAME}|" \
+    ${graylogserver_config_file} 2>&1 >/dev/null)
+    command2_output_message=$(sed -i.dist \
+    -e "s/\(GRAYLOG_SERVER_JAVA_OPTS=\"\).*\(\"\)/\1-Djava.net.preferIPv4Stack=true -Xms${GRAYLOGSERVER_RAM_RESERVATION} -Xmx${GRAYLOGSERVER_RAM_RESERVATION} -XX:NewRatio=1 -XX:PermSize=128m -XX:MaxPermSize=256m -server -XX:+ResizeTLAB -XX:+UseConcMarkSweepGC -XX:+CMSConcurrentMTEnabled -XX:+CMSClassUnloadingEnabled -XX:+UseParNewGC -XX:-OmitStackTraceInFastThrow\2/" \
+    ${graylogserver_sysconfig_file} 2>&1 >/dev/null)
+    if [ -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
+    then
+      log "INFO" "GRAYLOG server: ${graylogserver_config_file} successfully modified"
+      log "INFO" "GRAYLOG server: ${graylogserver_sysconfig_file} successfully modified"
+      echo_success "OK"
+    elif [ ! -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
+    then
+      log "ERROR" "GRAYLOG server: ${graylogserver_config_file} not modified"
+      log "DEBUG" ${command1_output_message}
+      log "INFO" "GRAYLOG server: ${graylogserver_sysconfig_file} successfully modified"
+      echo_failure "FAILED"
+      abort_installation
+    elif [ -z "${command1_output_message}" ] && [ ! -z "${command2_output_message}" ]
+    then
+      log "INFO" "GRAYLOG server: ${graylogserver_config_file} successfully modified"
+      log "ERROR" "GRAYLOG server: ${graylogserver_sysconfig_file} not modified"
+      log "DEBUG" ${command2_output_message}
+      echo_failure "FAILED"
+      abort_installation
+    else
+      log "ERROR" "GRAYLOG server: ${graylogserver_config_file} not modified"
+      log "DEBUG" ${command1_output_message}
+      log "ERROR" "GRAYLOG server: ${graylogserver_sysconfig_file} not modified"
+      log "DEBUG" ${command2_output_message}
+      echo_failure "FAILED"
+      abort_installation
+    fi
+    echo_message "Add GRAYLOG server on startup"
+    if [[ "${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}" =~ true ]]
+    then
+      command1_output_message=$(chkconfig graylog-server on 2>&1 >/dev/null)
+      if [ -z "${command1_output_message}" ]
+      then
+        log "INFO" "GRAYLOG server: Successfully added on startup"
+        echo_success "OK"
+      else
+        log "ERROR" "GRAYLOG server: Not added on startup"
+        log "DEBUG" ${command1_output_message}
+        echo_failure "FAILED"
+      fi
+    else
+      command1_output_message=$(chkconfig graylog-server off 2>&1 >/dev/null)
+      if [ -z "${command1_output_message}" ]
+      then
+        log "WARN" "GRAYLOG server: Not added on startup by user"
+        echo_passed "PASS"
+      else
+        log "ERROR" "GRAYLOG server: Not disabled on startup"
+        log "DEBUG" ${command1_output_message}
+        echo_failure "FAILED"
+      fi
+    fi
   fi
 }
 # Install and configure web interface component of Graylog application
 function install_graylogwebgui() {
   local installed_counter=0
+  local configured_counter=0
   local command1_output_message=
   local command2_output_message=
   local graylogwebgui_config_folder="/etc/graylog/web"
@@ -3370,127 +3296,98 @@ function install_graylogwebgui() {
   if [[ "${command1_output_message}" =~ ^graylog-web\..* ]]
   then
     ((installed_counter++))
+    log "WARN" "GRAYLOG web interface: RPM package already installed"
   fi
-  if [ "${installed_counter}" == "1" ]
+  command_output_message=$(test_file ${graylogwebgui_backup_file})
+  if [ "${command_output_message}" == "0" ]
   then
-    log "WARN" "GRAYLOG web interface: Already installed"
+    ((configured_counter++))
+    log "INFO" "GRAYLOG web interface: ${graylogwebgui_backup_file} successfully found"
+  fi
+  command_output_message=$(test_file ${graylogwebgui_sysbackup_file})
+  if [ "${command_output_message}" == "0" ]
+  then
+    ((configured_counter++))
+    log "INFO" "GRAYLOG web interface: ${graylogwebgui_sysbackup_file} successfully found"
+  fi
+  if [ "${installed_counter}" == "1" ] && [ "${configured_counter}" == "2" ]
+  then
+    log "WARN" "GRAYLOG web interface: Already installed and configured"
     echo_passed "PASS"
   else
-    command1_output_message=$(yum -y install graylog-web 2>&1 >/dev/null)
+    if [ "${installed_counter}" == "0" ]
+    then
+      command1_output_message=$(yum -y install graylog-web 2>&1 >/dev/null)
+    fi
     if [ -z "${command1_output_message}" ] || [[ "${command1_output_message}" =~ [Ww]arning.* ]]
     then
       log "INFO" "GRAYLOG web interface: Successfully installed"
-      command1_output_message=$(test_file ${graylogwebgui_backup_file})
-      command2_output_message=$(test_file ${graylogwebgui_sysbackup_file})
-      if [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "0" ]
-      then
-        log "WARN" "GRAYLOG web interface: ${graylogwebgui_config_file} already backed-up"
-        log "WARN" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} already backed-up"
-        echo_passed "PASS"
-      elif [ "${command1_output_message}" == "1" ] && [ "${command2_output_message}" == "0" ]
-      then
-        log "ERROR" "GRAYLOG web interface: ${graylogwebgui_config_file} not backed-up"
-        log "WARN" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} already backed-up"
-        echo_failure "FAILED"
-        abort_installation
-      elif [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "1" ]
-      then
-        log "WARN" "GRAYLOG web interface: ${graylogwebgui_config_file} already backed-up"
-        log "ERROR" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} not backed-up"
-        echo_failure "FAILED"
-        abort_installation
-      else
-        command1_output_message=$(test_file ${graylogwebgui_config_file})
-        command2_output_message=$(test_file ${graylogwebgui_sysconfig_file})
-        if [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "0" ]
-        then
-          log "INFO" "GRAYLOG web interface: ${graylogwebgui_config_file} successfully found"
-          log "INFO" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} successfully found"
-          command1_output_message=$(sed -i.dist \
-          -e "s|\(graylog2-server.uris=\"\)\(\"\)|\1https://${SERVER_HOST_NAME}:12900/\2|" \
-          -e "s/\(application.secret=\"\)\(\"\)/\1${graylog_secret_password}\2/" \
-          -e "s|#.*\(timezone=\"\).*\(\"\)|\1${SERVER_TIME_ZONE}\2|" \
-          ${graylogwebgui_config_file} 2>&1 >/dev/null)
-          command2_output_message=$(sed -i.dist \
-          -e "s/\(GRAYLOG_WEB_HTTP_ADDRESS=\"\)0.0.0.0\(\"\)/\1localhost\2/" \
-          -e "s/\(GRAYLOG_WEB_JAVA_OPTS=\"\)\(\"\)/\1-Djava.net.preferIPv4Stack=true\2/" \
-          ${graylogwebgui_sysconfig_file} 2>&1 >/dev/null)
-          if [ -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
-          then
-            log "INFO" "GRAYLOG web interface: ${graylogwebgui_config_file} successfully modified"
-            log "INFO" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} successfully modified"
-            echo_success "OK"
-          elif [ ! -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
-          then
-            log "ERROR" "GRAYLOG web interface: ${graylogwebgui_config_file} not found"
-            log "DEBUG" ${command1_output_message}
-            log "INFO" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} successfully found"
-            echo_failure "FAILED"
-            abort_installation
-          elif [ -z "${command1_output_message}" ] && [ ! -z "${command2_output_message}" ]
-          then
-            log "INFO" "GRAYLOG web interface: ${graylogwebgui_config_file} successfully found"
-            log "ERROR" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} not found"
-            log "DEBUG" ${command2_output_message}
-            echo_failure "FAILED"
-            abort_installation
-          else
-            log "ERROR" "GRAYLOG web interface: ${graylogwebgui_config_file} not found"
-            log "DEBUG" ${command1_output_message}
-            log "ERROR" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} not found"
-            log "DEBUG" ${command2_output_message}
-            echo_failure "FAILED"
-            abort_installation
-          fi
-        elif [ "${command1_output_message}" == "1" ] && [ "${command2_output_message}" == "0" ]
-        then
-          log "ERROR" "GRAYLOG web interface: ${graylogwebgui_config_file} not found"
-          log "INFO" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} successfully found"
-          echo_failure "FAILED"
-          abort_installation
-        elif [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "1" ]
-        then
-          log "INFO" "GRAYLOG web interface: ${graylogwebgui_config_file} successfully found"
-          log "ERROR" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} not found"
-          echo_failure "FAILED"
-          abort_installation
-        else
-          log "ERROR" "GRAYLOG web interface: ${graylogwebgui_config_file} not found"
-          log "ERROR" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} not found"
-          echo_failure "FAILED"
-          abort_installation
-        fi
-      fi
-      echo_message "Add GRAYLOG web interface on startup"
-      if [[ "${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}" =~ true ]]
-      then
-        command1_output_message=$(chkconfig graylog-web on 2>&1 >/dev/null)
-        if [ -z "${command1_output_message}" ]
-        then
-          log "INFO" "GRAYLOG web interface: Successfully added on startup"
-          echo_success "OK"
-        else
-          log "ERROR" "GRAYLOG web interface: Not added on startup"
-          log "DEBUG" ${command1_output_message}
-          echo_failure "FAILED"
-        fi
-      else
-        command1_output_message=$(chkconfig graylog-web off 2>&1 >/dev/null)
-        if [ -z "${command1_output_message}" ]
-        then
-          log "WARN" "GRAYLOG web interface: Not added on startup by user"
-          echo_passed "PASS"
-        else
-          log "ERROR" "GRAYLOG web interface: Not disabled on startup"
-          log "DEBUG" ${command1_output_message}
-          echo_failure "FAILED"
-        fi
-      fi
     else
       log "ERROR" "GRAYLOG web interface: Not installed"
       log "DEBUG" ${command1_output_message}
       echo_failure "FAILED"
       abort_installation
+    fi
+    command1_output_message=$(sed -i.dist \
+    -e "s|\(graylog2-server.uris=\"\)\(\"\)|\1https://${SERVER_HOST_NAME}:12900/\2|" \
+    -e "s/\(application.secret=\"\)\(\"\)/\1${graylog_secret_password}\2/" \
+    -e "s|#.*\(timezone=\"\).*\(\"\)|\1${SERVER_TIME_ZONE}\2|" \
+    ${graylogwebgui_config_file} 2>&1 >/dev/null)
+    command2_output_message=$(sed -i.dist \
+    -e "s/\(GRAYLOG_WEB_HTTP_ADDRESS=\"\)0.0.0.0\(\"\)/\1localhost\2/" \
+    -e "s/\(GRAYLOG_WEB_JAVA_OPTS=\"\)\(\"\)/\1-Djava.net.preferIPv4Stack=true\2/" \
+    ${graylogwebgui_sysconfig_file} 2>&1 >/dev/null)
+    if [ -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
+    then
+      log "INFO" "GRAYLOG web interface: ${graylogwebgui_config_file} successfully modified"
+      log "INFO" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} successfully modified"
+      echo_success "OK"
+    elif [ ! -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
+    then
+      log "ERROR" "GRAYLOG web interface: ${graylogwebgui_config_file} not found"
+      log "DEBUG" ${command1_output_message}
+      log "INFO" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} successfully found"
+      echo_failure "FAILED"
+      abort_installation
+    elif [ -z "${command1_output_message}" ] && [ ! -z "${command2_output_message}" ]
+    then
+      log "INFO" "GRAYLOG web interface: ${graylogwebgui_config_file} successfully found"
+      log "ERROR" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} not found"
+      log "DEBUG" ${command2_output_message}
+      echo_failure "FAILED"
+      abort_installation
+    else
+      log "ERROR" "GRAYLOG web interface: ${graylogwebgui_config_file} not found"
+      log "DEBUG" ${command1_output_message}
+      log "ERROR" "GRAYLOG web interface: ${graylogwebgui_sysconfig_file} not found"
+      log "DEBUG" ${command2_output_message}
+      echo_failure "FAILED"
+      abort_installation
+    fi
+    echo_message "Add GRAYLOG web interface on startup"
+    if [[ "${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}" =~ true ]]
+    then
+      command1_output_message=$(chkconfig graylog-web on 2>&1 >/dev/null)
+      if [ -z "${command1_output_message}" ]
+      then
+        log "INFO" "GRAYLOG web interface: Successfully added on startup"
+        echo_success "OK"
+      else
+        log "ERROR" "GRAYLOG web interface: Not added on startup"
+        log "DEBUG" ${command1_output_message}
+        echo_failure "FAILED"
+      fi
+    else
+      command1_output_message=$(chkconfig graylog-web off 2>&1 >/dev/null)
+      if [ -z "${command1_output_message}" ]
+      then
+        log "WARN" "GRAYLOG web interface: Not added on startup by user"
+        echo_passed "PASS"
+      else
+        log "ERROR" "GRAYLOG web interface: Not disabled on startup"
+        log "DEBUG" ${command1_output_message}
+        echo_failure "FAILED"
+      fi
     fi
   fi
 }
@@ -3510,145 +3407,119 @@ function install_nginx() {
   if [[ "${command1_output_message}" =~ ^nginx\..* ]]
   then
     ((installed_counter++))
+    log "WARN" "NGINX web server: RPM package already installed"
   fi
-  if [ "${installed_counter}" == "1" ]
+  command_output_message=$(test_file ${nginx_defaultbackup_file})
+  if [ "${command_output_message}" == "0" ]
   then
-    log "WARN" "NGINX web server: Already installed"
+    ((configured_counter++))
+  fi
+  command_output_message=$(test_file ${nginx_sslconfig_file})
+  if [ "${command_output_message}" == "0" ]
+  then
+    ((configured_counter++))
+  fi
+  command_output_message=$(test_file ${nginx_sslbackup_file})
+  if [ "${command_output_message}" == "0" ]
+  then
+    ((configured_counter++))
+  fi
+  if [ "${installed_counter}" == "1" ] && [ "${configured_counter}" == "3" ]
+  then
+    log "WARN" "NGINX web server: Already installed and configured"
     echo_passed "PASS"
   else
-    command1_output_message=$(yum -y install nginx 2>&1 >/dev/null)
+    if [ "${installed_counter}" == "0" ]
+    then
+      command1_output_message=$(yum -y install nginx 2>&1 >/dev/null)
+    fi
     if [ -z "${command1_output_message}" ] || [[ "${command1_output_message}" =~ [Ww]arning.* ]]
     then
       log "INFO" "NGINX web server: Successfully installed"
-      command1_output_message=$(test_file ${nginx_defaultbackup_file})
-      command2_output_message=$(test_file ${nginx_sslbackup_file})
-      if [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "0" ]
-      then
-        log "WARN" "NGINX web server: ${nginx_defaultconfig_file} already backed-up"
-        log "WARN" "NGINX web server: ${nginx_sslconfig_file} already backed-up"
-        echo_passed "PASS"
-      elif [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "1" ]
-      then
-        log "WARN" "NGINX web server: ${nginx_defaultconfig_file} already backed-up"
-        log "ERROR" "NGINX web server: ${nginx_sslbackup_file} not found"
-        echo_failure "FAILED"
-        abort_installation
-      elif [ "${command1_output_message}" == "1" ] && [ "${command2_output_message}" == "0" ]
-      then
-        log "ERROR" "NGINX web server: ${nginx_defaultconfig_file} not found"
-        log "WARN" "NGINX web server: ${nginx_sslbackup_file} already backed-up"
-        echo_failure "FAILED"
-        abort_installation
-      else
-        command1_output_message=$(test_file ${nginx_defaultconfig_file})
-        command2_output_message=$(test_file ${nginx_defaultssl_file})
-        if [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "0" ]
-        then
-          log "INFO" "NGINX web server: ${nginx_defaultconfig_file} successfully found"
-          log "INFO" "NGINX web server: ${nginx_defaultssl_file} successfully found"
-          command1_output_message=$(mv ${nginx_defaultconfig_file} ${nginx_defaultbackup_file} 2>&1 >/dev/null)
-          command2_output_message=$(mv ${nginx_defaultssl_file} ${nginx_sslconfig_file} 2>&1 >/dev/null)
-          if [ -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
-          then
-            log "INFO" "NGINX web server: ${nginx_defaultconfig_file} successfully backed-up"
-            log "INFO" "NGINX web server: ${nginx_defaultssl_file} successfully backed-up"
-            command1_output_message=$(sed -i.dist \
-            -e "s/\#\(server .*\)/\1/" \
-            -e "s/\#.*\(listen\).*\(443.*;\)/\t\1\t\t\t\t${SERVER_HOST_NAME}:\2/" \
-            -e "s/\#.*\(server_name\).*\(;\)/\t\1\t\t\t${SERVER_HOST_NAME}\2/" \
-            -e "s|\#.*\(ssl_certificate \).*\(;\)|\t\1\t\t${PUBLIC_KEY_FILE}\2|" \
-            -e "s|\#.*\(ssl_certificate_key\).*\(;\)|\t\1\t\t${PRIVATE_KEY_FILE}\2|" \
-            -e "s/\#.*\(ssl_session_cache\).*\(shared:SSL:1m;\)/\t\1\t\t\2/" \
-            -e "s/\#.*\(ssl_session_timeout\).*\(5m;\)/\t\1\t\t\2/" \
-            -e "s/\#.*\(ssl_ciphers\).*\(HIGH:\!aNULL:\!MD5;\)/\t\1\t\t\t\2/" \
-            -e "s/\#.*\(ssl_prefer_server_ciphers\).*\(on;\)/\t\1\t\2/" \
-            -e "s/\#.*\(location \/ {\)/\t\1/" \
-            -e "s/\# .*\(\}\)/\t\1/" \
-            -e "s/\#.*root.*/\t\tproxy_pass http:\/\/localhost:9000\/;\n\t\tproxy_set_header Host \$host;\n\t\tproxy_set_header X-Real-IP \$remote_addr;\n\t\tproxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;\n\t\tproxy_connect_timeout 150;\n\t\tproxy_send_timeout 100;\n\t\tproxy_read_timeout 100;\n\t\tproxy_buffers 4 32k;\n\t\tclient_max_body_size 8m;\n\t\tclient_body_buffer_size 128k;/" \
-            -e "s/\#\(\}\)/\1/" \
-            -e '/\#.*index.*/d' \
-            ${nginx_sslconfig_file} 2>&1 >/dev/null)
-            if [ -z "${command1_output_message}" ]
-            then
-              log "INFO" "NGINX web server: ${nginx_defaultssl_file} successfully modified"
-              echo_success "OK"
-            else
-              log "ERROR" "NGINX web server: ${nginx_defaultssl_file} not modified"
-              log "DEBUG" ${command1_output_message}
-              echo_failure "FAILED"
-              abort_installation
-            fi
-          elif [ ! -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
-          then
-            log "ERROR" "NGINX web server: ${nginx_defaultconfig_file} not backed-up"
-            log "DEBUG" ${command1_output_message}
-            log "INFO" "NGINX web server: ${nginx_defaultssl_file} successfully backed-up"
-            echo_failure "FAILED"
-            abort_installation
-          elif [ -z "${command1_output_message}" ] && [ ! -z "${command2_output_message}" ]
-          then
-            log "INFO" "NGINX web server: ${nginx_defaultconfig_file} successfully backed-up"
-            log "ERROR" "NGINX web server: ${nginx_defaultssl_file} not backed-up"
-            log "DEBUG" ${command2_output_message}
-            echo_failure "FAILED"
-            abort_installation
-          else
-            log "ERROR" "NGINX web server: ${nginx_defaultconfig_file} not backed-up"
-            log "DEBUG" ${command1_output_message}
-            log "ERROR" "NGINX web server: ${nginx_defaultssl_file} not backed-up"
-            log "DEBUG" ${command2_output_message}
-            echo_failure "FAILED"
-            abort_installation
-          fi
-        elif [ "${command1_output_message}" == "1" ] && [ "${command2_output_message}" == "0" ]
-        then
-          log "ERROR" "NGINX web server: ${nginx_defaultconfig_file} not found"
-          log "INFO" "NGINX web server: ${nginx_defaultssl_file} successfully found"
-          echo_failure "FAILED"
-          abort_installation
-        elif [ "${command1_output_message}" == "0" ] && [ "${command2_output_message}" == "1" ]
-        then
-          log "INFO" "NGINX web server: ${nginx_defaultconfig_file} successfully found"
-          log "ERROR" "NGINX web server: ${nginx_defaultssl_file} not found"
-          echo_failure "FAILED"
-          abort_installation
-        else
-          log "ERROR" "NGINX web server: ${nginx_defaultconfig_file} not found"
-          log "ERROR" "NGINX web server: ${nginx_defaultssl_file} not found"
-          echo_failure "FAILED"
-          abort_installation
-        fi
-      fi
-      echo_message "Add NGINX service on startup"
-      if [[ "${BOOLEAN_NGINX_ONSTARTUP}" =~ true ]]
-      then
-        command1_output_message=$(chkconfig nginx on 2>&1 >/dev/null)
-        if [ -z "${command1_output_message}" ]
-        then
-          log "INFO" "NGINX web server: Successfully added on startup"
-          echo_success "OK"
-        else
-          log "ERROR" "NGINX web server: Not added on startup"
-          log "DEBUG" ${command1_output_message}
-          echo_failure "FAILED"
-        fi
-      else
-        command1_output_message=$(chkconfig nginx off 2>&1 >/dev/null)
-        if [ -z "${command1_output_message}" ]
-        then
-          log "WARN" "NGINX web server: Not added on startup by user"
-          echo_passed "PASS"
-        else
-          log "ERROR" "NGINX web server: Not disabled on startup"
-          log "DEBUG" ${command1_output_message}
-          echo_failure "FAILED"
-        fi
-      fi
     else
       log "ERROR" "NGINX web server: Not installed"
       log "DEBUG" ${command1_output_message}
       echo_failure "FAILED"
       abort_installation
+    fi
+    command1_output_message=$(mv ${nginx_defaultconfig_file} ${nginx_defaultbackup_file} 2>&1 >/dev/null)
+    command2_output_message=$(mv ${nginx_defaultssl_file} ${nginx_sslconfig_file} 2>&1 >/dev/null)
+    if [ -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
+    then
+      log "INFO" "NGINX web server: ${nginx_defaultconfig_file} successfully backed-up"
+      log "INFO" "NGINX web server: ${nginx_defaultssl_file} successfully backed-up"
+      command1_output_message=$(sed -i.dist \
+      -e "s/\#\(server .*\)/\1/" \
+      -e "s/\#.*\(listen\).*\(443.*;\)/\t\1\t\t\t\t${SERVER_HOST_NAME}:\2/" \
+      -e "s/\#.*\(server_name\).*\(;\)/\t\1\t\t\t${SERVER_HOST_NAME}\2/" \
+      -e "s|\#.*\(ssl_certificate \).*\(;\)|\t\1\t\t${PUBLIC_KEY_FILE}\2|" \
+      -e "s|\#.*\(ssl_certificate_key\).*\(;\)|\t\1\t\t${PRIVATE_KEY_FILE}\2|" \
+      -e "s/\#.*\(ssl_session_cache\).*\(shared:SSL:1m;\)/\t\1\t\t\2/" \
+      -e "s/\#.*\(ssl_session_timeout\).*\(5m;\)/\t\1\t\t\2/" \
+      -e "s/\#.*\(ssl_ciphers\).*\(HIGH:\!aNULL:\!MD5;\)/\t\1\t\t\t\2/" \
+      -e "s/\#.*\(ssl_prefer_server_ciphers\).*\(on;\)/\t\1\t\2/" \
+      -e "s/\#.*\(location \/ {\)/\t\1/" \
+      -e "s/\# .*\(\}\)/\t\1/" \
+      -e "s/\#.*root.*/\t\tproxy_pass http:\/\/localhost:9000\/;\n\t\tproxy_set_header Host \$host;\n\t\tproxy_set_header X-Real-IP \$remote_addr;\n\t\tproxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;\n\t\tproxy_connect_timeout 150;\n\t\tproxy_send_timeout 100;\n\t\tproxy_read_timeout 100;\n\t\tproxy_buffers 4 32k;\n\t\tclient_max_body_size 8m;\n\t\tclient_body_buffer_size 128k;/" \
+      -e "s/\#\(\}\)/\1/" \
+      -e '/\#.*index.*/d' \
+      ${nginx_sslconfig_file} 2>&1 >/dev/null)
+      if [ -z "${command1_output_message}" ]
+      then
+        log "INFO" "NGINX web server: ${nginx_defaultssl_file} successfully modified"
+        echo_success "OK"
+      else
+        log "ERROR" "NGINX web server: ${nginx_defaultssl_file} not modified"
+        log "DEBUG" ${command1_output_message}
+        echo_failure "FAILED"
+        abort_installation
+      fi
+    elif [ ! -z "${command1_output_message}" ] && [ -z "${command2_output_message}" ]
+    then
+      log "ERROR" "NGINX web server: ${nginx_defaultconfig_file} not backed-up"
+      log "DEBUG" ${command1_output_message}
+      log "INFO" "NGINX web server: ${nginx_defaultssl_file} successfully backed-up"
+      echo_failure "FAILED"
+      abort_installation
+    elif [ -z "${command1_output_message}" ] && [ ! -z "${command2_output_message}" ]
+    then
+      log "INFO" "NGINX web server: ${nginx_defaultconfig_file} successfully backed-up"
+      log "ERROR" "NGINX web server: ${nginx_defaultssl_file} not backed-up"
+      log "DEBUG" ${command2_output_message}
+      echo_failure "FAILED"
+      abort_installation
+    else
+      log "ERROR" "NGINX web server: ${nginx_defaultconfig_file} not backed-up"
+      log "DEBUG" ${command1_output_message}
+      log "ERROR" "NGINX web server: ${nginx_defaultssl_file} not backed-up"
+      log "DEBUG" ${command2_output_message}
+      echo_failure "FAILED"
+      abort_installation
+    fi
+    echo_message "Add NGINX service on startup"
+    if [[ "${BOOLEAN_NGINX_ONSTARTUP}" =~ true ]]
+    then
+      command1_output_message=$(chkconfig nginx on 2>&1 >/dev/null)
+      if [ -z "${command1_output_message}" ]
+      then
+        log "INFO" "NGINX web server: Successfully added on startup"
+        echo_success "OK"
+      else
+        log "ERROR" "NGINX web server: Not added on startup"
+        log "DEBUG" ${command1_output_message}
+        echo_failure "FAILED"
+      fi
+    else
+      command1_output_message=$(chkconfig nginx off 2>&1 >/dev/null)
+      if [ -z "${command1_output_message}" ]
+      then
+        log "WARN" "NGINX web server: Not added on startup by user"
+        echo_passed "PASS"
+      else
+        log "ERROR" "NGINX web server: Not disabled on startup"
+        log "DEBUG" ${command1_output_message}
+        echo_failure "FAILED"
+      fi
     fi
   fi
 }
