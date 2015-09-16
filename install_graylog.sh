@@ -2,16 +2,16 @@
 #==============================================================================
 #title         : install_graylog.sh
 #description   : This script will install Graylog components (server and web).
-#author        : MikaÃ«l ANDRE
+#author        : Mikaël ANDRE
 #job title     : Network engineer
 #mail          : mikael.andre.1989@gmail.com
 #created       : 20150219
-#last revision : 20150426
-#version       : 1.4
+#last revision : 20150916
+#version       : 1.5
 #platform      : Linux
 #processor     : 64 Bits
 #os            : CentOS
-#os version    : 6.5 or 6.6
+#os version    : 6.5 to 6.7
 #usage         : sh install_graylog.sh -i | -a <file.cfg> | -v (options)
 #                options are --cfg <file.cfg> | --cnx | --sys
 #notes         : Copy and paste in Vi to use this script
@@ -45,7 +45,9 @@ BOOLEAN_RSA_AUTH=
 RSA_PUBLIC_KEY=
 # MONGO VARIABLES
 BOOLEAN_MONGO_ONSTARTUP=
-MONGODB_ADMIN_DATABASE='admin'
+MONGO_HOST_NAME='localhost'
+MONGO_PORT_NUMBER='27017'
+MONGO_ADMIN_DATABASE='admin'
 MONGO_ADMIN_USER='admin'
 MONGO_ADMIN_PASSWORD=
 MONGO_GRAYLOG_DATABASE=
@@ -63,7 +65,6 @@ SSL_SUBJECT_EMAIL=
 # JAVA VARIABLES
 ELASTICSEARCH_RAM_RESERVATION=
 GRAYLOGSERVER_RAM_RESERVATION=
-#GRAYLOGWEBGUI_RAM_RESERVATION="256m"
 # ELASTICSEARCH VARIABLES
 BOOLEAN_ELASTICSEARCH_ONSTARTUP=
 BOOLEAN_INSTALL_ELASTICSEARCHPLUGIN=
@@ -1997,15 +1998,15 @@ function get_sysinfo() {
     log "INFO" "System informations: OS name=CentOS"
     os_major_version=`sed -rn 's/.*\s.*\s.*([0-9])\.[0-9].*/\1/p' ${centos_release_file}`
     os_minor_version=`sed -rn 's/.*\s.*\s.*[0-9]\.([0-9]).*/\1/p' ${centos_release_file}`
-    if [ "${os_major_version}" == "6" ] && [[ "${os_minor_version}" =~ [5-6] ]]
+    if [ "${os_major_version}" == "6" ] && [[ "${os_minor_version}" =~ [5-7] ]]
     then
       log "INFO" "System informations: OS major version=${os_major_version}"
       log "INFO" "System informations: OS minor version=${os_minor_version}"
-    elif [ "${os_major_version}" != "6" ] && [[ "${os_minor_version}" =~ [5-6] ]]
+    elif [ "${os_major_version}" != "6" ] && [[ "${os_minor_version}" =~ [5-7] ]]
     then
       ((error_counter++))
       log "ERROR" "System informations: OS major version=${os_major_version}"
-    elif [ "${os_major_version}" == "6" ] && [[ ! "${os_minor_version}" =~ [5-6] ]]
+    elif [ "${os_major_version}" == "6" ] && [[ ! "${os_minor_version}" =~ [5-7] ]]
     then
       ((error_counter++))
       log "ERROR" "System informations: OS minor version=${os_minor_version}"
@@ -2128,9 +2129,9 @@ function configure_yum() {
   local nginx_key_url="http://nginx.org/packages/keys/nginx_signing.key"
   local nginx_repo_file="/etc/yum.repos.d/nginx.repo"
   local mongodb_repo_file="/etc/yum.repos.d/mongodb.repo"
-  local elasticsearch_key_url="https://packages.elasticsearch.org/GPG-KEY-elasticsearch"
+  local elasticsearch_key_url="https://packages.elastic.co/GPG-KEY-elasticsearch"
   local elasticsearch_repo_file="/etc/yum.repos.d/elasticsearch.repo"
-  local graylog_rpm_url="https://packages.graylog2.org/repo/packages/graylog-1.0-repository-el6_latest.rpm"
+  local graylog_rpm_url="https://packages.graylog2.org/repo/packages/graylog-1.2-repository-el6_latest.rpm"
   local graylog_repo_file="/etc/yum.repos.d/graylog.repo"
   echo_message "Configure YUM repositories"
   command_output_message=$(test_file ${epel_repo_file})
@@ -2161,17 +2162,6 @@ function configure_yum() {
     if [ -z "${command_output_message}" ]
     then
       log "INFO" "YUM repositories: NGINX repository successfully installed"
-      command_output_message=$(sed -i \
-      -e "s/\(baseurl=http:\/\/nginx\.org\/packages\)\(\/centos\/6\/\$basearch\/\)/\1\/mainline\2/" \
-      ${nginx_repo_file} 2>&1 >/dev/null)
-      if [ -z "${command_output_message}" ]
-      then
-        log "INFO" "YUM repositories: NGINX repository successfully configured"
-      else
-        ((error_counter++))
-        log "ERROR" "YUM repositories: NGINX repository not configured"
-        log "DEBUG" "YUM repositories: ${command_output_message}"
-      fi
     else
       ((error_counter++))
       log "ERROR" "YUM repositories: NGINX repository not installed"
@@ -2185,9 +2175,9 @@ function configure_yum() {
     log "WARN" "YUM repositories: MONGO repository already installed"
   else
     command_output_message=$(cat << EOF > ${mongodb_repo_file}
-[mongodb-org-3.0]
+[mongodb-org]
 name=MongoDB Repository
-baseurl=http://repo.mongodb.org/yum/redhat/\$releasever/mongodb-org/3.0/x86_64/
+baseurl=https://repo.mongodb.org/yum/redhat/\$releasever/mongodb-org/stable/\$basearch/
 gpgcheck=0
 enabled=1
 EOF
@@ -2209,11 +2199,11 @@ EOF
   else
     rpm --import ${elasticsearch_key_url}
     command_output_message=$(cat << EOF > /etc/yum.repos.d/elasticsearch.repo
-[elasticsearch-1.5]
-name=Elasticsearch repository for 1.5.x packages
-baseurl=http://packages.elasticsearch.org/elasticsearch/1.5/centos
+[elasticsearch-1.7]
+name=Elasticsearch repository for 1.7.x packages
+baseurl=http://packages.elastic.co/elasticsearch/1.7/centos
 gpgcheck=1
-gpgkey=http://packages.elasticsearch.org/GPG-KEY-elasticsearch
+gpgkey=http://packages.elastic.co/GPG-KEY-elasticsearch
 enabled=1
 EOF
 2>&1 >/dev/null)
@@ -2917,12 +2907,12 @@ function install_mongodb() {
       echo_failure "FAILED"
       abort_installation
     fi
-    command_output_message=$(mongo --eval "db.getSiblingDB('${MONGODB_ADMIN_DATABASE}').createUser({user: '${MONGO_ADMIN_USER}', pwd: '${MONGO_ADMIN_PASSWORD}', roles: [ { role: 'root', db: '${MONGODB_ADMIN_DATABASE}' } ]})")
+    command_output_message=$(mongo --eval "db.getSiblingDB('${MONGO_ADMIN_DATABASE}').createUser({user: '${MONGO_ADMIN_USER}', pwd: '${MONGO_ADMIN_PASSWORD}', roles: [ { role: 'root', db: '${MONGO_ADMIN_DATABASE}' } ]})")
     success_word_occurrence=$(( (`cat <<<${command_output_message} | wc -c` - `sed "s/${success_word_definition}//g" <<<${command_output_message} | wc -c`) / ${#success_word_definition} ))
     if [ "${success_word_occurrence}" == "1" ]
     then
       log "INFO" "MONGO database server: Successfully set password (${MONGO_ADMIN_PASSWORD}) for user ${MONGO_ADMIN_USER}"
-      log "INFO" "MONGO database server: Successfully set role 'root' to user ${MONGO_ADMIN_USER} on database ${MONGODB_ADMIN_DATABASE}"
+      log "INFO" "MONGO database server: Successfully set role 'root' to user ${MONGO_ADMIN_USER} on database ${MONGO_ADMIN_DATABASE}"
     else
       log "ERROR" "MONGO database server: CLI configuration not completed"
       log "DEBUG" "MONGO database server: ${command_output_message}"
@@ -2996,7 +2986,7 @@ function install_mongodb() {
       if [ -z "${command_output_message}" ]
       then
         log "INFO" "MONGO database server: Disabled on startup"
-        echo_passed "OK"
+        echo_success "OK"
       else
         log "ERROR" "MONGO database server: Not disabled on startup"
         log "DEBUG" "MONGO database server: ${command_output_message}"
@@ -3242,7 +3232,7 @@ function install_elasticsearch() {
       if [ -z "${command_output_message}" ]
       then
         log "INFO" "ELASTICSEARCH index server: Disabled on startup"
-        echo_passed "OK"
+        echo_success "OK"
       else
         log "ERROR" "ELASTICSEARCH index server: Not disabled on startup"
         log "DEBUG" "ELASTICSEARCH index server: ${command_output_message}"
@@ -3325,12 +3315,9 @@ function install_graylogserver() {
     -e "s/#\(elasticsearch_node_data = false\)/\1/" \
     -e "s/#\(elasticsearch_transport_tcp_port = 9350\)/\1/" \
     -e "s/#\(elasticsearch_http_enabled = false\)/\1/" \
-    -e "s/#\(elasticsearch_network_host = \).*/\1${SERVER_IP_ADDRESS}/" \
-    -e "s/\(mongodb_useauth = \).*/\1true/" \
-    -e "s/#\(mongodb_user = \).*/\1${MONGO_GRAYLOG_USER}/" \
-    -e "s/#\(mongodb_password = \).*/\1${MONGO_GRAYLOG_PASSWORD}/" \
-    -e "s/\(mongodb_host = \).*/\1localhost/" \
-    -e "s/\(mongodb_database = \).*/\1${MONGO_GRAYLOG_DATABASE}/" \
+    -e "s/#\(elasticsearch_network_host =\).*/\1 ${SERVER_IP_ADDRESS}/" \
+    -e "s/\(mongodb_uri = mongodb:\/\/localhost\/graylog2\)/#\1/" \
+    -e "s/#\(mongodb_uri = mongodb:\/\/\).*\(:\).*\(@\).*\(:\)27017\(\/\)graylog2\$/\1${MONGO_GRAYLOG_USER}\2${MONGO_GRAYLOG_PASSWORD}\3${MONGO_HOST_NAME}\4${MONGO_PORT_NUMBER}\5${MONGO_GRAYLOG_DATABASE}/" \
     -e "s/#\(transport_email_enabled = \).*/\1${BOOLEAN_GRAYLOG_SMTP}/" \
     -e "s/#\(transport_email_hostname = \).*/\1${SMTP_HOST_NAME}/" \
     -e "s/#\(transport_email_port = \).*/\1${SMTP_PORT_NUMBER}/" \
@@ -3352,7 +3339,7 @@ function install_graylogserver() {
       log "DEBUG" "GRAYLOG back-end server: ${command_output_message}"
     fi
     command_output_message=$(sed -i.dist \
-    -e "s/\(GRAYLOG_SERVER_JAVA_OPTS=\"\).*\(\"\)/\1-Djava.net.preferIPv4Stack=true -Xms${GRAYLOGSERVER_RAM_RESERVATION} -Xmx${GRAYLOGSERVER_RAM_RESERVATION} -XX:NewRatio=1 -XX:PermSize=128m -XX:MaxPermSize=256m -server -XX:+ResizeTLAB -XX:+UseConcMarkSweepGC -XX:+CMSConcurrentMTEnabled -XX:+CMSClassUnloadingEnabled -XX:+UseParNewGC -XX:-OmitStackTraceInFastThrow\2/" \
+    -e "s/\(GRAYLOG_SERVER_JAVA_OPTS=\"\).*\(\"\)/\1-Djava.net.preferIPv4Stack=true -Xms${GRAYLOGSERVER_RAM_RESERVATION} -Xmx${GRAYLOGSERVER_RAM_RESERVATION} -XX:NewRatio=1 -server -XX:+ResizeTLAB -XX:+UseConcMarkSweepGC -XX:+CMSConcurrentMTEnabled -XX:+CMSClassUnloadingEnabled -XX:+UseParNewGC -XX:-OmitStackTraceInFastThrow\2/" \
     ${graylogserver_sysconfig_file} 2>&1 >/dev/null)
     if [ -z "${command_output_message}" ]
     then
@@ -3407,7 +3394,7 @@ function install_graylogserver() {
       if [ -z "${command_output_message}" ]
       then
         log "INFO" "GRAYLOG back-end server: Disabled on startup"
-        echo_passed "OK"
+        echo_success "OK"
       else
         log "ERROR" "GRAYLOG back-end server: Not disabled on startup"
         log "DEBUG" "GRAYLOG back-end server: ${command_output_message}"
@@ -3539,7 +3526,7 @@ function install_graylogwebgui() {
       if [ -z "${command_output_message}" ]
       then
         log "INFO" "GRAYLOG front-end server: Disabled on startup"
-        echo_passed "OK"
+        echo_success "OK"
       else
         log "ERROR" "GRAYLOG front-end server: Not disabled on startup"
         log "DEBUG" "GRAYLOG front-end server: ${command_output_message}"
@@ -3691,7 +3678,7 @@ function install_nginx() {
       if [ -z "${command_output_message}" ]
       then
         log "INFO" "NGINX web server: Disabled on startup"
-        echo_passed "OK"
+        echo_success "OK"
       else
         log "ERROR" "NGINX web server: Not disabled on startup"
         log "DEBUG" "NGINX web server: ${command_output_message}"
