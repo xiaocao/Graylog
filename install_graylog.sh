@@ -1,8 +1,8 @@
-#!/bin/bash
+﻿#!/bin/bash
 #==============================================================================
 #title         : install_graylog.sh
 #description   : This script will install Graylog components (server and web).
-#author        : Mika�l ANDRE
+#author        : Mikaël ANDRE
 #job title     : Network engineer
 #mail          : mikael.andre.1989@gmail.com
 #created       : 20150219
@@ -86,6 +86,10 @@ SMTP_AUTH_USERNAME=
 SMTP_AUTH_PASSWORD=
 # NGINX VARIABLES
 BOOLEAN_NGINX_ONSTARTUP=
+# IPTABLES VARIABLES
+BOOLEAN_IPTABLES_ONSTARTUP=
+DEFAULT_SYSLOG_PORT='514'
+CUSTOM_SYSLOG_PORT=
 # TERMINAL VARIABLES
 RES_COL="60"
 RES_COL1="67"
@@ -1493,7 +1497,7 @@ function set_globalvariables() {
   echo "BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP='${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}'" >> ${installation_cfg_tmpfile}
   if [ -z "${BOOLEAN_NGINX_ONSTARTUP}" ]
   then
-    yes_no_function "Do you want to add Nginx web server on startup ?" "yes"
+    yes_no_function "Do you want to add NGINX web server on startup ?" "yes"
     if [ "${?}" == "0" ]
     then
       BOOLEAN_NGINX_ONSTARTUP="true"
@@ -1503,7 +1507,7 @@ function set_globalvariables() {
   else
     if [[ "${BOOLEAN_NGINX_ONSTARTUP}" =~ true ]]
     then
-      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} Nginx web server on startup ?" "yes"
+      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} NGINX web server on startup ?" "yes"
       if [ "${?}" == "0" ]
       then
         BOOLEAN_NGINX_ONSTARTUP="false"
@@ -1511,7 +1515,7 @@ function set_globalvariables() {
         BOOLEAN_NGINX_ONSTARTUP=${BOOLEAN_NGINX_ONSTARTUP}
       fi
     else
-      yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} Nginx web server on startup ?" "yes"
+      yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} NGINX web server on startup ?" "yes"
       if [ "${?}" == "0" ]
       then
         BOOLEAN_NGINX_ONSTARTUP="true"
@@ -1521,6 +1525,71 @@ function set_globalvariables() {
     fi
   fi
   echo "BOOLEAN_NGINX_ONSTARTUP='${BOOLEAN_NGINX_ONSTARTUP}'" >> ${installation_cfg_tmpfile}
+  if [ -z "${BOOLEAN_IPTABLES_ONSTARTUP}" ]
+  then
+    yes_no_function "Do you want to add IPTABLES firewall on startup ?" "yes"
+    if [ "${?}" == "0" ]
+    then
+      BOOLEAN_IPTABLES_ONSTARTUP="true"
+    else
+      BOOLEAN_IPTABLES_ONSTARTUP="false"
+    fi
+  else
+    if [[ "${BOOLEAN_IPTABLES_ONSTARTUP}" =~ true ]]
+    then
+      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} IPTABLES firewall on startup ?" "yes"
+      if [ "${?}" == "0" ]
+      then
+        BOOLEAN_IPTABLES_ONSTARTUP="false"
+      else
+        BOOLEAN_IPTABLES_ONSTARTUP=${BOOLEAN_IPTABLES_ONSTARTUP}
+      fi
+    else
+      yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} IPTABLES firewall on startup ?" "yes"
+      if [ "${?}" == "0" ]
+      then
+        BOOLEAN_IPTABLES_ONSTARTUP="true"
+      else
+        BOOLEAN_IPTABLES_ONSTARTUP=${BOOLEAN_IPTABLES_ONSTARTUP}
+      fi
+    fi
+  fi
+  echo "BOOLEAN_IPTABLES_ONSTARTUP='${BOOLEAN_IPTABLES_ONSTARTUP}'" >> ${installation_cfg_tmpfile}
+  if [ -z "${CUSTOM_SYSLOG_PORT}" ]
+  then
+    while [[ ! "${CUSTOM_SYSLOG_PORT}" =~ (102[4-9]|10[3-9][0-9]|1[1-9]\[0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]) ]]
+    do
+      echo -e "\nType custom SYSLOG port number (possible values : ${SETCOLOR_FAILURE}1024${SETCOLOR_NORMAL} to ${SETCOLOR_FAILURE}63355${SETCOLOR_NORMAL}), followed by [ENTER]"
+      echo -e "Default to [${SETCOLOR_INFO}5514${SETCOLOR_NORMAL}]:"
+      echo -en "> "
+      read CUSTOM_SYSLOG_PORT
+      if [ -z "${CUSTOM_SYSLOG_PORT}" ]
+      then
+        CUSTOM_SYSLOG_PORT='5514'
+      fi
+    done
+  else
+    old_input_value=${CUSTOM_SYSLOG_PORT}
+    yes_no_function "Can you confirm you want to modify current custom SYSLOG port number ?" "yes"
+    if [ "${?}" == "0" ]
+    then
+      CUSTOM_SYSLOG_PORT=
+      while [[ ! "${CUSTOM_SYSLOG_PORT}" =~ (102[4-9]|10[3-9][0-9]|1[1-9]\[0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]) ]]
+      do
+        echo -e "\nType custom SYSLOG port number (possible values : ${SETCOLOR_FAILURE}1024${SETCOLOR_NORMAL} to ${SETCOLOR_FAILURE}63355${SETCOLOR_NORMAL}), followed by [ENTER]"
+        echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
+        echo -en "> "
+        read CUSTOM_SYSLOG_PORT
+        if [ -z "${CUSTOM_SYSLOG_PORT}" ]
+        then
+          CUSTOM_SYSLOG_PORT=${old_input_value}
+        fi
+      done
+    else
+      CUSTOM_SYSLOG_PORT=${old_input_value}
+    fi
+  fi
+  echo "CUSTOM_SYSLOG_PORT='${CUSTOM_SYSLOG_PORT}'" >> ${installation_cfg_tmpfile}
   INSTALLATION_CFG_FILE=${installation_cfg_tmpfile}
   verify_globalvariables
 }
@@ -1869,7 +1938,6 @@ function verify_globalvariables() {
   else
     echo -e "# ${SETCOLOR_DISABLE}SMTP_AUTH_PASSWORD${SETCOLOR_NORMAL}..................'${SMTP_AUTH_PASSWORD}'${MOVE_TO_COL1}#"
   fi
-  
   if [[ "${BOOLEAN_NGINX_ONSTARTUP}" =~ true|false ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_NGINX_ONSTARTUP${SETCOLOR_NORMAL}.............'${BOOLEAN_NGINX_ONSTARTUP}'${MOVE_TO_COL1}#"
@@ -1877,6 +1945,22 @@ function verify_globalvariables() {
     ((error_counter++))
     log "ERROR" "Global variables: BOOLEAN_NGINX_ONSTARTUP not successfully definied by user (value=${BOOLEAN_NGINX_ONSTARTUP})"
     echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_NGINX_ONSTARTUP${SETCOLOR_NORMAL}.............'${BOOLEAN_NGINX_ONSTARTUP}'${MOVE_TO_COL1}#"
+  fi
+  if [[ "${BOOLEAN_IPTABLES_ONSTARTUP}" =~ true|false ]]
+  then
+    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_IPTABLES_ONSTARTUP${SETCOLOR_NORMAL}..........'${BOOLEAN_IPTABLES_ONSTARTUP}'${MOVE_TO_COL1}#"
+  else
+    ((error_counter++))
+    log "ERROR" "Global variables: BOOLEAN_IPTABLES_ONSTARTUP not successfully definied by user (value=${BOOLEAN_IPTABLES_ONSTARTUP})"
+    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_IPTABLES_ONSTARTUP${SETCOLOR_NORMAL}..........'${BOOLEAN_IPTABLES_ONSTARTUP}'${MOVE_TO_COL1}#"
+  fi
+  if [[ "${CUSTOM_SYSLOG_PORT}" =~ (102[4-9]|10[3-9][0-9]|1[1-9]\[0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]) ]]
+  then
+    echo -e "# ${SETCOLOR_SUCCESS}CUSTOM_SYSLOG_PORT${SETCOLOR_NORMAL}..................'${CUSTOM_SYSLOG_PORT}'${MOVE_TO_COL1}#"
+  else
+    ((error_counter++))
+    log "ERROR" "Global variables: CUSTOM_SYSLOG_PORT not successfully definied by user (value=${CUSTOM_SYSLOG_PORT})"
+    echo -e "# ${SETCOLOR_FAILURE}CUSTOM_SYSLOG_PORT${SETCOLOR_NORMAL}..................'${CUSTOM_SYSLOG_PORT}'${MOVE_TO_COL1}#"
   fi
   echo -e "#${MOVE_TO_COL1}#"
   echo -e "###################################################################"
@@ -1926,6 +2010,8 @@ function verify_globalvariables() {
         log "INFO" "Global variables: BOOLEAN_GRAYLOGSERVER_ONSTARTUP successfully definied by user (value=${BOOLEAN_GRAYLOGSERVER_ONSTARTUP})"
         log "INFO" "Global variables: BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP successfully definied by user (value=${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP})"
         log "INFO" "Global variables: BOOLEAN_NGINX_ONSTARTUP successfully definied by user (value=${BOOLEAN_NGINX_ONSTARTUP})"
+        log "INFO" "Global variables: BOOLEAN_IPTABLES_ONSTARTUP successfully definied by user (value=${BOOLEAN_IPTABLES_ONSTARTUP})"
+        log "INFO" "Global variables: CUSTOM_SYSLOG_PORT successfully definied by user (value=${CUSTOM_SYSLOG_PORT})"
       else
         log "WARN" "Global variables: Not confirmed by user"
         yes_no_function "Do you want to define them again ?" "yes"
@@ -2117,7 +2203,7 @@ function generate_sslkeys() {
     abort_installation
   fi
 }
-# Configure Yum repositories (EPEL, ElasticSearch, Nginx, Graylog)
+# Configure Yum repositories (EPEL, ElasticSearch, NGINX, Graylog)
 function configure_yum() {
   local error_counter=0
   local warning_counter=0
@@ -3538,7 +3624,7 @@ function install_graylogwebgui() {
     fi
   fi
 }
-# Install Nginx web server as a proxy to communicate with GRAYLOG front-end server
+# Install NGINX web server as a proxy to communicate with GRAYLOG front-end server
 function install_nginx() {
   local installed_counter=0
   local error_counter=0
@@ -3651,7 +3737,7 @@ function install_nginx() {
       ((onstartup_counter++))
     fi
   done
-  if [[ "${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}" =~ true ]]
+  if [[ "${BOOLEAN_NGINX_ONSTARTUP}" =~ true ]]
   then
     echo_message "Enable NGINX web server on startup"
     if [ "${onstartup_counter}" == "7" ]
@@ -3686,6 +3772,150 @@ function install_nginx() {
       fi
     else
       log "WARN" "NGINX web server: Already disabled on startup"
+      echo_passed "PASS"
+    fi
+  fi
+}
+# Configure IPTABLES to allow functional streams of Graylog application
+function configure_iptables() {
+  local installed_counter=0
+  local error_counter=0
+  local onstartup_counter=0
+  local command_output_message=
+  local chkconfig_array=
+  local iptables_config_folder="/etc/sysconfig"
+  local iptables_defaultconfig_file="${iptables_config_folder}/iptables"
+  local iptables_defaultbackup_file="${iptables_defaultconfig_file}.dist"
+  echo_message "Install IPTABLES firewall"
+  command_output_message=$(yum list installed | grep iptables.x)
+  if [[ "${command_output_message}" =~ ^iptables\..* ]]
+  then
+    log "WARN" "IPTABLES firewall: Already installed"
+    echo_passed "PASS"
+  else
+    command_output_message=$(yum -y install iptables 2>&1 >/dev/null)
+    if [ -z "${command_output_message}" ] || [[ "${command_output_message}" =~ [Ww]arning.* ]]
+    then
+      log "INFO" "IPTABLES firewall: Successfully installed"
+      echo_success "OK"
+    else
+      log "ERROR" "IPTABLES firewall: Not installed"
+      log "DEBUG" "IPTABLES firewall: ${command_output_message}"
+      echo_failure "FAILED"
+      abort_installation
+    fi
+  fi
+  echo_message "Configure IPTABLES firewall"
+  command_output_message=$(test_file ${iptables_defaultbackup_file})
+  if [ "${command_output_message}" == "0" ]
+  then
+    ((configured_counter++))
+  fi
+  if [ "${configured_counter}" == "1" ]
+  then
+    log "WARN" "IPTABLES firewall: Already configured"
+    echo_passed "PASS"
+  else
+    command_output_message=$(mv ${iptables_defaultconfig_file} ${iptables_defaultbackup_file} 2>&1 >/dev/null)
+    if [ -z "${command_output_message}" ]
+    then
+      log "INFO" "IPTABLES firewall: ${iptables_defaultconfig_file} successfully backed-up"
+    else
+      ((error_counter++))
+      log "ERROR" "IPTABLES firewall: ${iptables_defaultconfig_file} not backed-up"
+      log "DEBUG" "IPTABLES firewall: ${command_output_message}"
+    fi
+    command_output_message=$(cat << EOF > ${iptables_defaultconfig_file}
+*nat
+:PREROUTING ACCEPT [0:0]
+:POSTROUTING ACCEPT [7:420]
+:OUTPUT ACCEPT [7:420]
+-A PREROUTING -i ${NETWORK_INTERFACE_NAME} -p tcp -m tcp --dport ${DEFAULT_SYSLOG_PORT} -j REDIRECT --to-ports 5514
+-A PREROUTING -i ${NETWORK_INTERFACE_NAME} -p udp -m udp --dport ${DEFAULT_SYSLOG_PORT} -j REDIRECT --to-ports 5514
+COMMIT
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [8160:1329188]
+-A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+-A INPUT -p icmp -j ACCEPT
+-A INPUT -i lo -j ACCEPT
+-A INPUT -p tcp -m state --state NEW -m tcp --dport 22 -j ACCEPT
+-A INPUT -p tcp -m state --state NEW -m tcp --dport 443 -j ACCEPT
+-A INPUT -p tcp -m state --state NEW -m tcp --dport ${DEFAULT_SYSLOG_PORT} -j ACCEPT
+-A INPUT -p tcp -m state --state NEW -m tcp --dport ${CUSTOM_SYSLOG_PORT} -j ACCEPT
+-A INPUT -p tcp -m state --state NEW -m tcp --dport 9200 -j ACCEPT
+-A INPUT -p tcp -m state --state NEW -m tcp --dport 9300 -j ACCEPT
+-A INPUT -p tcp -m state --state NEW -m tcp --dport 9350 -j ACCEPT
+-A INPUT -p tcp -m state --state NEW -m tcp --dport 12900 -j ACCEPT
+-A INPUT -p udp -m state --state NEW -m udp --dport ${DEFAULT_SYSLOG_PORT} -j ACCEPT
+-A INPUT -p udp -m state --state NEW -m udp --dport ${CUSTOM_SYSLOG_PORT} -j ACCEPT
+-A INPUT -j REJECT --reject-with icmp-host-prohibited
+-A FORWARD -j REJECT --reject-with icmp-host-prohibited
+COMMIT
+EOF
+2>&1 >/dev/null)
+    if [ -z "${command_output_message}" ]
+    then
+      log "INFO" "IPTABLES firewall: ${nginx_defaultssl_file} successfully modified"
+    else
+      ((error_counter++))
+      log "ERROR" "IPTABLES firewall: ${nginx_defaultssl_file} not modified"
+      log "DEBUG" "IPTABLES firewall: ${command_output_message}"
+    fi
+    if [ "${error_counter}" == "0" ]
+    then
+      log "INFO" "IPTABLES firewall: Successfully configured"
+      echo_success "OK"
+    else
+      echo_failure "FAILED"
+      abort_installation
+    fi
+  fi
+  chkconfig_array=( `chkconfig --list | grep 'iptables'` )
+  for i in "${chkconfig_array[@]}"
+  do
+    value=`echo ${i} | awk -F: '{print $2}'`
+    if [ "${value}" == "off" ]
+    then
+      ((onstartup_counter++))
+    fi
+  done
+  if [[ "${BOOLEAN_IPTABLES_ONSTARTUP}" =~ true ]]
+  then
+    echo_message "Enable IPTABLES firewall on startup"
+    if [ "${onstartup_counter}" == "7" ]
+    then
+      command_output_message=$(chkconfig iptables on 2>&1 >/dev/null)
+      if [ -z "${command_output_message}" ]
+      then
+        log "INFO" "IPTABLES firewall: Successfully enabled on startup"
+        echo_success "OK"
+      else
+        log "ERROR" "IPTABLES firewall: Not enabled on startup"
+        log "DEBUG" "IPTABLES firewall: ${command_output_message}"
+        echo_failure "FAILED"
+      fi
+    else
+      log "WARN" "IPTABLES firewall: Already enabled on startup"
+      echo_passed "PASS"
+    fi
+  else
+    echo_message "Disable IPTABLES firewall on startup"
+    if [ "${onstartup_counter}" != "7" ]
+    then
+      command_output_message=$(chkconfig iptables off 2>&1 >/dev/null)
+      if [ -z "${command_output_message}" ]
+      then
+        log "INFO" "IPTABLES firewall: Disabled on startup"
+        echo_success "OK"
+      else
+        log "ERROR" "IPTABLES firewall: Not disabled on startup"
+        log "DEBUG" "IPTABLES firewall: ${command_output_message}"
+        echo_failure "FAILED"
+      fi
+    else
+      log "WARN" "IPTABLES firewall: Already disabled on startup"
       echo_passed "PASS"
     fi
   fi
@@ -3790,6 +4020,7 @@ function main {
     install_graylogserver
     install_graylogwebgui
     install_nginx
+    configure_iptables
     display_informations
   fi
 }
