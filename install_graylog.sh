@@ -6,7 +6,7 @@
 #job title     : Network engineer
 #mail          : mikael.andre.1989@gmail.com
 #created       : 20150219
-#last revision : 20150916
+#last revision : 20150918
 #version       : 1.5
 #platform      : Linux
 #processor     : 64 Bits
@@ -90,6 +90,8 @@ BOOLEAN_NGINX_ONSTARTUP=
 BOOLEAN_IPTABLES_ONSTARTUP=
 DEFAULT_SYSLOG_PORT='514'
 CUSTOM_SYSLOG_PORT=
+DEFAULT_SNMPTRAP_PORT='162'
+CUSTOM_SNMPTRAP_PORT=
 # TERMINAL VARIABLES
 RES_COL="60"
 RES_COL1="67"
@@ -1557,7 +1559,7 @@ function set_globalvariables() {
   echo "BOOLEAN_IPTABLES_ONSTARTUP='${BOOLEAN_IPTABLES_ONSTARTUP}'" >> ${installation_cfg_tmpfile}
   if [ -z "${CUSTOM_SYSLOG_PORT}" ]
   then
-    while [[ ! "${CUSTOM_SYSLOG_PORT}" =~ (102[4-9]|10[3-9][0-9]|1[1-9]\[0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]) ]]
+    while [[ ! "${CUSTOM_SYSLOG_PORT}" =~ (102[4-9]|10[3-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]) ]]
     do
       echo -e "\nType custom SYSLOG port number (possible values : ${SETCOLOR_FAILURE}1024${SETCOLOR_NORMAL} to ${SETCOLOR_FAILURE}63355${SETCOLOR_NORMAL}), followed by [ENTER]"
       echo -e "Default to [${SETCOLOR_INFO}5514${SETCOLOR_NORMAL}]:"
@@ -1574,7 +1576,7 @@ function set_globalvariables() {
     if [ "${?}" == "0" ]
     then
       CUSTOM_SYSLOG_PORT=
-      while [[ ! "${CUSTOM_SYSLOG_PORT}" =~ (102[4-9]|10[3-9][0-9]|1[1-9]\[0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]) ]]
+      while [[ ! "${CUSTOM_SYSLOG_PORT}" =~ (102[4-9]|10[3-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]) ]]
       do
         echo -e "\nType custom SYSLOG port number (possible values : ${SETCOLOR_FAILURE}1024${SETCOLOR_NORMAL} to ${SETCOLOR_FAILURE}63355${SETCOLOR_NORMAL}), followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
@@ -1590,6 +1592,41 @@ function set_globalvariables() {
     fi
   fi
   echo "CUSTOM_SYSLOG_PORT='${CUSTOM_SYSLOG_PORT}'" >> ${installation_cfg_tmpfile}
+  if [ -z "${CUSTOM_SNMPTRAP_PORT}" ]
+  then
+    while [[ ! "${CUSTOM_SNMPTRAP_PORT}" =~ (102[4-9]|10[3-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]) ]]
+    do
+      echo -e "\nType custom SNMPTRAP port number (possible values : ${SETCOLOR_FAILURE}1024${SETCOLOR_NORMAL} to ${SETCOLOR_FAILURE}63355${SETCOLOR_NORMAL}), followed by [ENTER]"
+      echo -e "Default to [${SETCOLOR_INFO}1162${SETCOLOR_NORMAL}]:"
+      echo -en "> "
+      read CUSTOM_SNMPTRAP_PORT
+      if [ -z "${CUSTOM_SNMPTRAP_PORT}" ]
+      then
+        CUSTOM_SNMPTRAP_PORT='1162'
+      fi
+    done
+  else
+    old_input_value=${CUSTOM_SNMPTRAP_PORT}
+    yes_no_function "Can you confirm you want to modify current custom SNMPTRAP port number ?" "yes"
+    if [ "${?}" == "0" ]
+    then
+      CUSTOM_SNMPTRAP_PORT=
+      while [[ ! "${CUSTOM_SNMPTRAP_PORT}" =~ (102[4-9]|10[3-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]) ]]
+      do
+        echo -e "\nType custom SNMPTRAP port number (possible values : ${SETCOLOR_FAILURE}1024${SETCOLOR_NORMAL} to ${SETCOLOR_FAILURE}63355${SETCOLOR_NORMAL}), followed by [ENTER]"
+        echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
+        echo -en "> "
+        read CUSTOM_SNMPTRAP_PORT
+        if [ -z "${CUSTOM_SNMPTRAP_PORT}" ]
+        then
+          CUSTOM_SNMPTRAP_PORT=${old_input_value}
+        fi
+      done
+    else
+      CUSTOM_SNMPTRAP_PORT=${old_input_value}
+    fi
+  fi
+  echo "CUSTOM_SNMPTRAP_PORT='${CUSTOM_SNMPTRAP_PORT}'" >> ${installation_cfg_tmpfile}
   INSTALLATION_CFG_FILE=${installation_cfg_tmpfile}
   verify_globalvariables
 }
@@ -1954,13 +1991,21 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: BOOLEAN_IPTABLES_ONSTARTUP not successfully definied by user (value=${BOOLEAN_IPTABLES_ONSTARTUP})"
     echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_IPTABLES_ONSTARTUP${SETCOLOR_NORMAL}..........'${BOOLEAN_IPTABLES_ONSTARTUP}'${MOVE_TO_COL1}#"
   fi
-  if [[ "${CUSTOM_SYSLOG_PORT}" =~ (102[4-9]|10[3-9][0-9]|1[1-9]\[0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]) ]]
+  if [[ "${CUSTOM_SYSLOG_PORT}" =~ (102[4-9]|10[3-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]) ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}CUSTOM_SYSLOG_PORT${SETCOLOR_NORMAL}..................'${CUSTOM_SYSLOG_PORT}'${MOVE_TO_COL1}#"
   else
     ((error_counter++))
     log "ERROR" "Global variables: CUSTOM_SYSLOG_PORT not successfully definied by user (value=${CUSTOM_SYSLOG_PORT})"
     echo -e "# ${SETCOLOR_FAILURE}CUSTOM_SYSLOG_PORT${SETCOLOR_NORMAL}..................'${CUSTOM_SYSLOG_PORT}'${MOVE_TO_COL1}#"
+  fi
+  if [[ "${CUSTOM_SNMPTRAP_PORT}" =~ (102[4-9]|10[3-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]) ]]
+  then
+    echo -e "# ${SETCOLOR_SUCCESS}CUSTOM_SNMPTRAP_PORT${SETCOLOR_NORMAL}................'${CUSTOM_SNMPTRAP_PORT}'${MOVE_TO_COL1}#"
+  else
+    ((error_counter++))
+    log "ERROR" "Global variables: CUSTOM_SNMPTRAP_PORT not successfully definied by user (value=${CUSTOM_SNMPTRAP_PORT})"
+    echo -e "# ${SETCOLOR_FAILURE}CUSTOM_SNMPTRAP_PORT${SETCOLOR_NORMAL}................'${CUSTOM_SNMPTRAP_PORT}'${MOVE_TO_COL1}#"
   fi
   echo -e "#${MOVE_TO_COL1}#"
   echo -e "###################################################################"
@@ -2012,6 +2057,7 @@ function verify_globalvariables() {
         log "INFO" "Global variables: BOOLEAN_NGINX_ONSTARTUP successfully definied by user (value=${BOOLEAN_NGINX_ONSTARTUP})"
         log "INFO" "Global variables: BOOLEAN_IPTABLES_ONSTARTUP successfully definied by user (value=${BOOLEAN_IPTABLES_ONSTARTUP})"
         log "INFO" "Global variables: CUSTOM_SYSLOG_PORT successfully definied by user (value=${CUSTOM_SYSLOG_PORT})"
+        log "INFO" "Global variables: CUSTOM_SNMPTRAP_PORT successfully definied by user (value=${CUSTOM_SNMPTRAP_PORT})"
       else
         log "WARN" "Global variables: Not confirmed by user"
         yes_no_function "Do you want to define them again ?" "yes"
@@ -2603,12 +2649,24 @@ function install_networkpackages() {
     ((installed_counter++))
     log "WARN" "Network packages: system-config-firewall-tui already installed"
   fi
-  if [ "${installed_counter}" == "7" ]
+  command_output_message=$(yum list installed | grep -w net-snmp)
+  if [[ "${command_output_message}" =~ ^net-snmp\..* ]]
+  then
+    ((installed_counter++))
+    log "WARN" "Network packages: net-snmp already installed"
+  fi
+  command_output_message=$(yum list installed | grep -w net-snmp-utils)
+  if [[ "${command_output_message}" =~ ^net-snmp-utils\..* ]]
+  then
+    ((installed_counter++))
+    log "WARN" "Network packages: net-snmp-utils already installed"
+  fi
+  if [ "${installed_counter}" == "9" ]
   then
     log "WARN" "Network packages: Already installed"
     echo_passed "PASS"
   else
-    command_output_message=$(yum -y install wget tcpdump traceroute bind-utils telnet openssh-clients system-config-firewall 2>&1 >/dev/null)
+    command_output_message=$(yum -y install wget tcpdump traceroute bind-utils telnet openssh-clients system-config-firewall net-snmp net-snmp-utils 2>&1 >/dev/null)
     if [ -z "${command_output_message}" ] || [[ ${command_output_message} =~ [Ww]arning.* ]]
     then
       log "INFO" "Network packages: Successfully installed"
@@ -3624,6 +3682,30 @@ function install_graylogwebgui() {
     fi
   fi
 }
+# Install and SNMP plugin for Graylog application
+function install_graylogsnmpplugin() {
+  local command_output_message=
+  local graylogsnmpplugin_rpm_url="https://github.com/Graylog2/graylog-plugin-snmp/releases/download/0.3.0/graylog-plugin-snmp-0.3.0-1.noarch.rpm"
+  echo_message "Install GRAYLOG SNMP plugin"
+  command_output_message=$(yum list installed | grep -w graylog-plugin-snmp)
+  if [[ "${command_output_message}" =~ ^graylog-plugin-snmp\..* ]]
+  then
+    log "WARN" "GRAYLOG SNMP plugin: Already installed"
+    echo_passed "PASS"
+  else
+    command_output_message=$(yum -y install ${graylogsnmpplugin_rpm_url} 2>&1 >/dev/null)
+    if [ -z "${command_output_message}" ] || [[ "${command_output_message}" =~ [Ww]arning.* ]]
+    then
+      log "INFO" "GRAYLOG SNMP plugin: Successfully installed"
+      echo_success "OK"
+    else
+      log "INFO" "GRAYLOG SNMP plugin: Not installed"
+      log "DEBUG" "GRAYLOG SNMP plugin: ${command_output_message}"
+      echo_failure "FAILED"
+      abort_installation
+    fi
+  fi
+}
 # Install NGINX web server as a proxy to communicate with GRAYLOG front-end server
 function install_nginx() {
   local installed_counter=0
@@ -3830,8 +3912,9 @@ function configure_iptables() {
 :PREROUTING ACCEPT [0:0]
 :POSTROUTING ACCEPT [7:420]
 :OUTPUT ACCEPT [7:420]
--A PREROUTING -i ${NETWORK_INTERFACE_NAME} -p tcp -m tcp --dport ${DEFAULT_SYSLOG_PORT} -j REDIRECT --to-ports 5514
--A PREROUTING -i ${NETWORK_INTERFACE_NAME} -p udp -m udp --dport ${DEFAULT_SYSLOG_PORT} -j REDIRECT --to-ports 5514
+-A PREROUTING -i ${NETWORK_INTERFACE_NAME} -p tcp -m tcp --dport ${DEFAULT_SYSLOG_PORT} -j REDIRECT --to-ports ${CUSTOM_SYSLOG_PORT}
+-A PREROUTING -i ${NETWORK_INTERFACE_NAME} -p udp -m udp --dport ${DEFAULT_SYSLOG_PORT} -j REDIRECT --to-ports ${CUSTOM_SYSLOG_PORT}
+-A PREROUTING -i ${NETWORK_INTERFACE_NAME} -p udp -m udp --dport ${DEFAULT_SNMPTRAP_PORT} -j REDIRECT --to-ports ${CUSTOM_SNMPTRAP_PORT}
 COMMIT
 *filter
 :INPUT ACCEPT [0:0]
@@ -3848,7 +3931,9 @@ COMMIT
 -A INPUT -p tcp -m state --state NEW -m tcp --dport 9300 -j ACCEPT
 -A INPUT -p tcp -m state --state NEW -m tcp --dport 9350 -j ACCEPT
 -A INPUT -p tcp -m state --state NEW -m tcp --dport 12900 -j ACCEPT
+-A INPUT -p udp -m state --state NEW -m udp --dport ${DEFAULT_SNMPTRAP_PORT} -j ACCEPT
 -A INPUT -p udp -m state --state NEW -m udp --dport ${DEFAULT_SYSLOG_PORT} -j ACCEPT
+-A INPUT -p udp -m state --state NEW -m udp --dport ${CUSTOM_SNMPTRAP_PORT} -j ACCEPT
 -A INPUT -p udp -m state --state NEW -m udp --dport ${CUSTOM_SYSLOG_PORT} -j ACCEPT
 -A INPUT -j REJECT --reject-with icmp-host-prohibited
 -A FORWARD -j REJECT --reject-with icmp-host-prohibited
@@ -4019,6 +4104,7 @@ function main {
     install_elasticsearch
     install_graylogserver
     install_graylogwebgui
+    install_graylogsnmpplugin
     install_nginx
     configure_iptables
     display_informations
