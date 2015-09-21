@@ -1826,7 +1826,7 @@ function verify_globalvariables() {
   fi
   if [[ "${BOOLEAN_NTP_CONFIGURE}" =~ true ]]
   then
-    if [[ "${NEW_NTP_ADDRESS}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] || [[ "${NEW_NTP_ADDRESS}" =~ ^(([a-zA-Z0-9](-?[a-zA-Z0-9])*)\.)*[a-zA-Z0-9](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ ! "${NEW_NTP_ADDRESS}" =~ ^localhost$ ]]
+    if [[ "${NEW_NTP_ADDRESS}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] || [[ "${NEW_NTP_ADDRESS}" =~ ^(([a-zA-Z0-9](-?[a-zA-Z0-9])*)\.)*[a-zA-Z0-9](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ "${NEW_NTP_ADDRESS}" =~ ^localhost$ ]]
     then
       echo -e "# ${SETCOLOR_SUCCESS}NEW_NTP_ADDRESS${SETCOLOR_NORMAL}.....................'${NEW_NTP_ADDRESS}'${MOVE_TO_COL1}#"
     else
@@ -1845,7 +1845,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: BOOLEAN_NTP_ONSTARTUP not successfully definied by user (value=${BOOLEAN_NTP_ONSTARTUP})"
     echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_NTP_ONSTARTUP${SETCOLOR_NORMAL}...............'${BOOLEAN_NTP_ONSTARTUP}'${MOVE_TO_COL1}#"
   fi
-  if [[ "${MONGO_HOST_NAME}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] || [[ "${MONGO_HOST_NAME}" =~ ^(([a-zA-Z0-9](-?[a-zA-Z0-9])*)\.)*[a-zA-Z0-9](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ ! "${MONGO_HOST_NAME}" =~ ^localhost$ ]]
+  if [[ "${MONGO_HOST_NAME}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] || [[ "${MONGO_HOST_NAME}" =~ ^(([a-zA-Z0-9](-?[a-zA-Z0-9])*)\.)*[a-zA-Z0-9](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ "${MONGO_HOST_NAME}" =~ ^localhost$ ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}MONGO_HOST_NAME${SETCOLOR_NORMAL}.....................'${MONGO_HOST_NAME}'${MOVE_TO_COL1}#"
   else
@@ -2005,7 +2005,7 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: GRAYLOG_ADMIN_PASSWORD not successfully definied by user (value=${GRAYLOG_ADMIN_PASSWORD})"
     echo -e "# ${SETCOLOR_FAILURE}GRAYLOG_ADMIN_PASSWORD${SETCOLOR_NORMAL}..............'${GRAYLOG_ADMIN_PASSWORD}'${MOVE_TO_COL1}#"
   fi
-  if [[ "${GRAYLOGWEB_HOST_NAME}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] || [[ "${GRAYLOGWEB_HOST_NAME}" =~ ^(([a-zA-Z0-9](-?[a-zA-Z0-9])*)\.)*[a-zA-Z0-9](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ ! "${GRAYLOGWEB_HOST_NAME}" =~ ^localhost$ ]]
+  if [[ "${GRAYLOGWEB_HOST_NAME}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] || [[ "${GRAYLOGWEB_HOST_NAME}" =~ ^(([a-zA-Z0-9](-?[a-zA-Z0-9])*)\.)*[a-zA-Z0-9](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ "${GRAYLOGWEB_HOST_NAME}" =~ ^localhost$ ]]
   then
     echo -e "# ${SETCOLOR_SUCCESS}GRAYLOGWEB_HOST_NAME${SETCOLOR_NORMAL}................'${GRAYLOGWEB_HOST_NAME}'${MOVE_TO_COL1}#"
   else
@@ -2047,7 +2047,7 @@ function verify_globalvariables() {
   fi
   if [[ "${BOOLEAN_GRAYLOG_SMTP}" =~ true ]]
   then
-    if [[ "${SMTP_HOST_NAME}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] || [[ "${SMTP_HOST_NAME}" =~ ^(([a-zA-Z0-9](-?[a-zA-Z0-9])*)\.)*[a-zA-Z0-9](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ ! "${SMTP_HOST_NAME}" =~ ^localhost$ ]]
+    if [[ "${SMTP_HOST_NAME}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] || [[ "${SMTP_HOST_NAME}" =~ ^(([a-zA-Z0-9](-?[a-zA-Z0-9])*)\.)*[a-zA-Z0-9](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ "${SMTP_HOST_NAME}" =~ ^localhost$ ]]
     then
       echo -e "# ${SETCOLOR_SUCCESS}SMTP_HOST_NAME${SETCOLOR_NORMAL}......................'${SMTP_HOST_NAME}'${MOVE_TO_COL1}#"
     else
