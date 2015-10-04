@@ -9,7 +9,7 @@ Find prerequisites and installation documentations at [http://mikael-andre.githu
 ## About ##
 
 ### Author ###
-* Mikaël ANDRE - Network Engineer at Telindus FRANCE
+* Mikaël ANDRE - Network Engineer at SFR Business
 
 ## License ##
 These files `install_graylog.sh` and `graylog_variables.cfg` are distributed under GNU GPL v2 license, see LICENSE.
