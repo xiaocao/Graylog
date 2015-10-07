@@ -6,12 +6,12 @@
 #job title     : Network engineer
 #mail          : mikael.andre.1989@gmail.com
 #created       : 20150219
-#last revision : 20150921
-#version       : 1.5
+#last revision : 20151006
+#version       : 1.6
 #platform      : Linux
 #processor     : 64 Bits
 #os            : CentOS
-#os version    : 6.5 to 6.7
+#os version    : 7.0 to 7.1
 #usage         : sh install_graylog.sh -i | -a <file.cfg> | -v (options)
 #                options are --cfg <file.cfg> | --cnx | --sys
 #notes         : Copy and paste in Vi to use this script
@@ -36,10 +36,10 @@ INSTALLATION_LOG_FILE="${INSTALLATION_LOG_FOLDER}/install_graylog_${INSTALLATION
 INSTALLATION_CFG_FILE=
 # NETWORK VARIABLES
 NETWORK_INTERFACE_NAME=
-# NTP VARIABLES
-BOOLEAN_NTP_ONSTARTUP=
-BOOLEAN_NTP_CONFIGURE=
-NEW_NTP_ADDRESS=
+# CHRONY VARIABLES
+BOOLEAN_CHRONY_ONSTARTUP=
+BOOLEAN_CHRONY_CONFIGURE=
+NEW_CHRONY_ADDRESS=
 # SSH VARIABLES
 BOOLEAN_RSA_AUTH=
 RSA_PUBLIC_KEY=
@@ -407,106 +407,106 @@ function set_globalvariables() {
     fi
   fi
   echo "SERVER_TIME_ZONE='${SERVER_TIME_ZONE}'" >> ${installation_cfg_tmpfile}
-  if [ -z "${BOOLEAN_NTP_CONFIGURE}" ]
+  if [ -z "${BOOLEAN_CHRONY_CONFIGURE}" ]
   then
-    yes_no_function "Do you want to configure NTP service ?" "yes"
+    yes_no_function "Do you want to configure CHRONY service ?" "yes"
     if [ "${?}" == "0" ]
     then
-      BOOLEAN_NTP_CONFIGURE="true"
+      BOOLEAN_CHRONY_CONFIGURE="true"
     else
-      BOOLEAN_NTP_CONFIGURE="false"
+      BOOLEAN_CHRONY_CONFIGURE="false"
     fi
   else
-    if [[ "${BOOLEAN_NTP_CONFIGURE}" =~ true ]]
+    if [[ "${BOOLEAN_CHRONY_CONFIGURE}" =~ true ]]
     then
-      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not configure${SETCOLOR_NORMAL} NTP service ?" "yes"
+      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}not configure${SETCOLOR_NORMAL} CHRONY service ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_NTP_CONFIGURE="false"
+        BOOLEAN_CHRONY_CONFIGURE="false"
       else
-        BOOLEAN_NTP_CONFIGURE=${BOOLEAN_NTP_CONFIGURE}
+        BOOLEAN_CHRONY_CONFIGURE=${BOOLEAN_CHRONY_CONFIGURE}
       fi
     else
-      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}configure${SETCOLOR_NORMAL} NTP service ?" "yes"
+      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}configure${SETCOLOR_NORMAL} CHRONY service ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_NTP_CONFIGURE="true"
+        BOOLEAN_CHRONY_CONFIGURE="true"
       else
-        BOOLEAN_NTP_CONFIGURE=${BOOLEAN_NTP_CONFIGURE}
+        BOOLEAN_CHRONY_CONFIGURE=${BOOLEAN_CHRONY_CONFIGURE}
       fi
     fi
   fi
-  if [[ "${BOOLEAN_NTP_CONFIGURE}" =~ true ]]
+  if [[ "${BOOLEAN_CHRONY_CONFIGURE}" =~ true ]]
   then
-    if [ -z "${NEW_NTP_ADDRESS}" ]
+    if [ -z "${NEW_CHRONY_ADDRESS}" ]
     then
-      while [[ ! "${NEW_NTP_ADDRESS}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] && [[ ! "${NEW_NTP_ADDRESS}" =~ ^(([a-zA-Z0-9](-?[a-zA-Z0-9])*)\.)*[a-zA-Z0-9](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] && [[ ! "${NEW_NTP_ADDRESS}" =~ ^localhost$ ]]
+      while [[ ! "${NEW_CHRONY_ADDRESS}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] && [[ ! "${NEW_CHRONY_ADDRESS}" =~ ^(([a-zA-Z0-9](-?[a-zA-Z0-9])*)\.)*[a-zA-Z0-9](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] && [[ ! "${NEW_CHRONY_ADDRESS}" =~ ^localhost$ ]]
       do
-        echo -e "\nType IP address or hostname of NTP server, followed by [ENTER]"
+        echo -e "\nType IP address or hostname of CHRONY server, followed by [ENTER]"
         echo -e "Default to [${SETCOLOR_INFO}ntp.test.fr${SETCOLOR_NORMAL}]:"
         echo -en "> "
-        read NEW_NTP_ADDRESS
-        if [ -z "${NEW_NTP_ADDRESS}" ]
+        read NEW_CHRONY_ADDRESS
+        if [ -z "${NEW_CHRONY_ADDRESS}" ]
         then
-          NEW_NTP_ADDRESS='ntp.test.fr'
+          NEW_CHRONY_ADDRESS='ntp.test.fr'
         fi
       done
     else
-      old_input_value=${NEW_NTP_ADDRESS}
-      yes_no_function "Can you confirm you want to modify current NTP server ?" "yes"
+      old_input_value=${NEW_CHRONY_ADDRESS}
+      yes_no_function "Can you confirm you want to modify current CHRONY server ?" "yes"
       if [ "${?}" == "0" ]
       then
-        NEW_NTP_ADDRESS=
-        while [[ ! "${NEW_NTP_ADDRESS}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] && [[ ! "${NEW_NTP_ADDRESS}" =~ ^(([a-zA-Z0-9](-?[a-zA-Z0-9])*)\.)*[a-zA-Z0-9](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] && [[ ! "${NEW_NTP_ADDRESS}" =~ ^localhost$ ]]
+        NEW_CHRONY_ADDRESS=
+        while [[ ! "${NEW_CHRONY_ADDRESS}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] && [[ ! "${NEW_CHRONY_ADDRESS}" =~ ^(([a-zA-Z0-9](-?[a-zA-Z0-9])*)\.)*[a-zA-Z0-9](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] && [[ ! "${NEW_CHRONY_ADDRESS}" =~ ^localhost$ ]]
         do
-          echo -e "\nType IP address or hostname of NTP server, followed by [ENTER]"
+          echo -e "\nType IP address or hostname of CHRONY server, followed by [ENTER]"
           echo -e "Default to [${SETCOLOR_WARNING}${old_input_value}${SETCOLOR_NORMAL}]:"
           echo -en "> "
-          read NEW_NTP_ADDRESS
-          if [ -z "${NEW_NTP_ADDRESS}" ]
+          read NEW_CHRONY_ADDRESS
+          if [ -z "${NEW_CHRONY_ADDRESS}" ]
           then
-            NEW_NTP_ADDRESS=${old_input_value}
+            NEW_CHRONY_ADDRESS=${old_input_value}
           fi
         done
       else
-        NEW_NTP_ADDRESS=${old_input_value}
+        NEW_CHRONY_ADDRESS=${old_input_value}
       fi
     fi
   else
-    NEW_NTP_ADDRESS=
+    NEW_CHRONY_ADDRESS=
   fi
-  echo "BOOLEAN_NTP_CONFIGURE='${BOOLEAN_NTP_CONFIGURE}'" >> ${installation_cfg_tmpfile}
-  echo "NEW_NTP_ADDRESS='${NEW_NTP_ADDRESS}'" >> ${installation_cfg_tmpfile}
-  if [ -z "${BOOLEAN_NTP_ONSTARTUP}" ]
+  echo "BOOLEAN_CHRONY_CONFIGURE='${BOOLEAN_CHRONY_CONFIGURE}'" >> ${installation_cfg_tmpfile}
+  echo "NEW_CHRONY_ADDRESS='${NEW_CHRONY_ADDRESS}'" >> ${installation_cfg_tmpfile}
+  if [ -z "${BOOLEAN_CHRONY_ONSTARTUP}" ]
   then
-    yes_no_function "Do you want to add NTP service on startup ?" "yes"
+    yes_no_function "Do you want to add CHRONY service on startup ?" "yes"
     if [ "${?}" == "0" ]
     then
-      BOOLEAN_NTP_ONSTARTUP="true"
+      BOOLEAN_CHRONY_ONSTARTUP="true"
     else
-      BOOLEAN_NTP_ONSTARTUP="false"
+      BOOLEAN_CHRONY_ONSTARTUP="false"
     fi
   else
-    if [[ "${BOOLEAN_NTP_ONSTARTUP}" =~ true ]]
+    if [[ "${BOOLEAN_CHRONY_ONSTARTUP}" =~ true ]]
     then
-      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} NTP service on startup ?" "yes"
+      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} CHRONY service on startup ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_NTP_ONSTARTUP="false"
+        BOOLEAN_CHRONY_ONSTARTUP="false"
       else
-        BOOLEAN_NTP_ONSTARTUP=${BOOLEAN_NTP_ONSTARTUP}
+        BOOLEAN_CHRONY_ONSTARTUP=${BOOLEAN_CHRONY_ONSTARTUP}
       fi
     else
-      yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} NTP service on startup ?" "yes"
+      yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} CHRONY service on startup ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_NTP_ONSTARTUP="true"
+        BOOLEAN_CHRONY_ONSTARTUP="true"
       else
-        BOOLEAN_NTP_ONSTARTUP=${BOOLEAN_NTP_ONSTARTUP}
+        BOOLEAN_CHRONY_ONSTARTUP=${BOOLEAN_CHRONY_ONSTARTUP}
       fi
     fi
   fi
-  echo "BOOLEAN_NTP_ONSTARTUP='${BOOLEAN_NTP_ONSTARTUP}'" >> ${installation_cfg_tmpfile}
+  echo "BOOLEAN_CHRONY_ONSTARTUP='${BOOLEAN_CHRONY_ONSTARTUP}'" >> ${installation_cfg_tmpfile}
   if [ -z "${MONGO_HOST_NAME}" ]
   then
     while [[ ! "${MONGO_HOST_NAME}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] && [[ ! "${MONGO_HOST_NAME}" =~ ^(([a-zA-Z0-9](-?[a-zA-Z0-9])*)\.)*[a-zA-Z0-9](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] && [[ ! "${MONGO_HOST_NAME}" =~ ^localhost$ ]]
@@ -1816,34 +1816,34 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: SERVER_TIME_ZONE not successfully definied by user (value=${SERVER_TIME_ZONE})"
     echo -e "# ${SETCOLOR_FAILURE}SERVER_TIME_ZONE${SETCOLOR_NORMAL}....................'${SERVER_TIME_ZONE}'${MOVE_TO_COL1}#"
   fi
-  if [[ "${BOOLEAN_NTP_CONFIGURE}" =~ true|false ]]
+  if [[ "${BOOLEAN_CHRONY_CONFIGURE}" =~ true|false ]]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_NTP_CONFIGURE${SETCOLOR_NORMAL}...............'${BOOLEAN_NTP_CONFIGURE}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_CHRONY_CONFIGURE${SETCOLOR_NORMAL}............'${BOOLEAN_CHRONY_CONFIGURE}'${MOVE_TO_COL1}#"
   else
     ((error_counter++))
-    log "ERROR" "Global variables: BOOLEAN_NTP_CONFIGURE not successfully definied by user (value=${BOOLEAN_NTP_CONFIGURE})"
-    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_NTP_CONFIGURE${SETCOLOR_NORMAL}...............'${BOOLEAN_NTP_CONFIGURE}'${MOVE_TO_COL1}#"
+    log "ERROR" "Global variables: BOOLEAN_CHRONY_CONFIGURE not successfully definied by user (value=${BOOLEAN_CHRONY_CONFIGURE})"
+    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_CHRONY_CONFIGURE${SETCOLOR_NORMAL}............'${BOOLEAN_CHRONY_CONFIGURE}'${MOVE_TO_COL1}#"
   fi
-  if [[ "${BOOLEAN_NTP_CONFIGURE}" =~ true ]]
+  if [[ "${BOOLEAN_CHRONY_CONFIGURE}" =~ true ]]
   then
-    if [[ "${NEW_NTP_ADDRESS}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] || [[ "${NEW_NTP_ADDRESS}" =~ ^(([a-zA-Z0-9](-?[a-zA-Z0-9])*)\.)*[a-zA-Z0-9](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ "${NEW_NTP_ADDRESS}" =~ ^localhost$ ]]
+    if [[ "${NEW_CHRONY_ADDRESS}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] || [[ "${NEW_CHRONY_ADDRESS}" =~ ^(([a-zA-Z0-9](-?[a-zA-Z0-9])*)\.)*[a-zA-Z0-9](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ "${NEW_CHRONY_ADDRESS}" =~ ^localhost$ ]]
     then
-      echo -e "# ${SETCOLOR_SUCCESS}NEW_NTP_ADDRESS${SETCOLOR_NORMAL}.....................'${NEW_NTP_ADDRESS}'${MOVE_TO_COL1}#"
+      echo -e "# ${SETCOLOR_SUCCESS}NEW_CHRONY_ADDRESS${SETCOLOR_NORMAL}..................'${NEW_CHRONY_ADDRESS}'${MOVE_TO_COL1}#"
     else
       ((error_counter++))
-      log "ERROR" "Global variables: NEW_NTP_ADDRESS not successfully definied by user (value=${NEW_NTP_ADDRESS})"
-      echo -e "# ${SETCOLOR_FAILURE}NEW_NTP_ADDRESS${SETCOLOR_NORMAL}.....................'${NEW_NTP_ADDRESS}'${MOVE_TO_COL1}#"
+      log "ERROR" "Global variables: NEW_CHRONY_ADDRESS not successfully definied by user (value=${NEW_CHRONY_ADDRESS})"
+      echo -e "# ${SETCOLOR_FAILURE}NEW_CHRONY_ADDRESS${SETCOLOR_NORMAL}..................'${NEW_CHRONY_ADDRESS}'${MOVE_TO_COL1}#"
     fi
   else
-    echo -e "# ${SETCOLOR_DISABLE}NEW_NTP_ADDRESS${SETCOLOR_NORMAL}.....................'${NEW_NTP_ADDRESS}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_DISABLE}NEW_CHRONY_ADDRESS${SETCOLOR_NORMAL}..................'${NEW_CHRONY_ADDRESS}'${MOVE_TO_COL1}#"
   fi
-  if [[ "${BOOLEAN_NTP_ONSTARTUP}" =~ true|false ]]
+  if [[ "${BOOLEAN_CHRONY_ONSTARTUP}" =~ true|false ]]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_NTP_ONSTARTUP${SETCOLOR_NORMAL}...............'${BOOLEAN_NTP_ONSTARTUP}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_CHRONY_ONSTARTUP${SETCOLOR_NORMAL}............'${BOOLEAN_CHRONY_ONSTARTUP}'${MOVE_TO_COL1}#"
   else
     ((error_counter++))
-    log "ERROR" "Global variables: BOOLEAN_NTP_ONSTARTUP not successfully definied by user (value=${BOOLEAN_NTP_ONSTARTUP})"
-    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_NTP_ONSTARTUP${SETCOLOR_NORMAL}...............'${BOOLEAN_NTP_ONSTARTUP}'${MOVE_TO_COL1}#"
+    log "ERROR" "Global variables: BOOLEAN_CHRONY_ONSTARTUP not successfully definied by user (value=${BOOLEAN_CHRONY_ONSTARTUP})"
+    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_CHRONY_ONSTARTUP${SETCOLOR_NORMAL}............'${BOOLEAN_CHRONY_ONSTARTUP}'${MOVE_TO_COL1}#"
   fi
   if [[ "${MONGO_HOST_NAME}" =~ ^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$ ]] || [[ "${MONGO_HOST_NAME}" =~ ^(([a-zA-Z0-9](-?[a-zA-Z0-9])*)\.)*[a-zA-Z0-9](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}$ ]] || [[ "${MONGO_HOST_NAME}" =~ ^localhost$ ]]
   then
@@ -2194,9 +2194,9 @@ function verify_globalvariables() {
         log "INFO" "Global variables: Confirmed by user"
         log "INFO" "Global variables: NETWORK_INTERFACE_NAME successfully definied by user (value=${NETWORK_INTERFACE_NAME})"
         log "INFO" "Global variables: SERVER_TIME_ZONE successfully definied by user (value=${SERVER_TIME_ZONE})"
-        log "INFO" "Global variables: BOOLEAN_NTP_ONSTARTUP successfully definied by user (value=${BOOLEAN_NTP_ONSTARTUP})"
-        log "INFO" "Global variables: BOOLEAN_NTP_CONFIGURE successfully definied by user (value=${BOOLEAN_NTP_CONFIGURE})"
-        log "INFO" "Global variables: NEW_NTP_ADDRESS successfully definied by user (value=${NEW_NTP_ADDRESS})"
+        log "INFO" "Global variables: BOOLEAN_CHRONY_ONSTARTUP successfully definied by user (value=${BOOLEAN_CHRONY_ONSTARTUP})"
+        log "INFO" "Global variables: BOOLEAN_CHRONY_CONFIGURE successfully definied by user (value=${BOOLEAN_CHRONY_CONFIGURE})"
+        log "INFO" "Global variables: NEW_CHRONY_ADDRESS successfully definied by user (value=${NEW_CHRONY_ADDRESS})"
         log "INFO" "Global variables: BOOLEAN_RSA_AUTH successfully definied by user (value=${BOOLEAN_RSA_AUTH})"
         log "INFO" "Global variables: RSA_PUBLIC_KEY successfully definied by user (value=${RSA_PUBLIC_KEY})"
 		log "INFO" "Global variables: MONGO_HOST_NAME successfully definied by user (value=${MONGO_HOST_NAME})"
@@ -2270,7 +2270,7 @@ function get_sysinfo() {
   local os_major_version=
   local os_minor_version=
   echo_message "Check all system informations"
-  SERVER_IP_ADDRESS=$(ifconfig ${NETWORK_INTERFACE_NAME} 2>> ${INSTALLATION_LOG_FILE} | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}')
+  SERVER_IP_ADDRESS=$(ip addr show ${NETWORK_INTERFACE_NAME} 2>> ${INSTALLATION_LOG_FILE} | grep "inet " | awk '{print $2}' | awk -F/ '{print $1}')
   if [ ! -z "${SERVER_IP_ADDRESS}" ]
   then
     log "INFO" "System informations: IP address=${SERVER_IP_ADDRESS}"
@@ -2306,17 +2306,17 @@ function get_sysinfo() {
   if [ "${command_output_message}" == "0" ]
   then
     log "INFO" "System informations: OS name=CentOS"
-    os_major_version=`sed -rn 's/.*\s.*\s.*([0-9])\.[0-9].*/\1/p' ${centos_release_file}`
-    os_minor_version=`sed -rn 's/.*\s.*\s.*[0-9]\.([0-9]).*/\1/p' ${centos_release_file}`
-    if [ "${os_major_version}" == "6" ] && [[ "${os_minor_version}" =~ [5-7] ]]
+    os_major_version=`sed -rn 's/.*\s.*\s.*([0-9])\.[0-9]\.[0-9]{1,}.*/\1/p' ${centos_release_file}`
+    os_minor_version=`sed -rn 's/.*\s.*\s.*[0-9]\.([0-9])\.[0-9]{1,}.*/\1/p' ${centos_release_file}`
+    if [ "${os_major_version}" == "7" ] && [[ "${os_minor_version}" =~ [0-1] ]]
     then
       log "INFO" "System informations: OS major version=${os_major_version}"
       log "INFO" "System informations: OS minor version=${os_minor_version}"
-    elif [ "${os_major_version}" != "6" ] && [[ "${os_minor_version}" =~ [5-7] ]]
+    elif [ "${os_major_version}" != "7" ] && [[ "${os_minor_version}" =~ [0-1] ]]
     then
       ((error_counter++))
       log "ERROR" "System informations: OS major version=${os_major_version}"
-    elif [ "${os_major_version}" == "6" ] && [[ ! "${os_minor_version}" =~ [5-7] ]]
+    elif [ "${os_major_version}" == "7" ] && [[ ! "${os_minor_version}" =~ [0-1] ]]
     then
       ((error_counter++))
       log "ERROR" "System informations: OS minor version=${os_minor_version}"
@@ -2362,8 +2362,8 @@ function generate_sslkeys() {
     log "INFO" "SSL keys: ${private_key_folder} successfully found"
   else
     ((error_counter++))
-    log "ERROR" "SSL keys: ${private_key_folder} not found"
     log "DEBUG" "SSL keys: ${command_output_message}"
+    log "ERROR" "SSL keys: ${private_key_folder} not found"
   fi
   command_output_message=$(test_directory ${public_key_folder})
   if [ "${command_output_message}" == "0" ]
@@ -2371,8 +2371,8 @@ function generate_sslkeys() {
     log "INFO" "SSL keys: ${public_key_folder} successfully found"
   else
     ((error_counter++))
-    log "ERROR" "SSL keys: ${public_key_folder} not found"
     log "DEBUG" "SSL keys: ${command_output_message}"
+    log "ERROR" "SSL keys: ${public_key_folder} not found"
   fi
   if [ "${error_counter}" == "0" ]
   then
@@ -2432,35 +2432,35 @@ function configure_yum() {
   local error_counter=0
   local warning_counter=0
   local command_output_message=
-  local epel_rpm_url="http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm"
-  local epel_key_url="http://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-6"
-  local epel_repo_file="/etc/yum.repos.d/epel.repo"
-  local nginx_rpm_url="http://nginx.org/packages/centos/6/noarch/RPMS/nginx-release-centos-6-0.el6.ngx.noarch.rpm"
+# local epel_rpm_url="http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm"
+# local epel_key_url="http://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-6"
+# local epel_repo_file="/etc/yum.repos.d/epel.repo"
+  local nginx_rpm_url="http://nginx.org/packages/centos/7/noarch/RPMS/nginx-release-centos-7-0.el7.ngx.noarch.rpm"
   local nginx_key_url="http://nginx.org/packages/keys/nginx_signing.key"
   local nginx_repo_file="/etc/yum.repos.d/nginx.repo"
   local mongodb_repo_file="/etc/yum.repos.d/mongodb.repo"
   local elasticsearch_key_url="https://packages.elastic.co/GPG-KEY-elasticsearch"
   local elasticsearch_repo_file="/etc/yum.repos.d/elasticsearch.repo"
-  local graylog_rpm_url="https://packages.graylog2.org/repo/packages/graylog-1.2-repository-el6_latest.rpm"
+  local graylog_rpm_url="https://packages.graylog2.org/repo/packages/graylog-1.2-repository-el7_latest.rpm"
   local graylog_repo_file="/etc/yum.repos.d/graylog.repo"
   echo_message "Configure YUM repositories"
-  command_output_message=$(test_file ${epel_repo_file})
-  if [ "${command_output_message}" == "0" ]
-  then
-    ((warning_counter++))
-    log "WARN" "YUM repositories: EPEL repository already installed"
-  else
-    rpm --import ${epel_key_url}
-    command_output_message=$(rpm -U ${epel_rpm_url} 2>&1 >/dev/null)
-    if [ -z "${command_output_message}" ]
-    then
-      log "INFO" "YUM repositories: EPEL repository successfully installed"
-    else
-      ((error_counter++))
-      log "ERROR" "YUM repositories: EPEL repository not installed"
-      log "DEBUG" "YUM repositories: ${command_output_message}"
-    fi
-  fi
+# command_output_message=$(test_file ${epel_repo_file})
+# if [ "${command_output_message}" == "0" ]
+# then
+#   ((warning_counter++))
+#   log "WARN" "YUM repositories: EPEL repository already installed"
+# else
+#   rpm --import ${epel_key_url}
+#   command_output_message=$(rpm -U ${epel_rpm_url} 2>&1 >/dev/null)
+#   if [ -z "${command_output_message}" ]
+#   then
+#     log "INFO" "YUM repositories: EPEL repository successfully installed"
+#   else
+#     ((error_counter++))
+#     log "DEBUG" "YUM repositories: ${command_output_message}"
+#     log "ERROR" "YUM repositories: EPEL repository not installed"
+#   fi
+# fi
   command_output_message=$(test_file ${nginx_repo_file})
   if [ "${command_output_message}" == "0" ]
   then
@@ -2474,8 +2474,8 @@ function configure_yum() {
       log "INFO" "YUM repositories: NGINX repository successfully installed"
     else
       ((error_counter++))
-      log "ERROR" "YUM repositories: NGINX repository not installed"
       log "DEBUG" "YUM repositories: ${command_output_message}"
+      log "ERROR" "YUM repositories: NGINX repository not installed"
     fi
   fi
   command_output_message=$(test_file ${mongodb_repo_file})
@@ -2497,8 +2497,8 @@ EOF
       log "INFO" "YUM repositories: MONGO repository successfully installed"
     else
       ((error_counter++))
-      log "ERROR" "YUM repositories: MONGO repository not installed"
       log "DEBUG" "YUM repositories: ${command_output_message}"
+      log "ERROR" "YUM repositories: MONGO repository not installed"
     fi
   fi
   command_output_message=$(test_file ${elasticsearch_repo_file})
@@ -2522,8 +2522,8 @@ EOF
       log "INFO" "YUM repositories: ELASTICSEARCH repository successfully installed"
     else
       ((error_counter++))
-      log "ERROR" "YUM repositories: ELASTICSEARCH repository not installed"
       log "DEBUG" "YUM repositories: ${command_output_message}"
+      log "ERROR" "YUM repositories: ELASTICSEARCH repository not installed"
     fi
   fi
   command_output_message=$(test_file ${graylog_repo_file})
@@ -2538,8 +2538,8 @@ EOF
       log "INFO" "YUM repositories: GRAYLOG repository successfully installed"
     else
       ((error_counter++))
-      log "ERROR" "YUM repositories: GRAYLOG repository not installed"
       log "DEBUG" "YUM repositories: ${command_output_message}"
+      log "ERROR" "YUM repositories: GRAYLOG repository not installed"
     fi
   fi
   if [ "${error_counter}" == "0" ] && [ "${warning_counter}" == "0" ]
@@ -2564,8 +2564,8 @@ function initialize_yum() {
     log "INFO" "YUM repositories: Successfully cleaned"
   else
     ((error_counter++))
-    log "ERROR" "YUM repositories: Not cleaned"
     log "DEBUG" "YUM repositories: ${command_output_message}"
+    log "ERROR" "YUM repositories: Not cleaned"
   fi
   command_output_message=$(yum makecache 2>&1 >/dev/null)
   if [ -z "${command_output_message}" ] || [ "${command_output_message}" =~ [Ww]arning.* ]
@@ -2573,8 +2573,8 @@ function initialize_yum() {
     log "INFO" "YUM cache: Successfully created"
   else
     ((error_counter++))
-    log "ERROR" "YUM cache: Not created"
     log "DEBUG" "YUM repositories: ${command_output_message}"
+    log "ERROR" "YUM cache: Not created"
   fi
   if [ "${error_counter}" == "0" ]
   then
@@ -2587,25 +2587,25 @@ function initialize_yum() {
 # Upgrade OS to the last version
 function upgrade_os() {
   local command_output_message=
-  echo_message "Install YUM plugin"
-  command_output_message=$(yum list installed | grep -w yum-presto)
-  if [ -z "${command_output_message}" ]
-  then
-    command_output_message=$(yum -y install yum-presto 2>&1 >/dev/null)
-    if [ -z "${command_output_message}" ] || [[ "${command_output_message}" =~ [Ww]arning.* ]]
-    then
-      log "INFO" "YUM plugin: yum-presto successfully installed"
-      echo_success "OK"
-    else
-      log "ERROR" "YUM plugin: yum-presto not installed"
-      log "DEBUG" "YUM plugin: ${command_output_message}"
-      echo_failure "FAILED"
-      abort_installation
-    fi
-  else
-    log "WARN" "YUM plugin: yum-presto already installed"
-    echo_passed "PASS"
-  fi
+# echo_message "Install YUM plugin"
+# command_output_message=$(yum list installed | grep -w yum-presto)
+# if [ -z "${command_output_message}" ]
+# then
+#   command_output_message=$(yum -y install yum-presto 2>&1 >/dev/null)
+#   if [ -z "${command_output_message}" ] || [[ "${command_output_message}" =~ [Ww]arning.* ]]
+#   then
+#     log "INFO" "YUM plugin: yum-presto successfully installed"
+#     echo_success "OK"
+#   else
+#     log "DEBUG" "YUM plugin: ${command_output_message}"
+#     log "ERROR" "YUM plugin: yum-presto not installed"
+#     echo_failure "FAILED"
+#     abort_installation
+#   fi
+# else
+#   log "WARN" "YUM plugin: yum-presto already installed"
+#   echo_passed "PASS"
+# fi
   echo_message "Upgrade operating system"
   command_output_message=$(yum -y update 2>&1 >/dev/null)
   if [ -z "${command_output_message}" ] || [[ "${command_output_message}" =~ [Ww]arning.* ]]
@@ -2613,117 +2613,107 @@ function upgrade_os() {
     log "INFO" "Upgrade operation: Successfully completed"
     echo_success "OK"
   else
-    log "ERROR" "Upgrade operation: Not completed"
     log "DEBUG" "YUM plugin: ${command_output_message}"
+    log "ERROR" "Upgrade operation: Not completed"
     echo_failure "FAILED"
     abort_installation
   fi
 }
-# Install NTP service to maintain system at the time
-function install_ntp() {
+# Install CHRONY service to maintain system at the time
+function install_chrony() {
   local configured_counter=0
-  local onstartup_counter=0
   local command_output_message=
-  local chkconfig_array=
-  local ntp_config_file="/etc/ntp.conf"
-  local ntp_backup_file="${ntp_config_file}.dist"
-  echo_message "Install NTP service"
-  command_output_message=$(yum list installed | grep -w ntp)
-  if [[ "${command_output_message}" =~ ^ntp\..* ]]
+  local chrony_config_file="/etc/chrony.conf"
+  local chrony_backup_file="${chrony_config_file}.dist"
+  echo_message "Install chrony service"
+  command_output_message=$(yum list installed | grep -w chrony)
+  if [[ "${command_output_message}" =~ ^chrony\..* ]]
   then
-    log "WARN" "NTP service: Already installed"
+    log "WARN" "CHRONY service: Already installed"
     echo_passed "PASS"
   else
-    command_output_message=$(yum -y install ntp 2>&1 >/dev/null)
+    command_output_message=$(yum -y install chrony 2>&1 >/dev/null)
     if [ -z "${command_output_message}" ] || [[ "${command_output_message}" =~ [Ww]arning.* ]]
     then
-      log "INFO" "NTP service: Successfully installed"
+      log "INFO" "CHRONY service: Successfully installed"
       echo_success "OK"
     else
-      log "INFO" "NTP service: Not installed"
-      log "DEBUG" "NTP service: ${command_output_message}"
+      log "DEBUG" "CHRONY service: ${command_output_message}"
+      log "INFO" "CHRONY service: Not installed"
       echo_failure "FAILED"
       abort_installation
     fi
   fi
-  echo_message "Configure NTP service"
-  if [[ "${BOOLEAN_NTP_CONFIGURE}" =~ true ]]
+  echo_message "Configure CHRONY service"
+  if [[ "${BOOLEAN_CHRONY_CONFIGURE}" =~ true ]]
   then
-    command_output_message=$(test_file ${ntp_backup_file})
+    command_output_message=$(test_file ${chrony_backup_file})
     if [ "${command_output_message}" == "0" ]
     then
       ((configured_counter++))
-      log "INFO" "NTP service: ${ntp_backup_file} successfully found"
+      log "INFO" "CHRONY service: ${chrony_backup_file} successfully found"
     fi
     if [ "${configured_counter}" == "1" ]
     then
-      log "WARN" "NTP service: Already configured"
+      log "WARN" "CHRONY service: Already configured"
       echo_passed "PASS"
     else
       command_output_message=$(sed -i.dist \
-      -e "s/\(# Please consider.*\)/\1\nserver ${NEW_NTP_ADDRESS}/" \
+      -e "s/\(# Please consider.*\)/\1\nserver ${NEW_CHRONY_ADDRESS}/" \
       -e "s/\(server\s[0-9]\..*\)/#\1/" \
-      ${ntp_config_file} 2>&1 >/dev/null)
+      ${chrony_config_file} 2>&1 >/dev/null)
       if [ -z "${command_output_message}" ]
       then
-        log "INFO" "NTP service: Successfully configured"
+        log "INFO" "CHRONY service: Successfully configured"
         echo_success "OK"
       else
-        log "ERROR" "NTP service: Not configured"
-        log "DEBUG" "NTP service: ${command_output_message}"
+        log "DEBUG" "CHRONY service: ${command_output_message}"
+        log "ERROR" "CHRONY service: Not configured"
         echo_failure "FAILED"
         abort_installation
       fi
     fi
   else
-    log "WARN" "NTP service: Configuration cancelled by user"
+    log "WARN" "CHRONY service: Configuration cancelled by user"
     echo_passed "PASS"
   fi
-  chkconfig_array=( `chkconfig --list | grep 'ntpd '` )
-  for i in "${chkconfig_array[@]}"
-  do
-    value=`echo ${i} | awk -F: '{print $2}'`
-    if [ "${value}" == "off" ]
-    then
-      ((onstartup_counter++))
-    fi
-  done
-  if [[ "${BOOLEAN_NTP_ONSTARTUP}" =~ true ]]
+  if [[ "${BOOLEAN_CHRONY_ONSTARTUP}" =~ true ]]
   then
-    echo_message "Enable NTP service on startup"
-    if [ "${onstartup_counter}" == "7" ]
+    echo_message "Enable CHRONY service on startup"
+    command_output_message=$(systemctl list-unit-files | grep chronyd | awk '{print $2}')
+    if [ "${command_output_message}" == "enabled" ]
     then
-      command_output_message=$(chkconfig ntpd on 2>&1 >/dev/null)
+      log "WARN" "CHRONY service: Already enabled on startup"
+      echo_passed "PASS"
+    else
+      command_output_message=$(systemctl enable chronyd.service 2>&1 >/dev/null)
       if [ -z "${command_output_message}" ]
       then
-        log "INFO" "NTP service: Successfully enabled on startup"
+        log "INFO" "CHRONY service: Successfully enabled on startup"
         echo_success "OK"
       else
-        log "ERROR" "NTP service: Not enabled on startup"
-        log "DEBUG" "NTP service: ${command_output_message}"
+        log "DEBUG" "CHRONY service: ${command_output_message}"
+        log "ERROR" "CHRONY service: Not enabled on startup"
         echo_failure "FAILED"
       fi
-    else
-      log "WARN" "NTP service: Already enabled on startup"
-      echo_passed "PASS"
     fi
   else
-    echo_message "Disable NTP service on startup"
-    if [ "${onstartup_counter}" != "7" ]
+    echo_message "Disable CHRONY service on startup"
+    if [ "${command_output_message}" == "disabled" ]
     then
-      command_output_message=$(chkconfig ntpd off 2>&1 >/dev/null)
+      log "WARN" "CHRONY service: Already disabled on startup"
+      echo_passed "PASS"
+    else
+      command_output_message=$(systemctl disable chronyd.service 2>&1 >/dev/null)
       if [ -z "${command_output_message}" ]
       then
-        log "INFO" "NTP service: Disabled on startup"
+        log "INFO" "CHRONY service: Disabled on startup"
         echo_passed "OK"
       else
-        log "ERROR" "NTP service: Not disabled on startup"
-        log "DEBUG" "NTP service: ${command_output_message}"
+        log "DEBUG" "CHRONY service: ${command_output_message}"
+        log "ERROR" "CHRONY service: Not disabled on startup"
         echo_failure "FAILED"
       fi
-    else
-      log "WARN" "NTP service: Already disabled on startup"
-      echo_passed "PASS"
     fi
   fi
 }
@@ -2773,8 +2763,8 @@ function install_lsbpackages() {
       log "INFO" "LSB packages: Successfully installed"
       echo_success "OK"
     else
-      log "ERROR" "LSB packages: Not installed"
       log "DEBUG" "LSB packages: ${command_output_message}"
+      log "ERROR" "LSB packages: Not installed"
       echo_failure "FAILED"
       abort_installation
     fi
@@ -2809,24 +2799,24 @@ function install_networkpackages() {
     ((installed_counter++))
     log "WARN" "Network packages: bind-utils already installed"
   fi
-  command_output_message=$(yum list installed | grep -w telnet)
-  if [[ "${command_output_message}" =~ ^telnet\..* ]]
-  then
-    ((installed_counter++))
-    log "WARN" "Network packages: telnet already installed"
-  fi
-  command_output_message=$(yum list installed | grep -w openssh-clients)
-  if [[ "${command_output_message}" =~ ^openssh-clients\..* ]]
-  then
-    ((installed_counter++))
-    log "WARN" "Network packages: openssh-clients already installed"
-  fi
-  command_output_message=$(yum list installed | grep -w system-config-firewall-tui)
-  if [[ "${command_output_message}" =~ ^system-config-firewall-tui\..* ]]
-  then
-    ((installed_counter++))
-    log "WARN" "Network packages: system-config-firewall-tui already installed"
-  fi
+# command_output_message=$(yum list installed | grep -w telnet)
+# if [[ "${command_output_message}" =~ ^telnet\..* ]]
+# then
+#   ((installed_counter++))
+#   log "WARN" "Network packages: telnet already installed"
+# fi
+# command_output_message=$(yum list installed | grep -w openssh-clients)
+# if [[ "${command_output_message}" =~ ^openssh-clients\..* ]]
+# then
+#   ((installed_counter++))
+#   log "WARN" "Network packages: openssh-clients already installed"
+# fi
+# command_output_message=$(yum list installed | grep -w system-config-firewall-tui)
+# if [[ "${command_output_message}" =~ ^system-config-firewall-tui\..* ]]
+# then
+#   ((installed_counter++))
+#   log "WARN" "Network packages: system-config-firewall-tui already installed"
+# fi
   command_output_message=$(yum list installed | grep -w net-snmp)
   if [[ "${command_output_message}" =~ ^net-snmp\..* ]]
   then
@@ -2844,14 +2834,14 @@ function install_networkpackages() {
     log "WARN" "Network packages: Already installed"
     echo_passed "PASS"
   else
-    command_output_message=$(yum -y install wget tcpdump traceroute bind-utils telnet openssh-clients system-config-firewall net-snmp net-snmp-utils 2>&1 >/dev/null)
+    command_output_message=$(yum -y install wget tcpdump traceroute bind-utils net-snmp net-snmp-utils 2>&1 >/dev/null)
     if [ -z "${command_output_message}" ] || [[ ${command_output_message} =~ [Ww]arning.* ]]
     then
       log "INFO" "Network packages: Successfully installed"
       echo_success "OK"
     else
-      log "ERROR" "Network packages: Not installed"
       log "DEBUG" "Network packages: ${command_output_message}"
+      log "ERROR" "Network packages: Not installed"
       echo_failure "FAILED"
       abort_installation
     fi
@@ -2905,13 +2895,13 @@ EOF
         log "INFO" "Bourne-Again shell: Successfully configured"
         echo_success "OK"
       else
-        log "ERROR" "Bourne-Again shell: NOT configured"
         log "DEBUG" "Bourne-Again shell: ${command_output_message}"
+        log "ERROR" "Bourne-Again shell: NOT configured"
         echo_failure "FAILED"
       fi
     else
-      log "ERROR" "Bourne-Again shell: Not backed-up"
       log "DEBUG" "Bourne-Again shell: ${command_output_message}"
+      log "ERROR" "Bourne-Again shell: Not backed-up"
       echo_failure "FAILED"
     fi
   fi
@@ -2937,12 +2927,12 @@ function configure_openssh() {
     ${opensshd_config_file} 2>&1 >/dev/null)
     if [ -z "${command_output_message}" ]
     then
-#      ssh-keygen -b 2048 -t rsa -f ${openssh_hostrsakey_file}
+#     ssh-keygen -b 2048 -t rsa -f ${openssh_hostrsakey_file}
       log "INFO" "SSH service: Successfully configured"
       echo_success "OK"
     else
-      log "ERROR" "SSH service: Not configured"
       log "DEBUG" "SSH service: ${command_output_message}"
+      log "ERROR" "SSH service: Not configured"
       echo_failure "FAILED"
     fi
   fi
@@ -2973,8 +2963,8 @@ function configure_rsaauth() {
             log "INFO" "RSA authentication: Public key successfully inserted"
             echo_success "OK"
           else
-            log "ERROR" "RSA authentication: Public key not inserted"
             log "DEBUG" "RSA authentication: ${command_output_message}"
+            log "ERROR" "RSA authentication: Public key not inserted"
             echo_failure "FAILED"
           fi
         else
@@ -2989,8 +2979,8 @@ function configure_rsaauth() {
           log "INFO" "RSA authentication: Public key successfully inserted"
           echo_success "OK"
         else
-          log "ERROR" "RSA authentication: Public key not inserted"
           log "DEBUG" "RSA authentication: ${command_output_message}"
+          log "ERROR" "RSA authentication: Public key not inserted"
           echo_failure "FAILED"
         fi
       fi
@@ -3020,23 +3010,23 @@ function configure_rsaauth() {
             log "INFO" "RSA authentication: Public key successfully inserted"
             echo_success "OK"
           else
-            log "ERROR" "RSA authentication: Public key not inserted"
             log "DEBUG" "RSA authentication: ${command_output_message}"
+            log "ERROR" "RSA authentication: Public key not inserted"
             echo_failure "FAILED"
           fi
         else
-          log "ERROR" "RSA authentication: ${openssh_authorizedkeys_file} not created"
           log "DEBUG" "RSA authentication: ${command_output_message}"
+          log "ERROR" "RSA authentication: ${openssh_authorizedkeys_file} not created"
           echo_failure "FAILED"
         fi
       else
-        log "ERROR" "RSA authentication: ${openssh_authorizedkeys_folder} not changed rights"
         log "DEBUG" "RSA authentication: ${command_output_message}"
+        log "ERROR" "RSA authentication: ${openssh_authorizedkeys_folder} not changed rights"
         echo_failure "FAILED"
       fi
     else
-      log "ERROR" "RSA authentication: ${openssh_authorizedkeys_folder} not created"
       log "DEBUG" "RSA authentication: ${command_output_message}"
+      log "ERROR" "RSA authentication: ${openssh_authorizedkeys_folder} not created"
       echo_failure "FAILED"
     fi
   fi
@@ -3063,8 +3053,8 @@ function configure_postfix() {
       log "INFO" "POSTFIX service: Successfully configured"
       echo_success "OK"
     else
-      log "ERROR" "POSTFIX service: Not configured"
       log "DEBUG" "POSTFIX service: ${command_output_message}"
+      log "ERROR" "POSTFIX service: Not configured"
       echo_failure "FAILED"
     fi
   fi
@@ -3091,8 +3081,8 @@ function configure_hostsfile() {
       log "INFO" "HOSTS file: Successfully configured"
       echo_success "OK"
     else
-      log "ERROR" "HOSTS file: Not configured"
       log "DEBUG" "HOSTS file: ${command_output_message}"
+      log "ERROR" "HOSTS file: Not configured"
       echo_failure "FAILED"
       abort_installation
     fi
@@ -3120,8 +3110,8 @@ function configure_selinux() {
       log "INFO" "SELINUX module: Successfully configured"
       echo_success "OK"
     else
-      log "ERROR" "SELINUX module: Not configured"
       log "DEBUG" "SELINUX module: ${command_output_message}"
+      log "ERROR" "SELINUX module: Not configured"
       echo_failure "FAILED"
       abort_installation
     fi
@@ -3131,10 +3121,8 @@ function configure_selinux() {
 function install_mongodb() {
   local installed_counter=0
   local configured_counter=0
-  local onstartup_counter=0
   local success_word_occurrence=
   local command_output_message=
-  local chkconfig_array=
   local success_word_definition="Successfully"
   local mongodb_init_file="/etc/init.d/mongod"
   local mongodb_initbackup_file="${mongodb_init_file}.dist"
@@ -3182,8 +3170,8 @@ function install_mongodb() {
       log "INFO" "MONGO database server: Successfully installed"
       echo_success "OK"
     else
-      log "ERROR" "MONGO database server: Not installed"
       log "DEBUG" "MONGO database server: ${command_output_message}"
+      log "ERROR" "MONGO database server: Not installed"
       echo_failure "FAILED"
       abort_installation
     fi
@@ -3213,19 +3201,28 @@ function install_mongodb() {
     then
       log "INFO" "MONGO database server: ${mongodb_init_file} successfully modified"
     else
-      log "ERROR" "MONGO database server: ${mongodb_init_file} not modified"
       log "DEBUG" "MONGO database server: ${command_output_message}"
+      log "ERROR" "MONGO database server: ${mongodb_init_file} not modified"
       echo_failure "FAILED"
       abort_installation
     fi
-    command_output_message=$(service mongod start 2>&1 >/dev/null)
+    command_output_message=$(systemctl daemon-reload 2>&1 >/dev/null)
     if [ -z "${command_output_message}" ]
     then
-      log "INFO" "MONGO database server: Successfully started"
-      sleep 30
+      command_output_message=$(systemctl start mongod.service 2>&1 >/dev/null)
+      if [ -z "${command_output_message}" ]
+      then
+        log "INFO" "MONGO database server: Successfully started"
+        sleep 30
+      else
+        log "DEBUG" "MONGO database server: ${command_output_message}"
+        log "ERROR" "MONGO database server: Not started"
+        echo_failure "FAILED"
+        abort_installation
+      fi
     else
-      log "ERROR" "MONGO database server: Not started"
       log "DEBUG" "MONGO database server: ${command_output_message}"
+      log "ERROR" "MONGO database server: systemd not reloaded"
       echo_failure "FAILED"
       abort_installation
     fi
@@ -3236,8 +3233,8 @@ function install_mongodb() {
       log "INFO" "MONGO database server: Successfully set password (${MONGO_ADMIN_PASSWORD}) for user ${MONGO_ADMIN_USER}"
       log "INFO" "MONGO database server: Successfully set role 'root' to user ${MONGO_ADMIN_USER} on database ${MONGO_ADMIN_DATABASE}"
     else
-      log "ERROR" "MONGO database server: CLI configuration not completed"
       log "DEBUG" "MONGO database server: ${command_output_message}"
+      log "ERROR" "MONGO database server: CLI configuration not completed"
       echo_failure "FAILED"
       abort_installation
     fi
@@ -3250,8 +3247,8 @@ function install_mongodb() {
       log "INFO" "MONGO database server: Successfully set password (${MONGO_GRAYLOG_PASSWORD}) for user ${MONGO_GRAYLOG_USER}"
       log "INFO" "MONGO database server: Successfully set role 'readWrite' to user ${MONGO_GRAYLOG_USER} on database ${MONGO_GRAYLOG_DATABASE}"
     else
-      log "ERROR" "MONGO database server: CLI configuration not completed"
       log "DEBUG" "MONGO database server: ${command_output_message}"
+      log "ERROR" "MONGO database server: CLI configuration not completed"
       echo_failure "FAILED"
       abort_installation
     fi
@@ -3266,57 +3263,49 @@ function install_mongodb() {
       log "INFO" "MONGO database server: Successfully configured"
       echo_success "OK"
     else
-      log "ERROR" "MONGO database server: Not configured"
       log "DEBUG" "MONGO database server: ${command_output_message}"
+      log "ERROR" "MONGO database server: Not configured"
       echo_failure "FAILED"
       abort_installation
     fi
   fi
-  chkconfig_array=( `chkconfig --list | grep 'mongod'` )
-  for i in "${chkconfig_array[@]}"
-  do
-    value=`echo ${i} | awk -F: '{print $2}'`
-    if [ "${value}" == "off" ]
-    then
-      ((onstartup_counter++))
-    fi
-  done
   if [[ "${BOOLEAN_MONGO_ONSTARTUP}" =~ true ]]
   then
     echo_message "Enable MONGO database server on startup"
-    if [ "${onstartup_counter}" == "7" ]
+    command_output_message=$(systemctl list-unit-files | grep mongod | awk '{print $2}')
+    if [ "${command_output_message}" == "enabled" ]
     then
-      command_output_message=$(chkconfig mongod on 2>&1 >/dev/null)
+      log "WARN" "MONGO database server: Already enabled on startup"
+      echo_passed "PASS"
+    else
+      command_output_message=$(systemctl enable mongod.service 2>&1 >/dev/null)
       if [ -z "${command_output_message}" ]
       then
         log "INFO" "MONGO database server: Successfully enabled on startup"
         echo_success "OK"
       else
-        log "ERROR" "MONGO database server: Not enabled on startup"
         log "DEBUG" "MONGO database server: ${command_output_message}"
+        log "ERROR" "MONGO database server: Not enabled on startup"
         echo_failure "FAILED"
       fi
-    else
-      log "WARN" "MONGO database server: Already enabled on startup"
-      echo_passed "PASS"
     fi
   else
     echo_message "Disable MONGO database server on startup"
-    if [ "${onstartup_counter}" != "7" ]
+    if [ "${command_output_message}" == "disabled" ]
     then
-      command_output_message=$(chkconfig mongod off 2>&1 >/dev/null)
+      log "WARN" "MONGO database server: Already disabled on startup"
+      echo_passed "PASS"
+    else
+      command_output_message=$(systemctl disable mongod.service 2>&1 >/dev/null)
       if [ -z "${command_output_message}" ]
       then
         log "INFO" "MONGO database server: Disabled on startup"
-        echo_success "OK"
+        echo_passed "OK"
       else
-        log "ERROR" "MONGO database server: Not disabled on startup"
         log "DEBUG" "MONGO database server: ${command_output_message}"
+        log "ERROR" "MONGO database server: Not disabled on startup"
         echo_failure "FAILED"
       fi
-    else
-      log "WARN" "MONGO database server: Already disabled on startup"
-      echo_passed "PASS"
     fi
   fi
 }
@@ -3342,8 +3331,8 @@ function install_java() {
       log "INFO" "Java Runtime Environment: Successfully installed"
       echo_success "OK"
     else
-      log "ERROR" "Java Runtime Environment: Not installed"
       log "DEBUG" "Java Runtime Environment: ${command_output_message}"
+      log "ERROR" "Java Runtime Environment: Not installed"
       echo_failure "FAILED"
       abort_installation
     fi
@@ -3395,8 +3384,8 @@ function install_elasticsearch() {
       log "INFO" "ELASTICSEARCH index server: Successfully installed"
       echo_success "OK"
     else
-      log "ERROR" "ELASTICSEARCH index server: Not installed"
       log "DEBUG" "ELASTICSEARCH index server: ${command_output_message}"
+      log "ERROR" "ELASTICSEARCH index server: Not installed"
       echo_failure "FAILED"
       abort_installation
     fi
@@ -3443,8 +3432,8 @@ function install_elasticsearch() {
       log "INFO" "ELASTICSEARCH index server: ${elasticsearch_config_file} successfully modified"
     else
       ((error_counter++))
-      log "ERROR" "ELASTICSEARCH index server: ${elasticsearch_config_file} not modified"
       log "DEBUG" "ELASTICSEARCH index server: ${command_output_message}"
+      log "ERROR" "ELASTICSEARCH index server: ${elasticsearch_config_file} not modified"
     fi
     command_output_message=$(sed -i.dist \
     -e "s/#\(ES_HEAP_SIZE\=\).*/\1${ELASTICSEARCH_RAM_RESERVATION}/" \
@@ -3459,8 +3448,8 @@ function install_elasticsearch() {
       log "INFO" "ELASTICSEARCH index server: ${elasticsearch_sysconfig_file} successfully modified"
     else
       ((error_counter++))
-      log "ERROR" "ELASTICSEARCH index server: ${elasticsearch_sysconfig_file} not modified"
       log "DEBUG" "ELASTICSEARCH index server: ${command_output_message}"
+      log "ERROR" "ELASTICSEARCH index server: ${elasticsearch_sysconfig_file} not modified"
     fi
     command_output_message=$(sed -i.dist \
     -e "s/#\(LimitMEMLOCK\=infinity\)/\1/" \
@@ -3470,8 +3459,8 @@ function install_elasticsearch() {
       log "INFO" "ELASTICSEARCH index server: ${elasticsearch_service_file} successfully modified"
     else
       ((error_counter++))
-      log "ERROR" "ELASTICSEARCH index server: ${elasticsearch_service_file} not modified"
       log "DEBUG" "ELASTICSEARCH index server: ${command_output_message}"
+      log "ERROR" "ELASTICSEARCH index server: ${elasticsearch_service_file} not modified"
     fi
     command_output_message=$(chkconfig --add elasticsearch 2>&1 >/dev/null)
     if [ -z "${command_output_message}" ]
@@ -3479,8 +3468,8 @@ function install_elasticsearch() {
       log "INFO" "ELASTICSEARCH index server: Successfully added to chkconfig"
     else
       ((error_counter++))
-      log "ERROR" "ELASTICSEARCH index server: Not added to chkconfig"
       log "DEBUG" "ELASTICSEARCH index server: ${command_output_message}"
+      log "ERROR" "ELASTICSEARCH index server: Not added to chkconfig"
     fi
     if [ "${error_counter}" == "0" ]
     then
@@ -3497,8 +3486,8 @@ function install_elasticsearch() {
       log "INFO" "ELASTICSEARCH index server: Successfully started"
       echo_success "OK"
     else
-      log "ERROR" "ELASTICSEARCH index server: Not started"
       log "DEBUG" "ELASTICSEARCH index server: ${command_output_message}"
+      log "ERROR" "ELASTICSEARCH index server: Not started"
       echo_failure "FAILED"
       abort_installation
     fi
@@ -3511,8 +3500,8 @@ function install_elasticsearch() {
         log "INFO" "ELASTICSEARCH index server: HQ Management plugin successfully installed"
         echo_success "OK"
       else
-        log "ERROR" "ELASTICSEARCH index server: HQ Management plugin not installed"
         log "DEBUG" "ELASTICSEARCH index server: ${command_output_message}"
+        log "ERROR" "ELASTICSEARCH index server: HQ Management plugin not installed"
         echo_failure "FAILED"
       fi
     else
@@ -3540,8 +3529,8 @@ function install_elasticsearch() {
         log "INFO" "ELASTICSEARCH index server: Successfully enabled on startup"
         echo_success "OK"
       else
-        log "ERROR" "ELASTICSEARCH index server: Not enabled on startup"
         log "DEBUG" "ELASTICSEARCH index server: ${command_output_message}"
+        log "ERROR" "ELASTICSEARCH index server: Not enabled on startup"
         echo_failure "FAILED"
       fi
     else
@@ -3558,8 +3547,8 @@ function install_elasticsearch() {
         log "INFO" "ELASTICSEARCH index server: Disabled on startup"
         echo_success "OK"
       else
-        log "ERROR" "ELASTICSEARCH index server: Not disabled on startup"
         log "DEBUG" "ELASTICSEARCH index server: ${command_output_message}"
+        log "ERROR" "ELASTICSEARCH index server: Not disabled on startup"
         echo_failure "FAILED"
       fi
     else
@@ -3595,8 +3584,8 @@ function install_graylogserver() {
       log "INFO" "GRAYLOG back-end server: Successfully installed"
       echo_success "OK"
     else
-      log "ERROR" "GRAYLOG back-end server: Not installed"
       log "DEBUG" "GRAYLOG back-end server: ${command_output_message}"
+      log "ERROR" "GRAYLOG back-end server: Not installed"
       echo_failure "FAILED"
       abort_installation
     fi
@@ -3660,8 +3649,8 @@ function install_graylogserver() {
       log "INFO" "GRAYLOG back-end server: ${graylogserver_config_file} successfully modified"
     else
       ((error_counter++))
-      log "ERROR" "GRAYLOG back-end server: ${graylogserver_config_file} not modified"
       log "DEBUG" "GRAYLOG back-end server: ${command_output_message}"
+      log "ERROR" "GRAYLOG back-end server: ${graylogserver_config_file} not modified"
     fi
     command_output_message=$(sed -i.dist \
     -e "s/\(GRAYLOG_SERVER_JAVA_OPTS=\"\).*\(\"\)/\1-Djava.net.preferIPv4Stack=true -Xms${GRAYLOGSERVER_RAM_RESERVATION} -Xmx${GRAYLOGSERVER_RAM_RESERVATION} -XX:NewRatio=1 -server -XX:+ResizeTLAB -XX:+UseConcMarkSweepGC -XX:+CMSConcurrentMTEnabled -XX:+CMSClassUnloadingEnabled -XX:+UseParNewGC -XX:-OmitStackTraceInFastThrow\2/" \
@@ -3671,8 +3660,8 @@ function install_graylogserver() {
       log "INFO" "GRAYLOG back-end server: ${graylogserver_sysconfig_file} successfully modified"
     else
       ((error_counter++))
-      log "ERROR" "GRAYLOG back-end server: ${graylogserver_sysconfig_file} not modified"
       log "DEBUG" "GRAYLOG back-end server: ${command_output_message}"
+      log "ERROR" "GRAYLOG back-end server: ${graylogserver_sysconfig_file} not modified"
     fi
     if [ "${error_counter}" == "0" ]
     then
@@ -3703,8 +3692,8 @@ function install_graylogserver() {
         log "INFO" "GRAYLOG back-end server: Successfully enabled on startup"
         echo_success "OK"
       else
-        log "ERROR" "GRAYLOG back-end server: Not enabled on startup"
         log "DEBUG" "GRAYLOG back-end server: ${command_output_message}"
+        log "ERROR" "GRAYLOG back-end server: Not enabled on startup"
         echo_failure "FAILED"
       fi
     else
@@ -3721,8 +3710,8 @@ function install_graylogserver() {
         log "INFO" "GRAYLOG back-end server: Disabled on startup"
         echo_success "OK"
       else
-        log "ERROR" "GRAYLOG back-end server: Not disabled on startup"
         log "DEBUG" "GRAYLOG back-end server: ${command_output_message}"
+        log "ERROR" "GRAYLOG back-end server: Not disabled on startup"
         echo_failure "FAILED"
       fi
     else
@@ -3757,8 +3746,8 @@ function install_graylogwebgui() {
       log "INFO" "GRAYLOG front-end server: Successfully installed"
       echo_success "OK"
     else
-      log "ERROR" "GRAYLOG front-end server: Not installed"
       log "DEBUG" "GRAYLOG front-end server: ${command_output_message}"
+      log "ERROR" "GRAYLOG front-end server: Not installed"
       echo_failure "FAILED"
       abort_installation
     fi
@@ -3791,8 +3780,8 @@ function install_graylogwebgui() {
       log "INFO" "GRAYLOG front-end server: ${graylogwebgui_config_file} successfully modified"
     else
       ((error_counter++))
-      log "ERROR" "GRAYLOG front-end server: ${graylogwebgui_config_file} not found"
       log "DEBUG" "GRAYLOG front-end server: ${command_output_message}"
+      log "ERROR" "GRAYLOG front-end server: ${graylogwebgui_config_file} not found"
     fi
     command_output_message=$(sed -i.dist \
     -e "s/\(GRAYLOG_WEB_HTTP_ADDRESS=\"\)0.0.0.0\(\"\)/\1${GRAYLOGWEB_HOST_NAME}\2/" \
@@ -3803,8 +3792,8 @@ function install_graylogwebgui() {
       log "INFO" "GRAYLOG front-end server: ${graylogwebgui_sysconfig_file} successfully modified"
     else
       ((error_counter++))
-      log "ERROR" "GRAYLOG front-end server: ${graylogwebgui_sysconfig_file} not found"
       log "DEBUG" "GRAYLOG front-end server: ${command_output_message}"
+      log "ERROR" "GRAYLOG front-end server: ${graylogwebgui_sysconfig_file} not found"
     fi
     if [ "${error_counter}" == "0" ]
     then
@@ -3835,8 +3824,8 @@ function install_graylogwebgui() {
         log "INFO" "GRAYLOG front-end server: Successfully enabled on startup"
         echo_success "OK"
       else
-        log "ERROR" "GRAYLOG front-end server: Not enabled on startup"
         log "DEBUG" "GRAYLOG front-end server: ${command_output_message}"
+        log "ERROR" "GRAYLOG front-end server: Not enabled on startup"
         echo_failure "FAILED"
       fi
     else
@@ -3853,8 +3842,8 @@ function install_graylogwebgui() {
         log "INFO" "GRAYLOG front-end server: Disabled on startup"
         echo_success "OK"
       else
-        log "ERROR" "GRAYLOG front-end server: Not disabled on startup"
         log "DEBUG" "GRAYLOG front-end server: ${command_output_message}"
+        log "ERROR" "GRAYLOG front-end server: Not disabled on startup"
         echo_failure "FAILED"
       fi
     else
@@ -3880,8 +3869,8 @@ function install_graylogsnmpplugin() {
       log "INFO" "GRAYLOG SNMP plugin: Successfully installed"
       echo_success "OK"
     else
-      log "INFO" "GRAYLOG SNMP plugin: Not installed"
       log "DEBUG" "GRAYLOG SNMP plugin: ${command_output_message}"
+      log "ERROR" "GRAYLOG SNMP plugin: Not installed"
       echo_failure "FAILED"
       abort_installation
     fi
@@ -3913,8 +3902,8 @@ function install_nginx() {
       log "INFO" "NGINX web server: Successfully installed"
       echo_success "OK"
     else
-      log "ERROR" "NGINX web server: Not installed"
       log "DEBUG" "NGINX web server: ${command_output_message}"
+      log "ERROR" "NGINX web server: Not installed"
       echo_failure "FAILED"
       abort_installation
     fi
@@ -3946,8 +3935,8 @@ function install_nginx() {
       log "INFO" "NGINX web server: ${nginx_defaultconfig_file} successfully backed-up"
     else
       ((error_counter++))
-      log "ERROR" "NGINX web server: ${nginx_defaultconfig_file} not backed-up"
       log "DEBUG" "NGINX web server: ${command_output_message}"
+      log "ERROR" "NGINX web server: ${nginx_defaultconfig_file} not backed-up"
     fi
     command_output_message=$(mv ${nginx_defaultssl_file} ${nginx_sslconfig_file} 2>&1 >/dev/null)
     if [ -z "${command_output_message}" ]
@@ -3955,8 +3944,8 @@ function install_nginx() {
       log "INFO" "NGINX web server: ${nginx_defaultssl_file} successfully backed-up"
     else
       ((error_counter++))
-      log "ERROR" "NGINX web server: ${nginx_defaultssl_file} successfully backed-up"
       log "DEBUG" "NGINX web server: ${command_output_message}"
+      log "ERROR" "NGINX web server: ${nginx_defaultssl_file} successfully backed-up"
     fi
     command_output_message=$(sed -i.dist \
     -e "s/\#\(server .*\)/\1/" \
@@ -3979,8 +3968,8 @@ function install_nginx() {
       log "INFO" "NGINX web server: ${nginx_defaultssl_file} successfully modified"
     else
       ((error_counter++))
-      log "ERROR" "NGINX web server: ${nginx_defaultssl_file} not modified"
       log "DEBUG" "NGINX web server: ${command_output_message}"
+      log "ERROR" "NGINX web server: ${nginx_defaultssl_file} not modified"
     fi
     if [ "${error_counter}" == "0" ]
     then
@@ -4011,8 +4000,8 @@ function install_nginx() {
         log "INFO" "NGINX web server: Successfully enabled on startup"
         echo_success "OK"
       else
-        log "ERROR" "NGINX web server: Not enabled on startup"
         log "DEBUG" "NGINX web server: ${command_output_message}"
+        log "ERROR" "NGINX web server: Not enabled on startup"
         echo_failure "FAILED"
       fi
     else
@@ -4029,8 +4018,8 @@ function install_nginx() {
         log "INFO" "NGINX web server: Disabled on startup"
         echo_success "OK"
       else
-        log "ERROR" "NGINX web server: Not disabled on startup"
         log "DEBUG" "NGINX web server: ${command_output_message}"
+        log "ERROR" "NGINX web server: Not disabled on startup"
         echo_failure "FAILED"
       fi
     else
@@ -4062,8 +4051,8 @@ function configure_iptables() {
       log "INFO" "IPTABLES firewall: Successfully installed"
       echo_success "OK"
     else
-      log "ERROR" "IPTABLES firewall: Not installed"
       log "DEBUG" "IPTABLES firewall: ${command_output_message}"
+      log "ERROR" "IPTABLES firewall: Not installed"
       echo_failure "FAILED"
       abort_installation
     fi
@@ -4085,8 +4074,8 @@ function configure_iptables() {
       log "INFO" "IPTABLES firewall: ${iptables_defaultconfig_file} successfully backed-up"
     else
       ((error_counter++))
-      log "ERROR" "IPTABLES firewall: ${iptables_defaultconfig_file} not backed-up"
       log "DEBUG" "IPTABLES firewall: ${command_output_message}"
+      log "ERROR" "IPTABLES firewall: ${iptables_defaultconfig_file} not backed-up"
     fi
     command_output_message=$(cat << EOF > ${iptables_defaultconfig_file}
 *nat
@@ -4126,8 +4115,8 @@ EOF
       log "INFO" "IPTABLES firewall: ${nginx_defaultssl_file} successfully modified"
     else
       ((error_counter++))
-      log "ERROR" "IPTABLES firewall: ${nginx_defaultssl_file} not modified"
       log "DEBUG" "IPTABLES firewall: ${command_output_message}"
+      log "ERROR" "IPTABLES firewall: ${nginx_defaultssl_file} not modified"
     fi
     if [ "${error_counter}" == "0" ]
     then
@@ -4158,8 +4147,8 @@ EOF
         log "INFO" "IPTABLES firewall: Successfully enabled on startup"
         echo_success "OK"
       else
-        log "ERROR" "IPTABLES firewall: Not enabled on startup"
         log "DEBUG" "IPTABLES firewall: ${command_output_message}"
+        log "ERROR" "IPTABLES firewall: Not enabled on startup"
         echo_failure "FAILED"
       fi
     else
@@ -4176,8 +4165,8 @@ EOF
         log "INFO" "IPTABLES firewall: Disabled on startup"
         echo_success "OK"
       else
-        log "ERROR" "IPTABLES firewall: Not disabled on startup"
         log "DEBUG" "IPTABLES firewall: ${command_output_message}"
+        log "ERROR" "IPTABLES firewall: Not disabled on startup"
         echo_failure "FAILED"
       fi
     else
@@ -4263,7 +4252,7 @@ function main {
     configure_yum
     initialize_yum
     upgrade_os
-    install_ntp
+    install_chrony
     install_lsbpackages
     install_networkpackages
     configure_bashrc
@@ -4280,14 +4269,14 @@ function main {
     configure_hostsfile
     configure_selinux
     install_mongodb
-    install_java
-    configure_ramreservations
-    install_elasticsearch
-    install_graylogserver
-    install_graylogwebgui
-    install_graylogsnmpplugin
-    install_nginx
-    configure_iptables
+#    install_java
+#    configure_ramreservations
+#    install_elasticsearch
+#    install_graylogserver
+#    install_graylogwebgui
+#    install_graylogsnmpplugin
+#    install_nginx
+#    configure_iptables
     display_informations
   fi
 }
