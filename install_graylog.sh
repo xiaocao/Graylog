@@ -3209,6 +3209,8 @@ function install_mongodb() {
     command_output_message=$(systemctl daemon-reload 2>&1 >/dev/null)
     if [ -z "${command_output_message}" ]
     then
+      log "INFO" "SYSTEM Manager: Successfully reloaded"
+      echo_message "Start MONGO database server"
       command_output_message=$(systemctl start mongod.service 2>&1 >/dev/null)
       if [ -z "${command_output_message}" ]
       then
@@ -3221,8 +3223,8 @@ function install_mongodb() {
         abort_installation
       fi
     else
-      log "DEBUG" "MONGO database server: ${command_output_message}"
-      log "ERROR" "MONGO database server: systemd not reloaded"
+      log "DEBUG" "SYSTEM Manager: ${command_output_message}"
+      log "ERROR" "SYSTEM Manager: Not reloaded"
       echo_failure "FAILED"
       abort_installation
     fi
@@ -3361,9 +3363,7 @@ function configure_ramreservations() {
 function install_elasticsearch() {
   local configured_counter=0
   local error_counter=0
-  local onstartup_counter=0
   local command_output_message=
-  local chkconfig_array=
   local elasticsearch_config_folder="/etc/elasticsearch"
   local elasticsearch_config_file="${elasticsearch_config_folder}/elasticsearch.yml"
   local elasticsearch_backup_file="${elasticsearch_config_file}.dist"
@@ -3462,33 +3462,25 @@ function install_elasticsearch() {
       log "DEBUG" "ELASTICSEARCH index server: ${command_output_message}"
       log "ERROR" "ELASTICSEARCH index server: ${elasticsearch_service_file} not modified"
     fi
-    command_output_message=$(chkconfig --add elasticsearch 2>&1 >/dev/null)
+    command_output_message=$(systemctl daemon-reload 2>&1 >/dev/null)
     if [ -z "${command_output_message}" ]
     then
-      log "INFO" "ELASTICSEARCH index server: Successfully added to chkconfig"
+      log "INFO" "SYSTEM Manager: Successfully reloaded"
+      echo_message "Start ELASTICSEARCH index server"
+      command_output_message=$(systemctl start elasticsearch.service 2>&1 >/dev/null)
+      if [ -z "${command_output_message}" ]
+      then
+        log "INFO" "ELASTICSEARCH index server: Successfully started"
+        echo_success "OK"
+      else
+        log "DEBUG" "ELASTICSEARCH index server: ${command_output_message}"
+        log "ERROR" "ELASTICSEARCH index server: Not started"
+        echo_failure "FAILED"
+        abort_installation
+      fi
     else
-      ((error_counter++))
-      log "DEBUG" "ELASTICSEARCH index server: ${command_output_message}"
-      log "ERROR" "ELASTICSEARCH index server: Not added to chkconfig"
-    fi
-    if [ "${error_counter}" == "0" ]
-    then
-      log "INFO" "ELASTICSEARCH index server: Successfully configured"
-      echo_success "OK"
-    else
-      echo_failure "FAILED"
-      abort_installation
-    fi
-    echo_message "Start ELASTICSEARCH index server"
-    command_output_message=$(service elasticsearch start 2>&1 >/dev/null)
-    if [ -z "${command_output_message}" ]
-    then
-      log "INFO" "ELASTICSEARCH index server: Successfully started"
-      echo_success "OK"
-    else
-      log "DEBUG" "ELASTICSEARCH index server: ${command_output_message}"
-      log "ERROR" "ELASTICSEARCH index server: Not started"
-      echo_failure "FAILED"
+      log "DEBUG" "SYSTEM Manager: ${command_output_message}"
+      log "ERROR" "SYSTEM Manager: Not reloaded"
       abort_installation
     fi
     echo_message "Install ELASTICSEARCH HQ Management plugin"
@@ -3509,21 +3501,16 @@ function install_elasticsearch() {
         echo_passed "PASS"
     fi
   fi
-  chkconfig_array=( `chkconfig --list | grep 'elasticsearch'` )
-  for i in "${chkconfig_array[@]}"
-  do
-    value=`echo ${i} | awk -F: '{print $2}'`
-    if [ "${value}" == "off" ]
-    then
-      ((onstartup_counter++))
-    fi
-  done
   if [[ "${BOOLEAN_ELASTICSEARCH_ONSTARTUP}" =~ true ]]
   then
     echo_message "Enable ELASTICSEARCH index server on startup"
-    if [ "${onstartup_counter}" == "7" ]
+    command_output_message=$(systemctl list-unit-files | grep elasticsearch | awk '{print $2}')
+    if [ "${command_output_message}" == "enabled" ]
     then
-      command_output_message=$(chkconfig elasticsearch on 2>&1 >/dev/null)
+      log "WARN" "ELASTICSEARCH index server: Already enabled on startup"
+      echo_passed "PASS"
+    else
+      command_output_message=$(systemctl enable elasticsearch.service 2>&1 >/dev/null)
       if [ -z "${command_output_message}" ]
       then
         log "INFO" "ELASTICSEARCH index server: Successfully enabled on startup"
@@ -3533,27 +3520,24 @@ function install_elasticsearch() {
         log "ERROR" "ELASTICSEARCH index server: Not enabled on startup"
         echo_failure "FAILED"
       fi
-    else
-      log "WARN" "ELASTICSEARCH index server: Already enabled on startup"
-      echo_passed "PASS"
     fi
   else
     echo_message "Disable ELASTICSEARCH index server on startup"
-    if [ "${onstartup_counter}" != "7" ]
+    if [ "${command_output_message}" == "disabled" ]
     then
-      command_output_message=$(chkconfig elasticsearch off 2>&1 >/dev/null)
+      log "WARN" "ELASTICSEARCH index server: Already disabled on startup"
+      echo_passed "PASS"
+    else
+      command_output_message=$(systemctl disable elasticsearch.service 2>&1 >/dev/null)
       if [ -z "${command_output_message}" ]
       then
         log "INFO" "ELASTICSEARCH index server: Disabled on startup"
-        echo_success "OK"
+        echo_passed "OK"
       else
         log "DEBUG" "ELASTICSEARCH index server: ${command_output_message}"
         log "ERROR" "ELASTICSEARCH index server: Not disabled on startup"
         echo_failure "FAILED"
       fi
-    else
-      log "WARN" "ELASTICSEARCH index server: Already disabled on startup"
-      echo_passed "PASS"
     fi
   fi
 }
@@ -3561,9 +3545,7 @@ function install_elasticsearch() {
 function install_graylogserver() {
   local configured_counter=0
   local error_counter=0
-  local onstartup_counter=0
   local command_output_message=
-  local chkconfig_array=
   local graylogserver_config_folder="/etc/graylog/server"
   local graylogserver_config_file="${graylogserver_config_folder}/server.conf"
   local graylogserver_backup_file="${graylogserver_config_file}.dist"
@@ -3672,21 +3654,16 @@ function install_graylogserver() {
       abort_installation
     fi
   fi
-  chkconfig_array=( `chkconfig --list | grep 'graylog-server'` )
-  for i in "${chkconfig_array[@]}"
-  do
-    value=`echo ${i} | awk -F: '{print $2}'`
-    if [ "${value}" == "off" ]
-    then
-      ((onstartup_counter++))
-    fi
-  done
   if [[ "${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}" =~ true ]]
   then
     echo_message "Enable GRAYLOG back-end server on startup"
-    if [ "${onstartup_counter}" == "7" ]
+    command_output_message=$(systemctl list-unit-files | grep graylog-server | awk '{print $2}')
+    if [ "${command_output_message}" == "enabled" ]
     then
-      command_output_message=$(chkconfig graylog-server on 2>&1 >/dev/null)
+      log "WARN" "GRAYLOG back-end server: Already enabled on startup"
+      echo_passed "PASS"
+    else
+      command_output_message=$(systemctl enable graylog-server.service 2>&1 >/dev/null)
       if [ -z "${command_output_message}" ]
       then
         log "INFO" "GRAYLOG back-end server: Successfully enabled on startup"
@@ -3696,27 +3673,24 @@ function install_graylogserver() {
         log "ERROR" "GRAYLOG back-end server: Not enabled on startup"
         echo_failure "FAILED"
       fi
-    else
-      log "WARN" "GRAYLOG back-end server: Already enabled on startup"
-      echo_passed "PASS"
     fi
   else
-    echo_message "Disable GRAYLOG back-end server on startup"
-    if [ "${onstartup_counter}" != "7" ]
+    cho_message "Disable GRAYLOG back-end server on startup"
+    if [ "${command_output_message}" == "disabled" ]
     then
-      command_output_message=$(chkconfig graylog-server off 2>&1 >/dev/null)
+      log "WARN" "GRAYLOG back-end server: Already disabled on startup"
+      echo_passed "PASS"
+    else
+      command_output_message=$(systemctl disable graylog-server.service 2>&1 >/dev/null)
       if [ -z "${command_output_message}" ]
       then
         log "INFO" "GRAYLOG back-end server: Disabled on startup"
-        echo_success "OK"
+        echo_passed "OK"
       else
         log "DEBUG" "GRAYLOG back-end server: ${command_output_message}"
         log "ERROR" "GRAYLOG back-end server: Not disabled on startup"
         echo_failure "FAILED"
       fi
-    else
-      log "WARN" "GRAYLOG back-end server: Already disabled on startup"
-      echo_passed "PASS"
     fi
   fi
 }
@@ -3724,9 +3698,7 @@ function install_graylogserver() {
 function install_graylogwebgui() {
   local configured_counter=0
   local error_counter=0
-  local onstartup_counter=0
   local command_output_message=
-  local chkconfig_array=
   local graylogwebgui_config_folder="/etc/graylog/web"
   local graylogwebgui_config_file="${graylogwebgui_config_folder}/web.conf"
   local graylogwebgui_backup_file="${graylogwebgui_config_file}.dist"
@@ -3804,21 +3776,17 @@ function install_graylogwebgui() {
       abort_installation
     fi
   fi
-  chkconfig_array=( `chkconfig --list | grep 'graylog-web'` )
-  for i in "${chkconfig_array[@]}"
-  do
-    value=`echo ${i} | awk -F: '{print $2}'`
-    if [ "${value}" == "off" ]
-    then
-      ((onstartup_counter++))
-    fi
-  done
-  if [[ "${BOOLEAN_GRAYLOGSERVER_ONSTARTUP}" =~ true ]]
+  
+  if [[ "${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}" =~ true ]]
   then
     echo_message "Enable GRAYLOG front-end server on startup"
-    if [ "${onstartup_counter}" == "7" ]
+    command_output_message=$(systemctl list-unit-files | grep graylog-web | awk '{print $2}')
+    if [ "${command_output_message}" == "enabled" ]
     then
-      command_output_message=$(chkconfig graylog-web on 2>&1 >/dev/null)
+      log "WARN" "GRAYLOG front-end server: Already enabled on startup"
+      echo_passed "PASS"
+    else
+      command_output_message=$(systemctl enable graylog-web.service 2>&1 >/dev/null)
       if [ -z "${command_output_message}" ]
       then
         log "INFO" "GRAYLOG front-end server: Successfully enabled on startup"
@@ -3828,27 +3796,24 @@ function install_graylogwebgui() {
         log "ERROR" "GRAYLOG front-end server: Not enabled on startup"
         echo_failure "FAILED"
       fi
-    else
-      log "WARN" "GRAYLOG front-end server: Already enabled on startup"
-      echo_passed "PASS"
     fi
   else
     echo_message "Disable GRAYLOG front-end server on startup"
-    if [ "${onstartup_counter}" != "7" ]
+    if [ "${command_output_message}" == "disabled" ]
     then
-      command_output_message=$(chkconfig graylog-web off 2>&1 >/dev/null)
+      log "WARN" "GRAYLOG front-end server: Already disabled on startup"
+      echo_passed "PASS"
+    else
+      command_output_message=$(systemctl disable graylog-web.service 2>&1 >/dev/null)
       if [ -z "${command_output_message}" ]
       then
         log "INFO" "GRAYLOG front-end server: Disabled on startup"
-        echo_success "OK"
+        echo_passed "OK"
       else
         log "DEBUG" "GRAYLOG front-end server: ${command_output_message}"
         log "ERROR" "GRAYLOG front-end server: Not disabled on startup"
         echo_failure "FAILED"
       fi
-    else
-      log "WARN" "GRAYLOG front-end server: Already disabled on startup"
-      echo_passed "PASS"
     fi
   fi
 }
