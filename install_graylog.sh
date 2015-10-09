@@ -3776,7 +3776,6 @@ function install_graylogwebgui() {
       abort_installation
     fi
   fi
-  
   if [[ "${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP}" =~ true ]]
   then
     echo_message "Enable GRAYLOG front-end server on startup"
@@ -3845,9 +3844,7 @@ function install_graylogsnmpplugin() {
 function install_nginx() {
   local installed_counter=0
   local error_counter=0
-  local onstartup_counter=0
   local command_output_message=
-  local chkconfig_array=
   local nginx_config_folder="/etc/nginx/conf.d"
   local nginx_defaultconfig_file="${nginx_config_folder}/default.conf"
   local nginx_defaultbackup_file="${nginx_defaultconfig_file}.dist"
@@ -3945,21 +3942,17 @@ function install_nginx() {
       abort_installation
     fi
   fi
-  chkconfig_array=( `chkconfig --list | grep 'nginx'` )
-  for i in "${chkconfig_array[@]}"
-  do
-    value=`echo ${i} | awk -F: '{print $2}'`
-    if [ "${value}" == "off" ]
-    then
-      ((onstartup_counter++))
-    fi
-  done
+  
   if [[ "${BOOLEAN_NGINX_ONSTARTUP}" =~ true ]]
   then
     echo_message "Enable NGINX web server on startup"
-    if [ "${onstartup_counter}" == "7" ]
+    command_output_message=$(systemctl list-unit-files | grep nginx | awk '{print $2}')
+    if [ "${command_output_message}" == "enabled" ]
     then
-      command_output_message=$(chkconfig nginx on 2>&1 >/dev/null)
+      log "WARN" "NGINX web server: Already enabled on startup"
+      echo_passed "PASS"
+    else
+      command_output_message=$(systemctl enable nginx.service 2>&1 >/dev/null)
       if [ -z "${command_output_message}" ]
       then
         log "INFO" "NGINX web server: Successfully enabled on startup"
@@ -3969,15 +3962,15 @@ function install_nginx() {
         log "ERROR" "NGINX web server: Not enabled on startup"
         echo_failure "FAILED"
       fi
-    else
-      log "WARN" "NGINX web server: Already enabled on startup"
-      echo_passed "PASS"
     fi
   else
-    echo_message "Disable NGINX web server on startup"
-    if [ "${onstartup_counter}" != "7" ]
+    echo_message "Disable GRAYLOG front-end server on startup"
+    if [ "${command_output_message}" == "disabled" ]
     then
-      command_output_message=$(chkconfig nginx off 2>&1 >/dev/null)
+      log "WARN" "NGINX web server: Already disabled on startup"
+      echo_passed "PASS"
+    else
+      command_output_message=$(systemctl disable nginx.service 2>&1 >/dev/null)
       if [ -z "${command_output_message}" ]
       then
         log "INFO" "NGINX web server: Disabled on startup"
@@ -3987,9 +3980,6 @@ function install_nginx() {
         log "ERROR" "NGINX web server: Not disabled on startup"
         echo_failure "FAILED"
       fi
-    else
-      log "WARN" "NGINX web server: Already disabled on startup"
-      echo_passed "PASS"
     fi
   fi
 }
