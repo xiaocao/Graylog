@@ -4224,14 +4224,14 @@ function main {
     configure_hostsfile
     configure_selinux
     install_mongodb
-#    install_java
-#    configure_ramreservations
-#    install_elasticsearch
-#    install_graylogserver
-#    install_graylogwebgui
-#    install_graylogsnmpplugin
-#    install_nginx
-#    configure_iptables
+    install_java
+    configure_ramreservations
+    install_elasticsearch
+    install_graylogserver
+    install_graylogwebgui
+    install_graylogsnmpplugin
+    install_nginx
+    configure_iptables
     display_informations
   fi
 }
