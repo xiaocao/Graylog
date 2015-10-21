@@ -6,7 +6,7 @@
 #job title     : Network engineer
 #mail          : mikael.andre.1989@gmail.com
 #created       : 20150219
-#last revision : 20151006
+#last revision : 20151021
 #version       : 1.6
 #platform      : Linux
 #processor     : 64 Bits
@@ -88,8 +88,8 @@ SMTP_AUTH_USERNAME=
 SMTP_AUTH_PASSWORD=
 # NGINX VARIABLES
 BOOLEAN_NGINX_ONSTARTUP=
-# IPTABLES VARIABLES
-BOOLEAN_IPTABLES_ONSTARTUP=
+# FIREWALLD VARIABLES
+BOOLEAN_FIREWALLD_ONSTARTUP=
 DEFAULT_SYSLOG_PORT='514'
 CUSTOM_SYSLOG_PORT=
 DEFAULT_SNMPTRAP_PORT='162'
@@ -1669,36 +1669,36 @@ function set_globalvariables() {
     fi
   fi
   echo "BOOLEAN_NGINX_ONSTARTUP='${BOOLEAN_NGINX_ONSTARTUP}'" >> ${installation_cfg_tmpfile}
-  if [ -z "${BOOLEAN_IPTABLES_ONSTARTUP}" ]
+  if [ -z "${BOOLEAN_FIREWALLD_ONSTARTUP}" ]
   then
-    yes_no_function "Do you want to add IPTABLES firewall on startup ?" "yes"
+    yes_no_function "Do you want to add FIREWALL on startup ?" "yes"
     if [ "${?}" == "0" ]
     then
-      BOOLEAN_IPTABLES_ONSTARTUP="true"
+      BOOLEAN_FIREWALLD_ONSTARTUP="true"
     else
-      BOOLEAN_IPTABLES_ONSTARTUP="false"
+      BOOLEAN_FIREWALLD_ONSTARTUP="false"
     fi
   else
-    if [[ "${BOOLEAN_IPTABLES_ONSTARTUP}" =~ true ]]
+    if [[ "${BOOLEAN_FIREWALLD_ONSTARTUP}" =~ true ]]
     then
-      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} IPTABLES firewall on startup ?" "yes"
+      yes_no_function "Can you confirm you want to ${SETCOLOR_FAILURE}disable${SETCOLOR_NORMAL} FIREWALL on startup ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_IPTABLES_ONSTARTUP="false"
+        BOOLEAN_FIREWALLD_ONSTARTUP="false"
       else
-        BOOLEAN_IPTABLES_ONSTARTUP=${BOOLEAN_IPTABLES_ONSTARTUP}
+        BOOLEAN_FIREWALLD_ONSTARTUP=${BOOLEAN_FIREWALLD_ONSTARTUP}
       fi
     else
-      yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} IPTABLES firewall on startup ?" "yes"
+      yes_no_function "Can you confirm you want to ${SETCOLOR_SUCCESS}enable${SETCOLOR_NORMAL} FIREWALL on startup ?" "yes"
       if [ "${?}" == "0" ]
       then
-        BOOLEAN_IPTABLES_ONSTARTUP="true"
+        BOOLEAN_FIREWALLD_ONSTARTUP="true"
       else
-        BOOLEAN_IPTABLES_ONSTARTUP=${BOOLEAN_IPTABLES_ONSTARTUP}
+        BOOLEAN_FIREWALLD_ONSTARTUP=${BOOLEAN_FIREWALLD_ONSTARTUP}
       fi
     fi
   fi
-  echo "BOOLEAN_IPTABLES_ONSTARTUP='${BOOLEAN_IPTABLES_ONSTARTUP}'" >> ${installation_cfg_tmpfile}
+  echo "BOOLEAN_FIREWALLD_ONSTARTUP='${BOOLEAN_FIREWALLD_ONSTARTUP}'" >> ${installation_cfg_tmpfile}
   if [ -z "${CUSTOM_SYSLOG_PORT}" ]
   then
     while [[ ! "${CUSTOM_SYSLOG_PORT}" =~ (102[4-9]|10[3-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]) ]]
@@ -2157,13 +2157,13 @@ function verify_globalvariables() {
     log "ERROR" "Global variables: BOOLEAN_NGINX_ONSTARTUP not successfully definied by user (value=${BOOLEAN_NGINX_ONSTARTUP})"
     echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_NGINX_ONSTARTUP${SETCOLOR_NORMAL}.............'${BOOLEAN_NGINX_ONSTARTUP}'${MOVE_TO_COL1}#"
   fi
-  if [[ "${BOOLEAN_IPTABLES_ONSTARTUP}" =~ true|false ]]
+  if [[ "${BOOLEAN_FIREWALLD_ONSTARTUP}" =~ true|false ]]
   then
-    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_IPTABLES_ONSTARTUP${SETCOLOR_NORMAL}..........'${BOOLEAN_IPTABLES_ONSTARTUP}'${MOVE_TO_COL1}#"
+    echo -e "# ${SETCOLOR_SUCCESS}BOOLEAN_FIREWALLD_ONSTARTUP${SETCOLOR_NORMAL}..........'${BOOLEAN_FIREWALLD_ONSTARTUP}'${MOVE_TO_COL1}#"
   else
     ((error_counter++))
-    log "ERROR" "Global variables: BOOLEAN_IPTABLES_ONSTARTUP not successfully definied by user (value=${BOOLEAN_IPTABLES_ONSTARTUP})"
-    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_IPTABLES_ONSTARTUP${SETCOLOR_NORMAL}..........'${BOOLEAN_IPTABLES_ONSTARTUP}'${MOVE_TO_COL1}#"
+    log "ERROR" "Global variables: BOOLEAN_FIREWALLD_ONSTARTUP not successfully definied by user (value=${BOOLEAN_FIREWALLD_ONSTARTUP})"
+    echo -e "# ${SETCOLOR_FAILURE}BOOLEAN_FIREWALLD_ONSTARTUP${SETCOLOR_NORMAL}..........'${BOOLEAN_FIREWALLD_ONSTARTUP}'${MOVE_TO_COL1}#"
   fi
   if [[ "${CUSTOM_SYSLOG_PORT}" =~ (102[4-9]|10[3-9][0-9]|1[1-9][0-9]{2}|[2-9][0-9]{3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]) ]]
   then
@@ -2199,7 +2199,7 @@ function verify_globalvariables() {
         log "INFO" "Global variables: NEW_CHRONY_ADDRESS successfully definied by user (value=${NEW_CHRONY_ADDRESS})"
         log "INFO" "Global variables: BOOLEAN_RSA_AUTH successfully definied by user (value=${BOOLEAN_RSA_AUTH})"
         log "INFO" "Global variables: RSA_PUBLIC_KEY successfully definied by user (value=${RSA_PUBLIC_KEY})"
-		log "INFO" "Global variables: MONGO_HOST_NAME successfully definied by user (value=${MONGO_HOST_NAME})"
+        log "INFO" "Global variables: MONGO_HOST_NAME successfully definied by user (value=${MONGO_HOST_NAME})"
         log "INFO" "Global variables: MONGO_PORT_NUMBER successfully definied by user (value=${MONGO_PORT_NUMBER})"
         log "INFO" "Global variables: MONGO_ADMIN_PASSWORD successfully definied by user (value=${MONGO_ADMIN_PASSWORD})"
         log "INFO" "Global variables: MONGO_GRAYLOG_DATABASE successfully definied by user (value=${MONGO_GRAYLOG_DATABASE})"
@@ -2233,7 +2233,7 @@ function verify_globalvariables() {
         log "INFO" "Global variables: BOOLEAN_GRAYLOGSERVER_ONSTARTUP successfully definied by user (value=${BOOLEAN_GRAYLOGSERVER_ONSTARTUP})"
         log "INFO" "Global variables: BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP successfully definied by user (value=${BOOLEAN_GRAYLOGWEBGUI_ONSTARTUP})"
         log "INFO" "Global variables: BOOLEAN_NGINX_ONSTARTUP successfully definied by user (value=${BOOLEAN_NGINX_ONSTARTUP})"
-        log "INFO" "Global variables: BOOLEAN_IPTABLES_ONSTARTUP successfully definied by user (value=${BOOLEAN_IPTABLES_ONSTARTUP})"
+        log "INFO" "Global variables: BOOLEAN_FIREWALLD_ONSTARTUP successfully definied by user (value=${BOOLEAN_FIREWALLD_ONSTARTUP})"
         log "INFO" "Global variables: CUSTOM_SYSLOG_PORT successfully definied by user (value=${CUSTOM_SYSLOG_PORT})"
         log "INFO" "Global variables: CUSTOM_SNMPTRAP_PORT successfully definied by user (value=${CUSTOM_SNMPTRAP_PORT})"
       else
@@ -3942,7 +3942,6 @@ function install_nginx() {
       abort_installation
     fi
   fi
-  
   if [[ "${BOOLEAN_NGINX_ONSTARTUP}" =~ true ]]
   then
     echo_message "Enable NGINX web server on startup"
@@ -3983,150 +3982,361 @@ function install_nginx() {
     fi
   fi
 }
-# Configure IPTABLES to allow functional streams of Graylog application
-function configure_iptables() {
+# Configure FIREWALLD to allow functional streams of Graylog application
+function configure_firewall() {
   local installed_counter=0
   local error_counter=0
-  local onstartup_counter=0
+  local successfull_counter=0
   local command_output_message=
-  local chkconfig_array=
+  local firewalld_servdefinition_folder="/etc/firewalld/services"
+  local syslog_servdefinition_file="${firewalld_servdefinition_folder}/syslog.xml"
+  local syslogcust_servdefinition_file="${firewalld_servdefinition_folder}/syslog-custom.xml"
+  local snmptrap_servdefinition_file="${firewalld_servdefinition_folder}/snmptrap.xml"
+  local snmptrapcust_servdefinition_file="${firewalld_servdefinition_folder}/snmptrap-custom.xml"
+  local elasticsearchweb_servdefinition_file="${firewalld_servdefinition_folder}/elasticsearch-web.xml"
+  local elasticsearchdata_servdefinition_file="${firewalld_servdefinition_folder}/elasticsearch-data.xml"
+  local graylogweb_servdefinition_file="${firewalld_servdefinition_folder}/graylog-web.xml"
+  local graylogdata_servdefinition_file="${firewalld_servdefinition_folder}/graylog-data.xml"
+  local graylogapi_servdefinition_file="${firewalld_servdefinition_folder}/graylog-api.xml"
   local iptables_config_folder="/etc/sysconfig"
   local iptables_defaultconfig_file="${iptables_config_folder}/iptables"
   local iptables_defaultbackup_file="${iptables_defaultconfig_file}.dist"
-  echo_message "Install IPTABLES firewall"
-  command_output_message=$(yum list installed | grep iptables.x)
-  if [[ "${command_output_message}" =~ ^iptables\..* ]]
+  echo_message "Install FIREWALL"
+  command_output_message=$(yum list installed | grep firewalld)
+  if [[ "${command_output_message}" =~ ^firewalld\..* ]]
   then
-    log "WARN" "IPTABLES firewall: Already installed"
+    log "WARN" "FIREWALL: Already installed"
     echo_passed "PASS"
   else
-    command_output_message=$(yum -y install iptables 2>&1 >/dev/null)
+    command_output_message=$(yum -y install firewalld 2>&1 >/dev/null)
     if [ -z "${command_output_message}" ] || [[ "${command_output_message}" =~ [Ww]arning.* ]]
     then
-      log "INFO" "IPTABLES firewall: Successfully installed"
+      log "INFO" "FIREWALL: Successfully installed"
       echo_success "OK"
     else
-      log "DEBUG" "IPTABLES firewall: ${command_output_message}"
-      log "ERROR" "IPTABLES firewall: Not installed"
+      log "DEBUG" "FIREWALL: ${command_output_message}"
+      log "ERROR" "FIREWALL: Not installed"
       echo_failure "FAILED"
       abort_installation
     fi
   fi
-  echo_message "Configure IPTABLES firewall"
-  command_output_message=$(test_file ${iptables_defaultbackup_file})
+  echo_message "Configure FIREWALL services"
+  command_output_message=$(test_file ${syslog_servdefinition_file})
   if [ "${command_output_message}" == "0" ]
   then
     ((configured_counter++))
   fi
-  if [ "${configured_counter}" == "1" ]
-  then
-    log "WARN" "IPTABLES firewall: Already configured"
-    echo_passed "PASS"
   else
-    command_output_message=$(mv ${iptables_defaultconfig_file} ${iptables_defaultbackup_file} 2>&1 >/dev/null)
-    if [ -z "${command_output_message}" ]
-    then
-      log "INFO" "IPTABLES firewall: ${iptables_defaultconfig_file} successfully backed-up"
-    else
-      ((error_counter++))
-      log "DEBUG" "IPTABLES firewall: ${command_output_message}"
-      log "ERROR" "IPTABLES firewall: ${iptables_defaultconfig_file} not backed-up"
-    fi
-    command_output_message=$(cat << EOF > ${iptables_defaultconfig_file}
-*nat
-:PREROUTING ACCEPT [0:0]
-:POSTROUTING ACCEPT [7:420]
-:OUTPUT ACCEPT [7:420]
--A PREROUTING -i ${NETWORK_INTERFACE_NAME} -p tcp -m tcp --dport ${DEFAULT_SYSLOG_PORT} -j REDIRECT --to-ports ${CUSTOM_SYSLOG_PORT}
--A PREROUTING -i ${NETWORK_INTERFACE_NAME} -p udp -m udp --dport ${DEFAULT_SYSLOG_PORT} -j REDIRECT --to-ports ${CUSTOM_SYSLOG_PORT}
--A PREROUTING -i ${NETWORK_INTERFACE_NAME} -p udp -m udp --dport ${DEFAULT_SNMPTRAP_PORT} -j REDIRECT --to-ports ${CUSTOM_SNMPTRAP_PORT}
-COMMIT
-*filter
-:INPUT ACCEPT [0:0]
-:FORWARD ACCEPT [0:0]
-:OUTPUT ACCEPT [8160:1329188]
--A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
--A INPUT -p icmp -j ACCEPT
--A INPUT -i lo -j ACCEPT
--A INPUT -p tcp -m state --state NEW -m tcp --dport 22 -j ACCEPT
--A INPUT -p tcp -m state --state NEW -m tcp --dport 443 -j ACCEPT
--A INPUT -p tcp -m state --state NEW -m tcp --dport ${DEFAULT_SYSLOG_PORT} -j ACCEPT
--A INPUT -p tcp -m state --state NEW -m tcp --dport ${CUSTOM_SYSLOG_PORT} -j ACCEPT
--A INPUT -p tcp -m state --state NEW -m tcp --dport 9200 -j ACCEPT
--A INPUT -p tcp -m state --state NEW -m tcp --dport 9300 -j ACCEPT
--A INPUT -p tcp -m state --state NEW -m tcp --dport 9350 -j ACCEPT
--A INPUT -p tcp -m state --state NEW -m tcp --dport 12900 -j ACCEPT
--A INPUT -p udp -m state --state NEW -m udp --dport ${DEFAULT_SNMPTRAP_PORT} -j ACCEPT
--A INPUT -p udp -m state --state NEW -m udp --dport ${DEFAULT_SYSLOG_PORT} -j ACCEPT
--A INPUT -p udp -m state --state NEW -m udp --dport ${CUSTOM_SNMPTRAP_PORT} -j ACCEPT
--A INPUT -p udp -m state --state NEW -m udp --dport ${CUSTOM_SYSLOG_PORT} -j ACCEPT
--A INPUT -j REJECT --reject-with icmp-host-prohibited
--A FORWARD -j REJECT --reject-with icmp-host-prohibited
-COMMIT
+    command_output_message=$(touch ${syslog_servdefinition_file})
+    command_output_message=$(cat << EOF > ${syslog_servdefinition_file}
+<?xml version="1.0" encoding="utf-8"?>
+<service>
+  <short>syslog</short>
+  <description>syslog</description>
+  <port protocol="tcp" port="514"/>
+  <port protocol="udp" port="514"/>
+</service>
 EOF
 2>&1 >/dev/null)
     if [ -z "${command_output_message}" ]
     then
-      log "INFO" "IPTABLES firewall: ${nginx_defaultssl_file} successfully modified"
+      ((successfull_counter++))
+      log "INFO" "FIREWALL: Syslog service successfully defined"
     else
       ((error_counter++))
-      log "DEBUG" "IPTABLES firewall: ${command_output_message}"
-      log "ERROR" "IPTABLES firewall: ${nginx_defaultssl_file} not modified"
-    fi
-    if [ "${error_counter}" == "0" ]
-    then
-      log "INFO" "IPTABLES firewall: Successfully configured"
-      echo_success "OK"
-    else
-      echo_failure "FAILED"
-      abort_installation
+      log "DEBUG" "FIREWALL: ${command_output_message}"
+      log "ERROR" "FIREWALL: Syslog service not defined"
     fi
   fi
-  chkconfig_array=( `chkconfig --list | grep 'iptables'` )
-  for i in "${chkconfig_array[@]}"
-  do
-    value=`echo ${i} | awk -F: '{print $2}'`
-    if [ "${value}" == "off" ]
-    then
-      ((onstartup_counter++))
-    fi
-  done
-  if [[ "${BOOLEAN_IPTABLES_ONSTARTUP}" =~ true ]]
+  command_output_message=$(test_file ${syslogcust_servdefinition_file})
+  if [ "${command_output_message}" == "0" ]
   then
-    echo_message "Enable IPTABLES firewall on startup"
-    if [ "${onstartup_counter}" == "7" ]
+    ((configured_counter++))
+  fi
+  else
+    command_output_message=$(touch ${syslogcust_servdefinition_file})
+    command_output_message=$(cat << EOF > ${syslogcust_servdefinition_file}
+<?xml version="1.0" encoding="utf-8"?>
+<service>
+  <short>syslog-custom</short>
+  <description>syslog-custom</description>
+  <port protocol="tcp" port="${CUSTOM_SYSLOG_PORT}"/>
+  <port protocol="udp" port="${CUSTOM_SYSLOG_PORT}"/>
+</service>
+EOF
+2>&1 >/dev/null)
+    if [ -z "${command_output_message}" ]
     then
-      command_output_message=$(chkconfig iptables on 2>&1 >/dev/null)
+      ((successfull_counter++))
+      log "INFO" "FIREWALL: Syslog custom service successfully defined"
+    else
+      ((error_counter++))
+      log "DEBUG" "FIREWALL: ${command_output_message}"
+      log "ERROR" "FIREWALL: Syslog custom service not defined"
+    fi
+  fi
+  command_output_message=$(test_file ${snmptrap_servdefinition_file})
+  if [ "${command_output_message}" == "0" ]
+  then
+    ((configured_counter++))
+  fi
+  else
+    command_output_message=$(touch ${snmptrap_servdefinition_file})
+    command_output_message=$(cat << EOF > ${snmptrap_servdefinition_file}
+<?xml version="1.0" encoding="utf-8"?>
+<service>
+  <short>snmptrap</short>
+  <description>snmptrap</description>
+  <port protocol="udp" port="162"/>
+</service>
+EOF
+2>&1 >/dev/null)
+    if [ -z "${command_output_message}" ]
+    then
+      ((successfull_counter++))
+      log "INFO" "FIREWALL: Snmptrap service successfully defined"
+    else
+      ((error_counter++))
+      log "DEBUG" "FIREWALL: ${command_output_message}"
+      log "ERROR" "FIREWALL: Snmptrap service not defined"
+    fi
+  fi
+  command_output_message=$(test_file ${snmptrapcust_servdefinition_file})
+  if [ "${command_output_message}" == "0" ]
+  then
+    ((configured_counter++))
+  fi
+  else
+    command_output_message=$(touch ${snmptrapcust_servdefinition_file})
+    command_output_message=$(cat << EOF > ${snmptrapcust_servdefinition_file}
+<?xml version="1.0" encoding="utf-8"?>
+<service>
+  <short>snmptrap-custom</short>
+  <description>snmptrap-custom</description>
+  <port protocol="udp" port="${CUSTOM_SNMPTRAP_PORT}"/>
+</service>
+EOF
+2>&1 >/dev/null)
+    if [ -z "${command_output_message}" ]
+    then
+      ((successfull_counter++))
+      log "INFO" "FIREWALL: Snmptrap custom service successfully defined"
+    else
+      ((error_counter++))
+      log "DEBUG" "FIREWALL: ${command_output_message}"
+      log "ERROR" "FIREWALL: Snmptrap custom service not defined"
+    fi
+  fi
+  command_output_message=$(test_file ${elasticsearchweb_servdefinition_file})
+  if [ "${command_output_message}" == "0" ]
+  then
+    ((configured_counter++))
+  fi
+  else
+    command_output_message=$(touch ${elasticsearchweb_servdefinition_file})
+    command_output_message=$(cat << EOF > ${elasticsearchweb_servdefinition_file}
+<?xml version="1.0" encoding="utf-8"?>
+<service>
+  <short>elasticsearch-web</short>
+  <description>elasticsearch-web</description>
+  <port protocol="tcp" port="9200"/>
+</service>
+EOF
+2>&1 >/dev/null)
+    if [ -z "${command_output_message}" ]
+    then
+      ((successfull_counter++))
+      log "INFO" "FIREWALL: Elasticsearch Web service successfully defined"
+    else
+      ((error_counter++))
+      log "DEBUG" "FIREWALL: ${command_output_message}"
+      log "ERROR" "FIREWALL: Elasticsearch Web service not defined"
+    fi
+  fi
+  command_output_message=$(test_file ${elasticsearchdata_servdefinition_file})
+  if [ "${command_output_message}" == "0" ]
+  then
+    ((configured_counter++))
+  fi
+  else
+    command_output_message=$(touch ${elasticsearchdata_servdefinition_file})
+    command_output_message=$(cat << EOF > ${elasticsearchdata_servdefinition_file}
+<?xml version="1.0" encoding="utf-8"?>
+<service>
+  <short>elasticsearch-data</short>
+  <description>elasticsearch-data</description>
+  <port protocol="tcp" port="9300"/>
+</service>
+EOF
+2>&1 >/dev/null)
+    if [ -z "${command_output_message}" ]
+    then
+      ((successfull_counter++))
+      log "INFO" "FIREWALL: Elasticsearch Data service successfully defined"
+    else
+      ((error_counter++))
+      log "DEBUG" "FIREWALL: ${command_output_message}"
+      log "ERROR" "FIREWALL: Elasticsearch Data service not defined"
+    fi
+  fi
+  command_output_message=$(test_file ${graylogdata_servdefinition_file})
+  if [ "${command_output_message}" == "0" ]
+  then
+    ((configured_counter++))
+  fi
+  else
+    command_output_message=$(touch ${graylogdata_servdefinition_file})
+    command_output_message=$(cat << EOF > ${graylogdata_servdefinition_file}
+<?xml version="1.0" encoding="utf-8"?>
+<service>
+  <short>graylog-data</short>
+  <description>graylog-data</description>
+  <port protocol="tcp" port="9350"/>
+</service>
+EOF
+2>&1 >/dev/null)
+    if [ -z "${command_output_message}" ]
+    then
+      ((successfull_counter++))
+      log "INFO" "FIREWALL: Graylog Data service successfully defined"
+    else
+      ((error_counter++))
+      log "DEBUG" "FIREWALL: ${command_output_message}"
+      log "ERROR" "FIREWALL: Graylog Data service not defined"
+    fi
+  fi
+  command_output_message=$(test_file ${graylogapi_servdefinition_file})
+  if [ "${command_output_message}" == "0" ]
+  then
+    ((configured_counter++))
+  fi
+  else
+    command_output_message=$(touch ${graylogapi_servdefinition_file})
+    command_output_message=$(cat << EOF > ${graylogapi_servdefinition_file}
+<?xml version="1.0" encoding="utf-8"?>
+<service>
+  <short>graylog-api</short>
+  <description>graylog-api</description>
+  <port protocol="tcp" port="12900"/>
+</service>
+EOF
+2>&1 >/dev/null)
+    if [ -z "${command_output_message}" ]
+    then
+      ((successfull_counter++))
+      log "INFO" "FIREWALL: Graylog API service successfully defined"
+    else
+      ((error_counter++))
+      log "DEBUG" "FIREWALL: ${command_output_message}"
+      log "ERROR" "FIREWALL: Graylog API service not defined"
+    fi
+  fi
+  if [ "${configured_counter}" == "8" ]
+  then
+    log "WARN" "FIREWALL: Services already configured"
+    echo_passed "PASS"
+  elif [ "${successfull_counter}" == "8" ]
+  then
+    log "INFO" "FIREWALL: Services successfully configured"
+    echo_success "OK"
+  else
+    log "ERROR" "FIREWALL: Services not configured"
+    echo_failure "FAILED"
+    abort_installation
+  fi
+  echo_message "Configure FIREWALL rules"
+  successfull_counter=0
+  error_counter=0
+  command_output_message=$(firewall-cmd --reload 2>&1 >/dev/null)
+  if [ -z "${command_output_message}" ]
+  then
+    ((successfull_counter++))
+    log "INFO" "FIREWALL: Daemon successfully reloaded"
+  else
+    ((error_counter++))
+    log "DEBUG" "FIREWALL: ${command_output_message}"
+    log "ERROR" "FIREWALL: Daemon not reloaded"
+  fi
+  command_output_message=$(firewall-cmd --set-default-zone=dmz 2>&1 >/dev/null)
+  if [ -z "${command_output_message}" ]
+  then
+    ((successfull_counter++))
+    log "INFO" "FIREWALL: Default zone successfully changed"
+  else
+    ((error_counter++))
+    log "DEBUG" "FIREWALL: ${command_output_message}"
+    log "ERROR" "FIREWALL: Default zone not changed"
+  fi
+  command_output_message=$(firewall-cmd --permanent --zone=dmz --add-service=https --add-service=syslog --add-service=syslog-custom \
+  --add-service=snmptrap --add-service=snmptrap-custom --add-service=elasticsearch-web \
+  --add-service=elasticsearch-data --add-service=graylog-data --add-service=graylog-api 2>&1 >/dev/null)
+  if [ -z "${command_output_message}" ]
+  then
+    ((successfull_counter++))
+    log "INFO" "FIREWALL: Rules successfully configured"
+  else
+    ((error_counter++))
+    log "DEBUG" "FIREWALL: ${command_output_message}"
+    log "ERROR" "FIREWALL: Rules not configured"
+  fi
+  command_output_message=$(firewall-cmd --direct --add-rule ipv4 nat PREROUTING 0 -i ${NETWORK_INTERFACE_NAME} -p tcp -m tcp --dport ${DEFAULT_SYSLOG_PORT} -j REDIRECT --to-ports ${CUSTOM_SYSLOG_PORT} \
+  firewall-cmd --direct --add-rule ipv4 nat PREROUTING 0 -i ${NETWORK_INTERFACE_NAME} -p udp -m udp --dport ${DEFAULT_SYSLOG_PORT} -j REDIRECT --to-ports ${CUSTOM_SYSLOG_PORT} \
+  firewall-cmd --direct --add-rule ipv4 nat PREROUTING 0 -i ${NETWORK_INTERFACE_NAME} -p udp -m udp --dport ${DEFAULT_SNMPTRAP_PORT} -j REDIRECT --to-ports ${CUSTOM_SNMPTRAP_PORT} 2>&1 >/dev/null)
+  if [ -z "${command_output_message}" ]
+  then
+    ((successfull_counter++))
+    log "INFO" "FIREWALL: Direct rules successfully configured"
+  else
+    ((error_counter++))
+    log "DEBUG" "FIREWALL: ${command_output_message}"
+    log "ERROR" "FIREWALL: Direct rules not configured"
+  fi
+  if [ "${successfull_counter}" == "4" ]
+  then
+    log "INFO" "FIREWALL: Successfully configured"
+    echo_success "OK"
+  else
+    log "ERROR" "FIREWALL: Not configured"
+    echo_failure "FAILED"
+    abort_installation
+  fi
+  if [[ "${BOOLEAN_FIREWALLD_ONSTARTUP}" =~ true ]]
+  then
+    echo_message "Enable FIREWALL on startup"
+    command_output_message=$(systemctl list-unit-files | grep firewalld | awk '{print $2}')
+    if [ "${command_output_message}" == "enabled" ]
+    then
+      log "WARN" "FIREWALL: Already enabled on startup"
+      echo_passed "PASS"
+    else
+      command_output_message=$(systemctl enable firewalld.service 2>&1 >/dev/null)
       if [ -z "${command_output_message}" ]
       then
-        log "INFO" "IPTABLES firewall: Successfully enabled on startup"
+        log "INFO" "FIREWALL: Successfully enabled on startup"
         echo_success "OK"
       else
-        log "DEBUG" "IPTABLES firewall: ${command_output_message}"
-        log "ERROR" "IPTABLES firewall: Not enabled on startup"
+        log "DEBUG" "FIREWALL: ${command_output_message}"
+        log "ERROR" "FIREWALL: Not enabled on startup"
         echo_failure "FAILED"
       fi
-    else
-      log "WARN" "IPTABLES firewall: Already enabled on startup"
-      echo_passed "PASS"
     fi
   else
-    echo_message "Disable IPTABLES firewall on startup"
-    if [ "${onstartup_counter}" != "7" ]
+    echo_message "Disable GRAYLOG front-end server on startup"
+    if [ "${command_output_message}" == "disabled" ]
     then
-      command_output_message=$(chkconfig iptables off 2>&1 >/dev/null)
+      log "WARN" "FIREWALL: Already disabled on startup"
+      echo_passed "PASS"
+    else
+      command_output_message=$(systemctl disable firewalld.service 2>&1 >/dev/null)
       if [ -z "${command_output_message}" ]
       then
-        log "INFO" "IPTABLES firewall: Disabled on startup"
+        log "INFO" "FIREWALL: Disabled on startup"
         echo_success "OK"
       else
-        log "DEBUG" "IPTABLES firewall: ${command_output_message}"
-        log "ERROR" "IPTABLES firewall: Not disabled on startup"
+        log "DEBUG" "FIREWALL: ${command_output_message}"
+        log "ERROR" "FIREWALL: Not disabled on startup"
         echo_failure "FAILED"
       fi
-    else
-      log "WARN" "IPTABLES firewall: Already disabled on startup"
-      echo_passed "PASS"
     fi
   fi
 }
@@ -4231,7 +4441,7 @@ function main {
     install_graylogwebgui
     install_graylogsnmpplugin
     install_nginx
-    configure_iptables
+    configure_firewall
     display_informations
   fi
 }
