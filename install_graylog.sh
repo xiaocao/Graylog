@@ -6,7 +6,7 @@
 #job title     : Network engineer
 #mail          : mikael.andre.1989@gmail.com
 #created       : 20150219
-#last revision : 20151021
+#last revision : 20151022
 #version       : 1.6
 #platform      : Linux
 #processor     : 64 Bits
@@ -4025,7 +4025,6 @@ function configure_firewall() {
   if [ "${command_output_message}" == "0" ]
   then
     ((configured_counter++))
-  fi
   else
     command_output_message=$(touch ${syslog_servdefinition_file})
     command_output_message=$(cat << EOF > ${syslog_servdefinition_file}
@@ -4052,7 +4051,6 @@ EOF
   if [ "${command_output_message}" == "0" ]
   then
     ((configured_counter++))
-  fi
   else
     command_output_message=$(touch ${syslogcust_servdefinition_file})
     command_output_message=$(cat << EOF > ${syslogcust_servdefinition_file}
@@ -4079,7 +4077,6 @@ EOF
   if [ "${command_output_message}" == "0" ]
   then
     ((configured_counter++))
-  fi
   else
     command_output_message=$(touch ${snmptrap_servdefinition_file})
     command_output_message=$(cat << EOF > ${snmptrap_servdefinition_file}
@@ -4105,7 +4102,6 @@ EOF
   if [ "${command_output_message}" == "0" ]
   then
     ((configured_counter++))
-  fi
   else
     command_output_message=$(touch ${snmptrapcust_servdefinition_file})
     command_output_message=$(cat << EOF > ${snmptrapcust_servdefinition_file}
@@ -4131,7 +4127,6 @@ EOF
   if [ "${command_output_message}" == "0" ]
   then
     ((configured_counter++))
-  fi
   else
     command_output_message=$(touch ${elasticsearchweb_servdefinition_file})
     command_output_message=$(cat << EOF > ${elasticsearchweb_servdefinition_file}
@@ -4157,7 +4152,6 @@ EOF
   if [ "${command_output_message}" == "0" ]
   then
     ((configured_counter++))
-  fi
   else
     command_output_message=$(touch ${elasticsearchdata_servdefinition_file})
     command_output_message=$(cat << EOF > ${elasticsearchdata_servdefinition_file}
@@ -4183,7 +4177,6 @@ EOF
   if [ "${command_output_message}" == "0" ]
   then
     ((configured_counter++))
-  fi
   else
     command_output_message=$(touch ${graylogdata_servdefinition_file})
     command_output_message=$(cat << EOF > ${graylogdata_servdefinition_file}
@@ -4209,7 +4202,6 @@ EOF
   if [ "${command_output_message}" == "0" ]
   then
     ((configured_counter++))
-  fi
   else
     command_output_message=$(touch ${graylogapi_servdefinition_file})
     command_output_message=$(cat << EOF > ${graylogapi_servdefinition_file}
@@ -4413,34 +4405,34 @@ function main {
   fi
   if [[ "${SCRIPT_MODE}" =~ i|a ]]
   then
-    generate_sslkeys
-    configure_yum
-    initialize_yum
-    upgrade_os
-    install_chrony
-    install_lsbpackages
-    install_networkpackages
-    configure_bashrc
-    configure_openssh
-    if [[ "${BOOLEAN_RSA_AUTH}" =~ true ]]
-    then
-      configure_rsaauth
-    else
-      echo_message "Configure RSA authentication"
-      log "WARN" "RSA authentication: operation cancelled by user"
-      echo_passed "PASS"
-    fi
-    configure_postfix
-    configure_hostsfile
-    configure_selinux
-    install_mongodb
-    install_java
-    configure_ramreservations
-    install_elasticsearch
-    install_graylogserver
-    install_graylogwebgui
-    install_graylogsnmpplugin
-    install_nginx
+#    generate_sslkeys
+#    configure_yum
+#    initialize_yum
+#    upgrade_os
+#    install_chrony
+#    install_lsbpackages
+#    install_networkpackages
+#    configure_bashrc
+#    configure_openssh
+#    if [[ "${BOOLEAN_RSA_AUTH}" =~ true ]]
+#    then
+#      configure_rsaauth
+#    else
+#      echo_message "Configure RSA authentication"
+#      log "WARN" "RSA authentication: operation cancelled by user"
+#      echo_passed "PASS"
+#    fi
+#    configure_postfix
+#    configure_hostsfile
+#    configure_selinux
+#    install_mongodb
+#    install_java
+#    configure_ramreservations
+#    install_elasticsearch
+#    install_graylogserver
+#    install_graylogwebgui
+#    install_graylogsnmpplugin
+#    install_nginx
     configure_firewall
     display_informations
   fi
